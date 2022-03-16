@@ -91,7 +91,7 @@ venv\Scripts\activate
 ##### Both
 Start the GUI
 ```
-python3 main.py
+python main.py
 ```
 A sample RES file can be downloaded [here](https://bit.ly/2wP3Gzc). After downloading the file, right-click and select to Import the file.
 
