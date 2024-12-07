@@ -8,9 +8,13 @@ import sys
 import os
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
 from engine.Manager.PackageManage.PackageManageVBox import PackageManageVBox
+from engine.Manager.PackageManage.PackageManageVMware import PackageManageVMware
 from engine.Manager.ExperimentManage.ExperimentManageVBox import ExperimentManageVBox
-from engine.Manager.VMManage.VBoxManage import VBoxManage
-from engine.Manager.VMManage.VBoxManageWin import VBoxManageWin
+from engine.Manager.ExperimentManage.ExperimentManageVMware import ExperimentManageVMware
+#from engine.Manager.VMManage.VBoxManage import VBoxManage
+#from engine.Manager.VMManage.VBoxManage import VBoxManageWin
+from engine.Manager.VMManage.VMwareManage import VBoxManage
+from engine.Manager.VMManage.VMwareManageWin import VMwareManageWin
 
 import threading
 
@@ -36,15 +40,19 @@ class Engine:
         #Create the VMManage
         if sys.platform == "linux" or sys.platform == "linux2" or sys.platform == "darwin":
             self.vmManage = VBoxManage(True)
+            self.vmManage = VMwareManage(True)
         else:
-            self.vmManage = VBoxManageWin(True)
+            #self.vmManage = VBoxManageWin(True)
+            self.vmManage = VMwareManageWin(True)
 
         #Create the ConnectionManage
         self.connectionManage = ConnectionManageGuacRDP()
         #Create the ExperimentManage
-        self.experimentManage = ExperimentManageVBox(self.vmManage)
+        #self.experimentManage = ExperimentManageVBox(self.vmManage)
+        self.experimentManage = ExperimentManageVMware(self.vmManage)
         #Create the PackageManage
-        self.packageManage = PackageManageVBox(self.vmManage, self.experimentManage)
+        #self.packageManage = PackageManageVBox(self.vmManage, self.experimentManage)
+        self.packageManage = PackageManageVMware(self.vmManage, self.experimentManage)
         #build the parser
         self.buildParser()
 
@@ -76,14 +84,12 @@ class Engine:
     def packagerStatusCmd(self, args):
         logging.debug("packagerStatusCmd(): instantiated")
         #query packager manager status and then return it here
-
         return self.packageManage.getPackageManageStatus()
 
     def packagerImportCmd(self, args):
         logging.debug("packagerImportCmd(): instantiated: ")
         #will import res package from file
         resfilename = args.resfilename
-
         return self.packageManage.importPackage(resfilename)
 
     def packagerExportCmd(self, args):
@@ -91,7 +97,6 @@ class Engine:
         #will export package to res file
         experimentname = args.experimentname
         exportpath = args.exportpath
-
         return self.packageManage.exportPackage(experimentname, exportpath)
 
     def connectionStatusCmd(self, args):
