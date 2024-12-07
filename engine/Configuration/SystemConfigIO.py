@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QStandardPaths
+#from PyQt5.QtCore import QStandardPaths
 import sys, traceback
 import configparser
 import os
@@ -43,20 +43,6 @@ class SystemConfigIO():
                     return
             logging.debug("readConfig(): file was NOT found: " + self.filename)
 
-            if sys.platform == "linux" or sys.platform == "linux2" or sys.platform == "darwin":
-                self.config['VBOX'] = {}
-                self.config['VBOX']['VBOX_PATH'] = "VBoxManage"
-                self.config['BROWSER']['BROWSER_PATH'] = "firefox"
-                self.config['BROWSER']['ARGS'] = "-private-window"
-            else:
-                self.config['VBOX'] = {}
-                self.config['VBOX']['VBOX_PATH'] = "C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe"
-                self.config['BROWSER']['BROWSER_PATH'] = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
-                self.config['BROWSER']['ARGS'] = "-private-window"
-
-            self.config['EXPERIMENTS'] = {}
-            self.config['EXPERIMENTS']['EXPERIMENTS_PATH'] = "ExperimentData"
-            self.config['EXPERIMENTS']['TEMP_DATA_PATH'] = "tmp"
         except Exception:
             logging.error("Error in readConfig(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -67,12 +53,29 @@ class SystemConfigIO():
             self.config['VBOX'] = {}
             self.config['VBOX']['VMANAGE_PATH'] = "VBoxManage"
             self.config['VBOX']['VBOX_PATH'] = "VirtualBox"
+            self.config['VMWARE'] = {}
+            self.config['VMWARE']['VMANAGE_PATH'] = "vmcli"
+            self.config['VMWARE']['VMWARE_PATH'] = "vmware"
+            self.config['VMWARE']['VMANAGE_OVF_PATH'] = "ovftool"
+            self.config['VMWARE']['VMWARE_PREFSFILE_PATH'] = "~/vmware/config"
+            self.config['VMWARE']['VMWARE_INVENTORYFILE_PATH'] = "~/vmware/config"
+            self.config['BROWSER'] = {}
             self.config['BROWSER']['BROWSER_PATH'] = "firefox"
             self.config['BROWSER']['ARGS'] = "-private-window"
         else:
             self.config['VBOX'] = {}
             self.config['VBOX']['VMANAGE_PATH'] = "C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe"
             self.config['VBOX']['VBOX_PATH'] = "C:\\Program Files\\Oracle\\VirtualBox\\VirtualBox.exe"
+            self.config['VMWARE'] = {}
+            self.config['VMWARE']['VMANAGE_CLI_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\vmcli.exe"
+            self.config['VMWARE']['VMANAGE_RUN_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\vmrun.exe"
+            self.config['VMWARE']['VMANAGE_OVF_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\OVFTool\\ovftool.exe"
+            self.config['VMWARE']['VMWARE_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\vmware.exe"
+            env_path = os.path.expandvars("C:\\Documents and Settings\\$USERNAME\\Application Data\\VMWare\\preferences.ini")
+            self.config['VMWARE']['VMWARE_PREFSFILE_PATH'] = env_path
+            env_path = os.path.expandvars("C:\\Documents and Settings\\$USERNAME\\Application Data\\VMWare\\inventory.vmls")
+            self.config['VMWARE']['VMWARE_INVENTORYFILE_PATH'] = env_path
+            self.config['BROWSER'] = {}
             self.config['BROWSER']['BROWSER_PATH'] = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
             self.config['BROWSER']['ARGS'] = "-private-window"
         self.config['EXPERIMENTS'] = {}
@@ -105,11 +108,12 @@ class SystemConfigIO():
             
     def writablePath(self, suffix=None):
         logging.debug("SystemConfigIO: writablePath(): instantiated")
-        if hasattr(QStandardPaths, "AppLocalDataLocation"):
-            p = QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)
-        else:
-            # Qt < 5.4
-            p = QStandardPaths.writableLocation(QStandardPaths.DataLocation)
+        # if hasattr(QStandardPaths, "AppLocalDataLocation"):
+        #     p = QStandardPaths.writableLocation(QStandardPaths.AppLocalDataLocation)
+        # else:
+        #     # Qt < 5.4
+        #     p = QStandardPaths.writableLocation(QStandardPaths.DataLocation)
+        p = "config"
         if suffix:
             p = os.path.join(p, suffix)
         if not os.path.exists(p):
