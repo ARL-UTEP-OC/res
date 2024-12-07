@@ -333,7 +333,7 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
     logging.debug("Starting Program")
 
-    resfilename = "samples\sample.res"
+    resfilename = "samples\\sample.res"
 
     logging.debug("Instantiating Experiment Config IO")
     p = PackageManageVBox()

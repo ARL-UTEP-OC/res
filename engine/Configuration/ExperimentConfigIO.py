@@ -147,7 +147,10 @@ class ExperimentConfigIO:
                 #get names for clones
                 myBaseOutname = baseOutname
                 for i in range(1, numClones + 1):
-                    cloneVMName = vmName + myBaseOutname + str(i)
+                    if vmName[-4:] == ".vmx":
+                        cloneVMName = vmName[:-4] + myBaseOutname + str(i) + ".vmx"
+                    else:
+                        cloneVMName = vmName + myBaseOutname + str(i)
                     cloneGroupName = "/" + baseGroupname + "/Set" + str(i)
                   
                     # intnet adaptors

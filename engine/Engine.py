@@ -13,7 +13,7 @@ from engine.Manager.ExperimentManage.ExperimentManageVBox import ExperimentManag
 from engine.Manager.ExperimentManage.ExperimentManageVMware import ExperimentManageVMware
 #from engine.Manager.VMManage.VBoxManage import VBoxManage
 #from engine.Manager.VMManage.VBoxManage import VBoxManageWin
-from engine.Manager.VMManage.VMwareManage import VBoxManage
+from engine.Manager.VMManage.VMwareManage import VMwareManage
 from engine.Manager.VMManage.VMwareManageWin import VMwareManageWin
 
 import threading

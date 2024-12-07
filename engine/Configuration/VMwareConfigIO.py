@@ -2,7 +2,6 @@ from engine.Configuration.SystemConfigIO import SystemConfigIO
 import sys, traceback
 import logging
 import re
-import json
 
 class VMwareConfigIO():
     def __init__(self):

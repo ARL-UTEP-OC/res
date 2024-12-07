@@ -16,7 +16,7 @@ from engine.Configuration.SystemConfigIO import SystemConfigIO
 from engine.Configuration.VMwareConfigIO import VMwareConfigIO
 from threading import RLock
 
-class VMwareManageWin(VMManage):
+class VMwareManage(VMManage):
     def __init__(self, initializeVMManage=True):
         logging.debug("VMwareManageWin.__init__(): instantiated")
         VMManage.__init__(self)

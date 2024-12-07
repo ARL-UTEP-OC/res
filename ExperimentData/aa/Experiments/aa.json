@@ -1,0 +1,40 @@
+{
+    "xml": {
+        "vbox-setup": {
+            "path-to-vboxmanage": "VBoxManage"
+        },
+        "testbed-setup": {
+            "network-config": {
+                "vm-server-ip": "11.0.0.2",
+                "rdp-broker-ip": "11.0.0.2:8080",
+                "chat-server-ip": "11.0.0.2:8080"
+            },
+            "vm-set": {
+                "base-groupname": "aa",
+                "num-clones": "5",
+                "linked-clones": "true",
+                "clone-snapshots": "true",
+                "base-outname": "_set_",
+                "vrdp-baseport": "2001",
+                "users-filename": "<unspecified>",
+                "vm": [
+                    {
+                        "name": "C:\\Users\\Acosta\\VMWare_VMs\\defaulta\\defaulta.vmx",
+                        "vrdp-enabled": "true",
+                        "internalnet-basename": [
+                            "vwintnet"
+                        ]
+                    },
+                    {
+                        "name": "C:\\Users\\Acosta\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
+                        "vrdp-enabled": "false",
+                        "internalnet-basename": [
+                            "intnet"
+                        ]
+                    }
+                ],
+                "material": []
+            }
+        }
+    }
+}

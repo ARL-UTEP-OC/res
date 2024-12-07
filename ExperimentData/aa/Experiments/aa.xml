@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xml>
+	<vbox-setup>
+		<path-to-vboxmanage>VBoxManage</path-to-vboxmanage>
+	</vbox-setup>
+	<testbed-setup>
+		<network-config>
+			<vm-server-ip>11.0.0.2</vm-server-ip>
+			<rdp-broker-ip>11.0.0.2:8080</rdp-broker-ip>
+			<chat-server-ip>11.0.0.2:8080</chat-server-ip>
+		</network-config>
+		<vm-set>
+			<base-groupname>aa</base-groupname>
+			<num-clones>5</num-clones>
+			<linked-clones>true</linked-clones>
+			<clone-snapshots>true</clone-snapshots>
+			<base-outname>_set_</base-outname>
+			<vrdp-baseport>2001</vrdp-baseport>
+			<users-filename>&lt;unspecified&gt;</users-filename>
+			<vm>
+				<name>C:\Users\Acosta\VMWare_VMs\defaulta\defaulta.vmx</name>
+				<vrdp-enabled>true</vrdp-enabled>
+				<internalnet-basename>vwintnet</internalnet-basename>
+			</vm>
+			<vm>
+				<name>C:\Users\Acosta\Ubuntu_20.04\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx</name>
+				<vrdp-enabled>false</vrdp-enabled>
+				<internalnet-basename>intnet</internalnet-basename>
+			</vm>
+		</vm-set>
+	</testbed-setup>
+</xml>

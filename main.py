@@ -139,8 +139,8 @@ class MainApp(QWidget):
         logging.debug("MainApp:setupContextMenus() instantiated")
     # Context menu for blank space
         self.blankTreeContextMenu = QtWidgets.QMenu()
-       	self.addExperiment = self.blankTreeContextMenu.addAction("New Experiment")
-       	self.addExperiment.triggered.connect(self.addExperimentActionEvent)
+        self.addExperiment = self.blankTreeContextMenu.addAction("New Experiment")
+        self.addExperiment.triggered.connect(self.addExperimentActionEvent)
         self.importExperiment = self.blankTreeContextMenu.addAction("Import Experiment from RES archive")
         self.importExperiment.triggered.connect(self.importActionEvent)
 
@@ -292,13 +292,13 @@ class MainApp(QWidget):
                 self.basedataStackedWidget.setCurrentWidget(self.baseWidgets[parentSelectedItem.text(0)]["MaterialWidgets"][selectedItem.text(0)])
 
     def showContextMenu(self, position):
-    	logging.debug("MainApp:showContextMenu() instantiated: " + str(position))
-    	if(self.experimentTree.itemAt(position) == None):
-    		self.blankTreeContextMenu.popup(self.experimentTree.mapToGlobal(position))
-    	elif(self.experimentTree.itemAt(position).parent() == None):
-    		self.experimentContextMenu.popup(self.experimentTree.mapToGlobal(position))
-    	else:
-    		self.itemContextMenu.popup(self.experimentTree.mapToGlobal(position))
+        logging.debug("MainApp:showContextMenu() instantiated: " + str(position))
+        if(self.experimentTree.itemAt(position) == None):
+            self.blankTreeContextMenu.popup(self.experimentTree.mapToGlobal(position))
+        elif(self.experimentTree.itemAt(position).parent() == None):
+            self.experimentContextMenu.popup(self.experimentTree.mapToGlobal(position))
+        else:
+            self.itemContextMenu.popup(self.experimentTree.mapToGlobal(position))
     
     def addExperimentActionEvent(self):
         logging.debug("MainApp:addExperimentActionEvent() instantiated")
