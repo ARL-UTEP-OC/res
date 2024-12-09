@@ -18,14 +18,14 @@
 			<vrdp-baseport>2001</vrdp-baseport>
 			<users-filename>&lt;unspecified&gt;</users-filename>
 			<vm>
-				<name>C:\Users\Acosta\VMware_VMs\defaultTemplate\defaulta\defaulta.vmx</name>
+				<name>C:\Users\Acosta\VMware_VMs\defaultTemplate\Ubuntu_20.04\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx</name>
 				<vrdp-enabled>false</vrdp-enabled>
-				<internalnet-basename>othernet</internalnet-basename>
+				<internalnet-basename>2024_hth</internalnet-basename>
 			</vm>
 			<vm>
-				<name>C:\Users\Acosta\VMware_VMs\Ubuntu_20.04\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx</name>
+				<name>C:\Users\Acosta\VMware_VMs\kali-linux-2024.3-vmware-amd64.vmwarevm\kali-linux-2024.3-vmware-amd64.vmx</name>
 				<vrdp-enabled>true</vrdp-enabled>
-				<internalnet-basename>acostanet</internalnet-basename>
+				<internalnet-basename>2024_hth</internalnet-basename>
 			</vm>
 		</vm-set>
 	</testbed-setup>

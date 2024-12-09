@@ -19,17 +19,17 @@
                 "users-filename": "<unspecified>",
                 "vm": [
                     {
-                        "name": "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\defaulta\\defaulta.vmx",
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
                         "vrdp-enabled": "false",
                         "internalnet-basename": [
-                            "othernet"
+                            "2024_hth"
                         ]
                     },
                     {
-                        "name": "C:\\Users\\Acosta\\VMware_VMs\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\kali-linux-2024.3-vmware-amd64.vmwarevm\\kali-linux-2024.3-vmware-amd64.vmx",
                         "vrdp-enabled": "true",
                         "internalnet-basename": [
-                            "acostanet"
+                            "2024_hth"
                         ]
                     }
                 ],
