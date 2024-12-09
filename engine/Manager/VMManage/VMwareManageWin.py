@@ -22,9 +22,9 @@ class VMwareManageWin(VMManage):
         VMManage.__init__(self)
         self.cf = SystemConfigIO()
         self.vc = VMwareConfigIO()
-        self.inventory_filename = self.cf.getConfig()['VMWARE']['VMWARE_INVENTORYFILE_PATH']
+        self.vms_filename = self.cf.getConfig()['VMWARE']['VMANAGE_VM_PATH']
         self.preferences_filename = self.cf.getConfig()['VMWARE']['VMWARE_PREFSFILE_PATH']
-        self.vm_inventory_all = self.vc.refresh_inventory_to_dict(self.inventory_filename)
+        self.vms_all = self.vc.refresh_vmpath_to_dict(self.vms_filename)
         self.prefs_all = self.vc.refresh_inventory_to_dict(self.preferences_filename)
         self.vmcli = self.cf.getConfig()['VMWARE']['VMANAGE_CLI_PATH']
         self.vmrun = self.cf.getConfig()['VMWARE']['VMANAGE_RUN_PATH']
@@ -97,14 +97,11 @@ class VMwareManageWin(VMManage):
                 vmUUID = str(self.vms[vmName].UUID)
             finally:
                 self.lock.release()
-            if not exists:
-                logging.error("configureVMNet(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
             
             for internalnet in internalNets:
                 self.readStatus = VMManage.MANAGER_READING
                 self.writeStatus += 1
-                self.runConfigureVMNet(self, vmName, cloneNetNum, internalnet)
+                self.runConfigureVMNet(vmName, cloneNetNum, internalnet)
                 cloneNetNum += 1            
            
             logging.debug("runConfigureVMNets(): Thread completed")
@@ -196,8 +193,8 @@ class VMwareManageWin(VMManage):
             self.tempVMs = {}
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runVMSInfo(): adding 1 "+ str(self.writeStatus))
-            self.vm_inventory_all = self.vc.refresh_inventory_to_dict(self.inventory_filename)
-            for vm in self.vc.get_vmlist_name():
+            self.vms_all = self.vc.refresh_vmpath_to_dict(self.vms_filename)
+            for vm in self.vms_all.keys():
                 self.tempVMs[vm] = VM()
                 self.tempVMs[vm].name = vm
                 self.tempVMs[vm].UUID = vm
@@ -223,7 +220,7 @@ class VMwareManageWin(VMManage):
                 vmnics = self.vc.get_vmnics(aVM)
                 nn = 1
                 self.tempVMs[aVM].adaptorInfo[nn] = vmnics
-                self.tempVMs[aVM].groups = self.vc.get_vmgroups_name()[aVM]
+                self.tempVMs[aVM].groups = self.vc.get_vmgroups_name(aVM)
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Power query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
@@ -279,7 +276,8 @@ class VMwareManageWin(VMManage):
             self.tempVMs = {}
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runVMSInfo(): adding 1 "+ str(self.writeStatus))
-            for vm in self.vc.get_vmlist_name():
+            self.vms_all = self.vc.refresh_vmpath_to_dict(self.vms_filename)
+            for vm in self.vms_all.keys():
                 self.tempVMs[vm] = VM()
                 self.tempVMs[vm].name = vm
                 self.tempVMs[vm].UUID = vm
@@ -305,7 +303,7 @@ class VMwareManageWin(VMManage):
             vmnics = self.vc.get_vmnics(vmName)
             nn = 1
             self.tempVMs[vmName].adaptorInfo[nn] = vmnics
-            self.tempVMs[vmName].groups = self.vc.get_vmgroups_name()[vmName]
+            self.tempVMs[vmName].groups = self.vc.get_vmgroups_name(vmName)
 
             vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[vmName].name) + "\" Power query"
             logging.debug("runVMSInfo(): Running " + vmStateCmd)
@@ -357,6 +355,7 @@ class VMwareManageWin(VMManage):
 
     def runConfigureVMNet(self, vmName, netNum, netName):
         try:
+            self.lock.acquire()
             logging.debug("VMwareManageWin: runConfigureVMNet(): instantiated")
             #Open the preferences.ini file and get number of pvns
             pvn_count = self.prefs_all['pref']['namedPVNs.count']
@@ -390,11 +389,7 @@ class VMwareManageWin(VMManage):
             #set netNum to pvnID and type to pvn
             self.readStatus = VMManage.MANAGER_READING
             vmUUID = ""
-            try:
-                self.lock.acquire()
-                vmUUID = str(self.vms[vmName].UUID)
-            finally:
-                self.lock.release()
+            vmUUID = str(self.vms[vmName].UUID)
 
             logging.debug("runConfigureVMNet(): adding 1 "+ str(self.writeStatus))
             #adjust netnum for compatibility:
@@ -414,6 +409,7 @@ class VMwareManageWin(VMManage):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
+            self.lock.release()
             self.readStatus = VMManage.MANAGER_IDLE
             self.writeStatus -= 1
             logging.debug("runConfigureVMNet(): sub 1 "+ str(self.writeStatus))
@@ -820,59 +816,69 @@ class VMwareManageWin(VMManage):
         t.start()
         return 0
 
-    def writeCloneVM_Config(self, vmName, cloneName, groupName):
-        #get list of VMs and groups
-        ###get vmlists
-        vmlists = self.vc.get_matching_keys(self.vm_inventory_all, "vmlist*")
-        #get vm and group display names
-        vms_names = self.vc.get_vmlist_disp2num()
-        groups_names = self.vc.get_vmgroup_disp2num()
+    # def writeCloneVM_Config(self, vmName, cloneName, groupName):
+    #     logging.debug("VMwareManageWin: writeCloneVM_Config(): instantiated")
+    #     try:
+    #         #get list of VMs and groups
+    #         ###get vmlists
+    #         self.lock.acquire()
+    #         self.vm_inventory_all = self.vc.refresh_inventory_to_dict(self.inventory_filename)
+    #         vmlists = self.vc.get_matching_keys(self.vm_inventory_all, "vmlist*")
+    #         #get vm and group display names
+    #         vms_names = self.vc.get_vmlist_disp2num()
+    #         groups_names = self.vc.get_vmgroup_disp2num()
 
-        tmpVMName_vmlist = vms_names[vmName]
-        # 1. look at all vms
-        #  if the vm is already there, print error and return
-        #  otherwise, get highest ItemID (vmlist#)
-        ###GROUP ID/CREATION###
-        #Get the vmlist# associated with the existing group
-        if groupName in groups_names:
-            group_vmlist = groups_names[groupName]
-            parent_id =  re.findall(r'\d+', group_vmlist[-1])[0]
-        else:
-            #otherwise create the group
-            vmlists.sort(key=self.num_sort)
-            current_high = re.findall(r'\d+', vmlists[-1])[0]
-            current_high = str(int(current_high)+1)
+    #         tmpVMName_vmlist = vms_names[vmName]
+    #         # 1. look at all vms
+    #         #  if the vm is already there, print error and return
+    #         #  otherwise, get highest ItemID (vmlist#)
+    #         ###GROUP ID/CREATION###
+    #         #Get the vmlist# associated with the existing group
+    #         if groupName in groups_names:
+    #             group_vmlist = groups_names[groupName]
+    #             parent_id =  re.findall(r'\d+', group_vmlist)[0]
+    #         else:
+    #             #otherwise create the group
+    #             vmlists.sort(key=self.num_sort)
+    #             current_high = re.findall(r'\d+', vmlists[-1])[0]
+    #             current_high = str(int(current_high)+1)
 
-            new_groupentry_header = "vmlist"+(current_high)
-            self.vm_inventory_all[new_groupentry_header] = {}
-            self.vm_inventory_all[new_groupentry_header]['config'] = 'folder'+str(current_high)
-            self.vm_inventory_all[new_groupentry_header]['Type'] = '2'
-            self.vm_inventory_all[new_groupentry_header]['DisplayName'] = groupName
-            self.vm_inventory_all[new_groupentry_header]['ParentID'] = '0'
-            self.vm_inventory_all[new_groupentry_header]['ItemID'] = str(current_high)
-            #my_list[new_groupentry_header]['SeqID'] = '0'
-            self.vm_inventory_all[new_groupentry_header]['IsFavorite'] = 'FALSE'
-            #my_list[new_groupentry_header]['UUID'] = tmpGroupName
-            self.vm_inventory_all[new_groupentry_header]['Expanded'] = 'TRUE'
-            parent_id = current_high
+    #             new_groupentry_header = "vmlist"+(current_high)
+    #             self.vm_inventory_all[new_groupentry_header] = {}
+    #             self.vm_inventory_all[new_groupentry_header]['config'] = 'folder'+str(current_high)
+    #             self.vm_inventory_all[new_groupentry_header]['Type'] = '2'
+    #             self.vm_inventory_all[new_groupentry_header]['DisplayName'] = groupName
+    #             self.vm_inventory_all[new_groupentry_header]['ParentID'] = '0'
+    #             self.vm_inventory_all[new_groupentry_header]['ItemID'] = str(current_high)
+    #             #my_list[new_groupentry_header]['SeqID'] = '0'
+    #             self.vm_inventory_all[new_groupentry_header]['IsFavorite'] = 'FALSE'
+    #             #my_list[new_groupentry_header]['UUID'] = tmpGroupName
+    #             self.vm_inventory_all[new_groupentry_header]['Expanded'] = 'TRUE'
+    #             parent_id = current_high
 
-        ###VM CLONE CREATION
-        vmlists = self.vc.get_matching_keys(self.vm_inventory_all, "vmlist*")
-        vmlists.sort(key=self.num_sort)
-        current_high = re.findall(r'\d+', vmlists[-1])[0]
-        current_high = str(int(current_high)+1)
-        
-        new_vmentry_header = "vmlist"+(current_high)
-        self.vm_inventory_all[new_vmentry_header] = self.vm_inventory_all[tmpVMName_vmlist].copy()
-        self.vm_inventory_all[new_vmentry_header]['config'] = cloneName
-        self.vm_inventory_all[new_vmentry_header]['DisplayName'] = os.path.basename(cloneName)[:-4]
-        self.vm_inventory_all[new_vmentry_header]['ItemID'] = current_high
-        self.vm_inventory_all[new_vmentry_header]['ParentID'] = parent_id
-        self.vm_inventory_all[new_vmentry_header]['IsClone'] = 'TRUE'
+    #         ###VM CLONE CREATION
+    #         vmlists = self.vc.get_matching_keys(self.vm_inventory_all, "vmlist*")
+    #         vmlists.sort(key=self.num_sort)
+    #         current_high = re.findall(r'\d+', vmlists[-1])[0]
+    #         current_high = str(int(current_high)+1)
+            
+    #         new_vmentry_header = "vmlist"+(current_high)
+    #         self.vm_inventory_all[new_vmentry_header] = self.vm_inventory_all[tmpVMName_vmlist].copy()
+    #         self.vm_inventory_all[new_vmentry_header]['config'] = cloneName
+    #         self.vm_inventory_all[new_vmentry_header]['DisplayName'] = os.path.basename(cloneName)[:-4]
+    #         self.vm_inventory_all[new_vmentry_header]['ItemID'] = current_high
+    #         self.vm_inventory_all[new_vmentry_header]['ParentID'] = parent_id
+    #         self.vm_inventory_all[new_vmentry_header]['IsClone'] = 'TRUE'
 
-        oresult = [""]
-        self.vc.dict_to_dot(self.vm_inventory_all, oresult)
-        self.vc.write_dict2dot_file(self.vm_inventory_all)
+    #         oresult = [""]
+    #         self.vc.dict_to_dot(self.vm_inventory_all, oresult)
+    #         #self.vc.write_dict2dot_file(self.vm_inventory_all)
+    #     except Exception:
+    #         logging.error("writeCloneVM_Config(): Error in writeCloneVM_Config(): An error occured when trying to write config file for the VM")
+    #         exc_type, exc_value, exc_traceback = sys.exc_info()
+    #         traceback.print_exception(exc_type, exc_value, exc_traceback)
+    #     finally:
+    #         self.lock.release()
 
     def runCloneVM(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName):
         logging.debug("VMwareManageWin: runCloneVM(): instantiated")
@@ -914,7 +920,10 @@ class VMwareManageWin(VMManage):
                 cloneCmd += "\"" + str(os.path.basename(tmpCloneName.replace("\"",""))[:-4]) + "\""
                 logging.debug("runCloneVM(): executing: " + str(cloneCmd))
                 result = subprocess.check_output(cloneCmd, encoding='utf-8')
-                self.writeCloneVM_Config(vmName, cloneName, groupName)
+                #also have to disable vmxstats for the clones or else we can't run more than 1 at once:
+                cloneCmd = "\"" + self.vmcli + "\" " + "\"" + tmpCloneName + "\" " + "ConfigParams  SetEntry vmxstats.filename \"\""
+                result = subprocess.check_output(cloneCmd, encoding='utf-8')
+                # self.writeCloneVM_Config(vmName, cloneName, groupName)
                 self.writeStatus += 1
                 self.runVMInfo(tmpCloneName)
 

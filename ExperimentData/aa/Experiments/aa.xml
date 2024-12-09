@@ -18,14 +18,14 @@
 			<vrdp-baseport>2001</vrdp-baseport>
 			<users-filename>&lt;unspecified&gt;</users-filename>
 			<vm>
-				<name>C:\Users\Acosta\VMWare_VMs\defaulta\defaulta.vmx</name>
-				<vrdp-enabled>true</vrdp-enabled>
-				<internalnet-basename>vwintnet</internalnet-basename>
+				<name>C:\Users\Acosta\VMware_VMs\defaultTemplate\defaulta\defaulta.vmx</name>
+				<vrdp-enabled>false</vrdp-enabled>
+				<internalnet-basename>othernet</internalnet-basename>
 			</vm>
 			<vm>
-				<name>C:\Users\Acosta\Ubuntu_20.04\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx</name>
-				<vrdp-enabled>false</vrdp-enabled>
-				<internalnet-basename>intnet</internalnet-basename>
+				<name>C:\Users\Acosta\VMware_VMs\Ubuntu_20.04\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx</name>
+				<vrdp-enabled>true</vrdp-enabled>
+				<internalnet-basename>acostanet</internalnet-basename>
 			</vm>
 		</vm-set>
 	</testbed-setup>

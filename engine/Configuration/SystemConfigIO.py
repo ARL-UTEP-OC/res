@@ -54,9 +54,11 @@ class SystemConfigIO():
             self.config['VBOX']['VMANAGE_PATH'] = "VBoxManage"
             self.config['VBOX']['VBOX_PATH'] = "VirtualBox"
             self.config['VMWARE'] = {}
-            self.config['VMWARE']['VMANAGE_PATH'] = "vmcli"
-            self.config['VMWARE']['VMWARE_PATH'] = "vmware"
+            self.config['VMWARE']['VMANAGE_VM_PATH'] = "~/vmware/vms/"
+            self.config['VMWARE']['VMANAGE_CLI_PATH'] = "vmcli"
+            self.config['VMWARE']['VMANAGE_RUN_PATH'] = "vmrun"
             self.config['VMWARE']['VMANAGE_OVF_PATH'] = "ovftool"
+            self.config['VMWARE']['VMWARE_PATH'] = "vmware"
             self.config['VMWARE']['VMWARE_PREFSFILE_PATH'] = "~/vmware/config"
             self.config['VMWARE']['VMWARE_INVENTORYFILE_PATH'] = "~/vmware/config"
             self.config['BROWSER'] = {}
@@ -67,6 +69,8 @@ class SystemConfigIO():
             self.config['VBOX']['VMANAGE_PATH'] = "C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe"
             self.config['VBOX']['VBOX_PATH'] = "C:\\Program Files\\Oracle\\VirtualBox\\VirtualBox.exe"
             self.config['VMWARE'] = {}
+            env_path = os.path.expandvars("C:\\Users\\$USERNAME\\VMware_VMs\\")
+            self.config['VMWARE']['VMANAGE_VM_PATH'] = env_path
             self.config['VMWARE']['VMANAGE_CLI_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\vmcli.exe"
             self.config['VMWARE']['VMANAGE_RUN_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\vmrun.exe"
             self.config['VMWARE']['VMANAGE_OVF_PATH'] = "C:\\Program Files (x86)\\VMware\\VMware Workstation\\OVFTool\\ovftool.exe"

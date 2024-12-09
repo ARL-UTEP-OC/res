@@ -19,8 +19,10 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
     logging.info("Starting Program")
     logging.info("Instantiating VMwareManageWin")
-    
-    testvmname = "C:\\Users\\Acosta\\VMWare_VMs\\testVMTemplate\\defaulta.vmx"
+    s = SystemConfigIO()
+    vmpath = s.getConfig()["VMWARE"]["VMANAGE_VM_PATH"]
+
+    testvmname = "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\defaulta\\defaulta.vmx"
     
     vbm = VMwareManageWin()
     
@@ -55,9 +57,10 @@ if __name__ == "__main__":
     logging.info(vbm.getVMStatus(testvmname))
 
     logging.info("Testing clone -- creating 1 clone of " + str(testvmname))
-    tmpCloneName = os.path.dirname(testvmname) + "1"
-    tmpCloneName = os.path.join(tmpCloneName,os.path.basename(testvmname)[:-4] + "1" + ".vmx")
-    vbm.cloneVM(testvmname, cloneName=str(tmpCloneName), cloneSnapshots="true", linkedClones="true", groupName="sample Group")
+    groupName = "sampleGroup"
+    tmpCloneName = os.path.join(vmpath,groupName,(os.path.basename(testvmname)[:-4]+"1.vmx"))  
+    
+    vbm.cloneVM(testvmname, cloneName=str(tmpCloneName), cloneSnapshots="true", linkedClones="true", groupName=groupName)
     while vbm.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
         logging.info("testing clone waiting for manager to finish query..." + str(vbm.getManagerStatus()["writeStatus"]))
         time.sleep(.1)
@@ -100,7 +103,16 @@ if __name__ == "__main__":
     while vbm.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
         logging.info("waiting for manager to finish query...")
         time.sleep(.1)
+
+    logging.info("Testing remove -- removing 1 clone of " + str(testvmname))
+    groupName = "sampleGroup"
+    tmpCloneName = os.path.join(vmpath,groupName,(os.path.basename(testvmname)[:-4]+"1.vmx"))  
     
+    vbm.removeVM(tmpCloneName)
+    while vbm.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+        logging.info("testing clone waiting for manager to finish query..." + str(vbm.getManagerStatus()["writeStatus"]))
+        time.sleep(.1)
+
     logging.info("----Testing VM commands-------")
     logging.info("----Start-------")
     vbm.startVM(testvmname)

@@ -19,17 +19,17 @@
                 "users-filename": "<unspecified>",
                 "vm": [
                     {
-                        "name": "C:\\Users\\Acosta\\VMWare_VMs\\defaulta\\defaulta.vmx",
-                        "vrdp-enabled": "true",
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\defaulta\\defaulta.vmx",
+                        "vrdp-enabled": "false",
                         "internalnet-basename": [
-                            "vwintnet"
+                            "othernet"
                         ]
                     },
                     {
-                        "name": "C:\\Users\\Acosta\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
-                        "vrdp-enabled": "false",
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
+                        "vrdp-enabled": "true",
                         "internalnet-basename": [
-                            "intnet"
+                            "acostanet"
                         ]
                     }
                 ],

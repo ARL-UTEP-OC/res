@@ -223,7 +223,7 @@ class VMwareManage(VMManage):
                 vmnics = self.vc.get_vmnics(aVM)
                 nn = 1
                 self.tempVMs[aVM].adaptorInfo[nn] = vmnics
-                self.tempVMs[aVM].groups = self.vc.get_vmgroups_name()[aVM]
+                self.tempVMs[aVM].groups = self.vc.get_vmgroups_name(aVM)
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Power query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
@@ -305,7 +305,7 @@ class VMwareManage(VMManage):
             vmnics = self.vc.get_vmnics(vmName)
             nn = 1
             self.tempVMs[vmName].adaptorInfo[nn] = vmnics
-            self.tempVMs[vmName].groups = self.vc.get_vmgroups_name()[vmName]
+            self.tempVMs[vmName].groups = self.vc.get_vmgroups_name(vmName)
 
             vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[vmName].name) + "\" Power query"
             logging.debug("runVMSInfo(): Running " + vmStateCmd)
@@ -836,7 +836,7 @@ class VMwareManage(VMManage):
         #Get the vmlist# associated with the existing group
         if groupName in groups_names:
             group_vmlist = groups_names[groupName]
-            parent_id =  re.findall(r'\d+', group_vmlist[-1])[0]
+            parent_id =  re.findall(r'\d+', group_vmlist)[0]
         else:
             #otherwise create the group
             vmlists.sort(key=self.num_sort)

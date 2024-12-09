@@ -2,6 +2,7 @@ from engine.Configuration.SystemConfigIO import SystemConfigIO
 import sys, traceback
 import logging
 import re
+import os
 
 class VMwareConfigIO():
     def __init__(self):
@@ -9,10 +10,9 @@ class VMwareConfigIO():
         self.vmgroups_dict = {}
         self.vminventory_dict = {}
         self.s = SystemConfigIO()
-        self.inventory_filename = self.s.getConfig()['VMWARE']['VMWARE_INVENTORYFILE_PATH']
-        self.vminventory_dict = self.refresh_inventory_to_dict(self.inventory_filename)
-        self.vmgroups_dict = self.get_vmgroups_name()
-    
+        self.inventory_filename = self.s.getConfig()['VMWARE']['VMANAGE_VM_PATH']
+        self.vminventory_dict = self.refresh_vmpath_to_dict(self.inventory_filename)
+
     def get_matching_keys(self, config_dict, pattern):
         logging.debug("VMwareConfigIO(): get_matching_keys instantiated")
         matching_keys = []
@@ -33,6 +33,8 @@ class VMwareConfigIO():
         """Converts a dot-separated string into a nested dictionary."""
         logging.debug("VMwareConfigIO(): dot_to_dict instantiated")
         result = {}
+        if "." not in string:
+            return result
         keys = string.split('.')
         current = result
         for key in keys[:-1]:
@@ -110,10 +112,10 @@ class VMwareConfigIO():
                         result[name][name2] = settingval
             return result
         except FileNotFoundError:
-            logging.error("Error in read_lines_to_dict_list(): File not found: " + str(filename))
+            logging.error("Error in vmx_to_dict(): File not found: " + str(filename))
             return None
         except Exception:
-            logging.error("Error in read_lines_to_dict_list(): An error occured ")
+            logging.error("Error in vmx_to_dict(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
@@ -142,20 +144,53 @@ class VMwareConfigIO():
                     result[name][name2] = settingval
             return result
         except FileNotFoundError:
-            logging.error("Error in read_lines_to_dict_list(): File not found: " + str(filename))
+            logging.error("Error in refresh_inventory_to_dict(): File not found: " + str(filename))
+            return None
+        except Exception:
+            logging.error("Error in refresh_inventory_to_dict(): An error occured ")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+
+    def refresh_vmpath_to_dict(self, filepath):
+        logging.debug("VMwareConfigIO(): read_lines_to_dict instantiated")
+        result = {}
+        try:
+            for root, dirs, files in os.walk(filepath):
+                for file in files:
+                    if (file.endswith('.vmx')):
+                        vmname = os.path.join(root,file)
+                        result[vmname] = {"DisplayName" : os.path.basename(file[:-4])}
+                        #look for parent group names (up until we reach the original filepath)
+                        groupsnames = []
+                        mdirname = os.path.dirname(root)
+                        while os.path.abspath(mdirname) != os.path.abspath(filepath) and mdirname != None:
+                            groupname = os.path.basename(mdirname)
+                            mdirname = os.path.dirname(mdirname)
+                            groupsnames.insert(0,groupname)
+                        strgroupname = ""
+                        for groupname in groupsnames:
+                            strgroupname = os.path.join(strgroupname,groupname)
+                        result[vmname] = {"GroupName" : strgroupname}
+            return result
+        except FileNotFoundError:
+            logging.error("Error in read_lines_to_dict_list(): File not found: " + str(filepath))
             return None
         except Exception:
             logging.error("Error in read_lines_to_dict_list(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
-        
 
     def get_vmlist_name(self):
         logging.debug("VMwareConfigIO(): get_vmlist_name instantiated")
         result = []
         vmlist = self.get_matching_keys(self.vminventory_dict, 'vmlist*')
+        if vmlist is None:
+            return result
         realvmlist = self.get_keys_with_config(self.vminventory_dict, vmlist, "IsClone")
+        if realvmlist is None:
+            return result
         for item in realvmlist:
             result.append(self.vminventory_dict[item]['config'])
         return result
@@ -164,8 +199,9 @@ class VMwareConfigIO():
     def get_vmnics(self, vmname):
         logging.debug("VMwareConfigIO(): get_vmnics instantiated")
         result = {}
-
         self.vmconf_dict = self.refresh_inventory_to_dict(vmname)
+        if self.vmconf_dict is None:
+            return result
         ethernetlist = self.get_matching_keys(self.vmconf_dict, 'ethernet*')
         connectionType = self.get_keys_with_config(self.vmconf_dict, ethernetlist, "connectionType")
         for item in connectionType:
@@ -173,31 +209,24 @@ class VMwareConfigIO():
 
         return result
 
-    def get_vmgroups_name(self):
+    def get_vmgroups_name(self, vmname):
         logging.debug("VMwareConfigIO(): get_vmgroups_name instantiated")
-        groups = {}
-        fid = {}
-        vmlist = self.get_matching_keys(self.vminventory_dict, "vmlist*")
-        folders = self.get_keys_with_config(self.vminventory_dict, vmlist, 'Expanded')
-        for f in folders:
-            fid[self.vminventory_dict[f]['ItemID']] = self.vminventory_dict[f]['DisplayName']
-        vms = self.get_keys_with_config(self.vminventory_dict, vmlist, 'State')
-        for vm in vms:
-            vm_parent = self.vminventory_dict[vm]['ParentID']
-            if vm_parent == "0" or vm_parent not in fid:
-                groups[self.vminventory_dict[vm]['config']] = "No Group"
-                vm_parent = "0"
-            else:
-                groups[self.vminventory_dict[vm]['config']] = fid[vm_parent]
-        return groups
+        if vmname not in self.vminventory_dict:
+            logging.error("VMwareConfigIO(): VM not found: " + str(vmname))
+            return None
+        return self.vminventory_dict[vmname]
     
     def get_vmlist_disp2num(self):
         logging.debug("VMwareConfigIO(): get_vmgroups_listnum instantiated")
         result = {}
         #get all vmlist items
         vmlists = self.get_matching_keys(self.vminventory_dict, "vmlist*")
+        if vmlists is None:
+            return result
         #get list of VMs
         vms_vmlist = self.get_keys_with_config(self.vminventory_dict, vmlists, "IsClone")
+        if vms_vmlist is None:
+            return result
         for vm in vms_vmlist:
             display_name = self.vminventory_dict[vm]["config"]
             result[display_name] = vm
@@ -208,7 +237,11 @@ class VMwareConfigIO():
         result = {}
         #get all vmlist items
         vmlists = self.get_matching_keys(self.vminventory_dict, "vmlist*")
+        if vmlists is None:
+            return result
         groups_vmlist = self.get_keys_with_config(self.vminventory_dict, vmlists, "Expanded")
+        if groups_vmlist is None:
+            return result
         for group in groups_vmlist:
             display_name = self.vminventory_dict[group]["DisplayName"]
             result[display_name] = group
