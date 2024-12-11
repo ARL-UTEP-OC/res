@@ -18,7 +18,7 @@ from threading import RLock
 
 class VMwareManage(VMManage):
     def __init__(self, initializeVMManage=True):
-        logging.debug("VMwareManageWin.__init__(): instantiated")
+        logging.debug("VMwareManage.__init__(): instantiated")
         VMManage.__init__(self)
         self.cf = SystemConfigIO()
         self.vc = VMwareConfigIO()
@@ -47,7 +47,7 @@ class VMwareManage(VMManage):
         return list(map(int, re.findall(r'\d+', istring)))[0]
 
     def configureVMNet(self, vmName, netNum, netName):
-        logging.debug("VMwareManageWin: configureVMNet(): instantiated")
+        logging.debug("VMwareManage: configureVMNet(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         exists = False
         try:
@@ -66,7 +66,7 @@ class VMwareManage(VMManage):
         return 0
 
     def configureVMNets(self, vmName, internalNets):
-        logging.debug("VMwareManageWin: configureVMNets(): instantiated")
+        logging.debug("VMwareManage: configureVMNets(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         exists = False
         try:
@@ -115,7 +115,7 @@ class VMwareManage(VMManage):
             logging.debug("runConfigureVMNets(): sub 1 "+ str(self.writeStatus))
 
     def guestCommands(self, vmName, cmds, delay=0):
-        logging.debug("VMwareManageWin: guestCommands(): instantiated")
+        logging.debug("VMwareManage: guestCommands(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         exists = False
         try:
@@ -159,7 +159,7 @@ class VMwareManage(VMManage):
             logging.debug("runGuestCommands(): sub thread 1 "+ str(self.writeStatus))
 
     def refreshAllVMInfo(self):
-        logging.debug("VMwareManageWin: refreshAllVMInfo(): instantiated")
+        logging.debug("VMwareManage: refreshAllVMInfo(): instantiated")
         logging.debug("getListVMS() Starting List VMs thread")
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
@@ -167,7 +167,7 @@ class VMwareManage(VMManage):
         t.start()
         
     def refreshVMInfo(self, vmName):
-        logging.debug("VMwareManageWin: refreshVMInfo(): instantiated: " + str(vmName))
+        logging.debug("VMwareManage: refreshVMInfo(): instantiated: " + str(vmName))
         logging.debug("refreshVMInfo() refresh VMs thread")
         #check to make sure the vm is known, if not should refresh or check name:
         exists = False
@@ -186,7 +186,7 @@ class VMwareManage(VMManage):
             self.lock.release()
     
     def runVMSInfo(self):
-        logging.debug("VMwareManageWin: runVMSInfo(): instantiated")
+        logging.debug("VMwareManage: runVMSInfo(): instantiated")
         try:
             logging.debug("runVMSInfo(): Collecting VM Names from log")
             #clear out the current set
@@ -224,7 +224,7 @@ class VMwareManage(VMManage):
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Power query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
-                p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+                p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
                 while True:
                     out = p.stdout.readline()
                     if out == '' and p.poll() != None:
@@ -239,7 +239,7 @@ class VMwareManage(VMManage):
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Snapshot query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
-                p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+                p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
                 while True:
                     out = p.stdout.readline()
                     if out == '' and p.poll() != None:
@@ -269,7 +269,7 @@ class VMwareManage(VMManage):
             logging.debug("runVMSInfo(): sub 1 "+ str(self.writeStatus))
 
     def runVMInfo(self, vmName):
-        logging.debug("VMwareManageWin: runVMInfo(): instantiated")
+        logging.debug("VMwareManage: runVMInfo(): instantiated")
         try:
             logging.debug("runVMSInfo(): Collecting VM Names from log")
             #clear out the current set
@@ -307,7 +307,7 @@ class VMwareManage(VMManage):
 
             vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[vmName].name) + "\" Power query"
             logging.debug("runVMSInfo(): Running " + vmStateCmd)
-            p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -322,7 +322,7 @@ class VMwareManage(VMManage):
 
             vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[vmName].name) + "\" Snapshot query"
             logging.debug("runVMSInfo(): Running " + vmStateCmd)
-            p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -356,13 +356,20 @@ class VMwareManage(VMManage):
     def runConfigureVMNet(self, vmName, netNum, netName):
         try:
             self.lock.acquire()
-            logging.debug("VMwareManageWin: runConfigureVMNet(): instantiated")
+            logging.debug("VMwareManage: runConfigureVMNet(): instantiated")
             #Open the preferences.ini file and get number of pvns
-            pvn_count = self.prefs_all['pref']['namedPVNs.count']
+            if 'namedPVNs.count' not in self.prefs_all['pref']:
+                pvn_count = "0"
+                # first get all names/id pairs
+                pvns_names = []
+                pvns_ids = []
+            else:
+                pvn_count = self.prefs_all['pref']['namedPVNs.count']
+                # first get all names/id pairs
+                pvns_names = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.name')
+                pvns_ids = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.pvnID')
             #check if netName exists
-            # first get all names/id pairs
-            pvns_names = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.name')
-            pvns_ids = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.pvnID')
+
             pvn_names_ids = {}
             if len(pvns_names) != len(pvns_ids):
                 logging.error("preferences.ini is corrupt; pvn names size is not equal to pvn id size")
@@ -396,11 +403,11 @@ class VMwareManage(VMManage):
             netNum = "ethernet" + str(int(netNum)-1)
             vmConfigVMCmd = "\""+self.vmcli+ "\"" + " \"" + vmUUID + "\" Ethernet SetPvnTypeBacking " + str(netNum) + " \"" + my_pvnid +"\""
             logging.debug("runConfigureVMNet(): Running " + vmConfigVMCmd)
-            subprocess.check_output(vmConfigVMCmd, encoding='utf-8')
+            subprocess.check_output(shlex.split(vmConfigVMCmd, posix=self.POSIX), encoding='utf-8')
 
             vmConfigVMCmd = "\""+self.vmcli+ "\"" + " \"" + vmUUID + "\" Ethernet SetConnectionType " + str(netNum) + " pvn"
             logging.debug("runConfigureVMNet(): Running " + vmConfigVMCmd)
-            subprocess.check_output(vmConfigVMCmd, encoding='utf-8')
+            subprocess.check_output(shlex.split(vmConfigVMCmd, posix=self.POSIX), encoding='utf-8')
             #Now refresh the preferences file for future accesses
             self.prefs_all = self.vc.refresh_inventory_to_dict(self.preferences_filename)
             logging.debug("runConfigureVMNet(): Thread completed")
@@ -415,13 +422,13 @@ class VMwareManage(VMManage):
             logging.debug("runConfigureVMNet(): sub 1 "+ str(self.writeStatus))
 
     def runVMCmd_cli(self, cmd):
-        logging.debug("VMwareManageWin: runVMCmd(): instantiated")
+        logging.debug("VMwareManage: runVMCmd(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runVMCmd(): adding 1 "+ str(self.writeStatus))
             vmCmd = "\""+self.vmcli + "\" " + cmd
             logging.debug("runVMCmd(): Running " + vmCmd)
-            p = Popen(vmCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -442,13 +449,13 @@ class VMwareManage(VMManage):
 
     def runVMCmd_ovf(self, cmd):
         #ovftool.exe "C:\Users\Acosta\OneDrive - The University of Texas at El Paso\Desktop\defaulta.ova" "C:\Users\Acosta\OneDrive - The University of Texas at El Paso\Desktop"\
-        logging.debug("VMwareManageWin: runVMCmd(): instantiated")
+        logging.debug("VMwareManage: runVMCmd(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runVMCmd(): adding 1 "+ str(self.writeStatus))
             vmCmd = "\""+self.vmovf + "\" " + cmd
             logging.debug("runVMCmd(): Running " + vmCmd)
-            p = Popen(vmCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -468,13 +475,13 @@ class VMwareManage(VMManage):
             logging.debug("runVMCmd(): sub 1 "+ str(self.writeStatus))
 
     def runVMCmd(self, cmd):
-        logging.debug("VMwareManageWin: runVMCmd(): instantiated")
+        logging.debug("VMwareManage: runVMCmd(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runVMCmd(): adding 1 "+ str(self.writeStatus))
             vmCmd = "\""+self.vmrun + "\" " + cmd
             logging.debug("runVMCmd(): Running " + vmCmd)
-            p = Popen(vmCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -494,7 +501,7 @@ class VMwareManage(VMManage):
             logging.debug("runVMCmd(): sub 1 "+ str(self.writeStatus))
 
     def getVMStatus(self, vmName):
-        logging.debug("VMwareManageWin: getVMStatus(): instantiated " + vmName)
+        logging.debug("VMwareManage: getVMStatus(): instantiated " + vmName)
         exists = False
         try:
             self.lock.acquire()
@@ -509,7 +516,7 @@ class VMwareManage(VMManage):
             self.lock.release()        
         
     def getManagerStatus(self):
-        logging.debug("VMwareManageWin: getManagerStatus(): instantiated")
+        logging.debug("VMwareManage: getManagerStatus(): instantiated")
         vmStatus = {}
         try:
             self.lock.acquire()
@@ -522,7 +529,7 @@ class VMwareManage(VMManage):
         return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "vmstatus" : vmStatus}
 
     def importVM(self, filepath):
-        logging.debug("VMwareManageWin: importVM(): instantiated")
+        logging.debug("VMwareManage: importVM(): instantiated")
         #ovftool.exe "C:\Users\Acosta\OneDrive - The University of Texas at El Paso\Desktop\defaulta.ova" "C:\Users\Acosta\OneDrive - The University of Texas at El Paso\Desktop"\
         cmd = "\"" + filepath + "\" \"" + self.prefs_all['prefvmx']['defaultVMPath'] + "\""
         self.readStatus = VMManage.MANAGER_READING
@@ -532,7 +539,7 @@ class VMwareManage(VMManage):
         return 0  
 
     def snapshotVM(self, vmName):
-        logging.debug("VMwareManageWin: snapshotVM(): instantiated")
+        logging.debug("VMwareManage: snapshotVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -550,7 +557,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def exportVM(self, vmName, filepath):
-        logging.debug("VMwareManageWin: exportVM(): instantiated")
+        logging.debug("VMwareManage: exportVM(): instantiated")
         #first remove any quotes that may have been entered before (because we will add some after we add the file and extension)
         try:
             self.lock.acquire()
@@ -570,7 +577,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def startVM(self, vmName):
-        logging.debug("VMwareManageWin: startVM(): instantiated")
+        logging.debug("VMwareManage: startVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -588,7 +595,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def pauseVM(self, vmName):
-        logging.debug("VMwareManageWin: pauseVM(): instantiated")
+        logging.debug("VMwareManage: pauseVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -606,7 +613,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def unpauseVM(self, vmName):
-        logging.debug("VMwareManageWin: unpauseVM(): instantiated")
+        logging.debug("VMwareManage: unpauseVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -624,7 +631,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def suspendVM(self, vmName):
-        logging.debug("VMwareManageWin: suspendVM(): instantiated")
+        logging.debug("VMwareManage: suspendVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -642,7 +649,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def stopVM(self, vmName):
-        logging.debug("VMwareManageWin: stopVM(): instantiated")
+        logging.debug("VMwareManage: stopVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -660,7 +667,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def removeVM(self, vmName):
-        logging.debug("VMwareManageWin: removeVM(): instantiated")
+        logging.debug("VMwareManage: removeVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -677,14 +684,14 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def runRemoveVM(self, vmName, vmUUID):
-        logging.debug("VMwareManageWin: runRemoveVM(): instantiated")
+        logging.debug("VMwareManage: runRemoveVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runRemoveVM(): adding 1 "+ str(self.writeStatus))
             vmCmd = "\"" + self.vmrun + "\" -T ws deleteVM \"" + vmUUID + "\""
             logging.debug("runRemoveVM(): Running " + vmCmd)
             
-            p = Popen(vmCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(vmCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stderr.readline()
                 if out == '' and p.poll() != None:
@@ -710,7 +717,7 @@ class VMwareManage(VMManage):
             logging.debug("runRemoveVM(): sub 1 "+ str(self.writeStatus))
 
     def cloneVMConfigAll(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort, refreshVMInfo=False):
-        logging.debug("VMwareManageWin: cloneVMConfigAll(): instantiated")
+        logging.debug("VMwareManage: cloneVMConfigAll(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -733,7 +740,7 @@ class VMwareManage(VMManage):
         return 0
 
     def runCloneVMConfigAll(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort):
-        logging.debug("VMwareManageWin: runCloneVMConfigAll(): instantiated")
+        logging.debug("VMwareManage: runCloneVMConfigAll(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runCloneVMConfigAll(): adding 1 "+ str(self.writeStatus))
@@ -774,7 +781,7 @@ class VMwareManage(VMManage):
             #create snap
             snapcmd = "\""+ self.vmcli + "\" \"" + cloneUUID + "\" Snapshot Take ressnapshot"
             logging.debug("runCloneVMConfigAll(): Running " + snapcmd)
-            p = Popen(snapcmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+            p = Popen(shlex.split(snapcmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
             while True:
                 out = p.stdout.readline()
                 if out == '' and p.poll() != None:
@@ -794,7 +801,7 @@ class VMwareManage(VMManage):
             logging.debug("runCloneVMConfigAll(): sub 1 "+ str(self.writeStatus))
 
     def cloneVM(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName, refreshVMInfo=False):
-        logging.debug("VMwareManageWin: cloneVM(): instantiated")
+        logging.debug("VMwareManage: cloneVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -817,7 +824,7 @@ class VMwareManage(VMManage):
         return 0
 
     # def writeCloneVM_Config(self, vmName, cloneName, groupName):
-    #     logging.debug("VMwareManageWin: writeCloneVM_Config(): instantiated")
+    #     logging.debug("VMwareManage: writeCloneVM_Config(): instantiated")
     #     try:
     #         #get list of VMs and groups
     #         ###get vmlists
@@ -881,7 +888,7 @@ class VMwareManage(VMManage):
     #         self.lock.release()
 
     def runCloneVM(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName):
-        logging.debug("VMwareManageWin: runCloneVM(): instantiated")
+        logging.debug("VMwareManage: runCloneVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runCloneVM(): adding 1 "+ str(self.writeStatus))
@@ -919,10 +926,10 @@ class VMwareManage(VMManage):
                 cloneCmd += " -cloneName="
                 cloneCmd += "\"" + str(os.path.basename(tmpCloneName.replace("\"",""))[:-4]) + "\""
                 logging.debug("runCloneVM(): executing: " + str(cloneCmd))
-                result = subprocess.check_output(cloneCmd, encoding='utf-8')
+                result = subprocess.check_output(shlex.split(cloneCmd, posix=self.POSIX), encoding='utf-8')
                 #also have to disable vmxstats for the clones or else we can't run more than 1 at once:
                 cloneCmd = "\"" + self.vmcli + "\" " + "\"" + tmpCloneName + "\" " + "ConfigParams  SetEntry vmxstats.filename \"\""
-                result = subprocess.check_output(cloneCmd, encoding='utf-8')
+                result = subprocess.check_output(shlex.split(cloneCmd, posix=self.POSIX), encoding='utf-8')
                 # self.writeCloneVM_Config(vmName, cloneName, groupName)
                 self.writeStatus += 1
                 self.runVMInfo(tmpCloneName)
@@ -937,7 +944,7 @@ class VMwareManage(VMManage):
             logging.debug("runCloneVM(): sub 1 "+ str(self.writeStatus))
 
     def enableVRDPVM(self, vmName, vrdpPort):
-        logging.debug("VMwareManageWin: enabledVRDP(): instantiated")
+        logging.debug("VMwareManage: enabledVRDP(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()
@@ -954,7 +961,7 @@ class VMwareManage(VMManage):
             self.lock.release()
 
     def runEnableVRDP(self, vmName, vrdpPort):
-        logging.debug("VMwareManageWin: runEnableVRDP(): instantiated")
+        logging.debug("VMwareManage: runEnableVRDP(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runEnableVRDP(): adding 1 "+ str(self.writeStatus))
@@ -962,12 +969,12 @@ class VMwareManage(VMManage):
             vrdpCmd = "\""+self.vmcli + "\" \"" + str(vmName) + "\" ConfigParams SetEntry RemoteDisplay.vnc.Enabled TRUE"
             logging.debug("runEnableVRDP(): Enabling VNC for " + vmName)
             logging.debug("runEnableVRDP(): executing: "+ str(vrdpCmd))
-            result = subprocess.check_output(vrdpCmd, encoding='utf-8')
+            result = subprocess.check_output(shlex.split(vrdpCmd, posix=self.POSIX), encoding='utf-8')
 
             vrdpCmd = "\""+self.vmcli + "\" \"" + str(vmName) + "\" ConfigParams SetEntry RemoteDisplay.vnc.port " + str(vrdpPort)
             logging.debug("runEnableVRDP(): Enabling VNC for " + vmName)
             logging.debug("runEnableVRDP(): executing: "+ str(vrdpCmd))
-            result = subprocess.check_output(vrdpCmd, encoding='utf-8')
+            result = subprocess.check_output(shlex.split(vrdpCmd, posix=self.POSIX), encoding='utf-8')
             
             logging.debug("runEnableVRDP(): completed")
         except Exception:
@@ -980,7 +987,7 @@ class VMwareManage(VMManage):
             logging.debug("runEnableVRDP(): sub 1 "+ str(self.writeStatus))
 
     def restoreLatestSnapVM(self, vmName):
-        logging.debug("VMwareManageWin: restoreLatestSnapVM(): instantiated")
+        logging.debug("VMwareManage: restoreLatestSnapVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         try:
             self.lock.acquire()

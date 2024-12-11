@@ -224,7 +224,7 @@ class VMwareManageWin(VMManage):
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Power query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
-                p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
+                p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
                 while True:
                     out = p.stdout.readline()
                     if out == '' and p.poll() != None:

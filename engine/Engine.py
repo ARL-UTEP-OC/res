@@ -39,7 +39,7 @@ class Engine:
         ##These are defaults and will be based on the SystemConfigIO values, for now make assumptions
         #Create the VMManage
         if sys.platform == "linux" or sys.platform == "linux2" or sys.platform == "darwin":
-            self.vmManage = VBoxManage(True)
+            #self.vmManage = VBoxManage(True)
             self.vmManage = VMwareManage(True)
         else:
             #self.vmManage = VBoxManageWin(True)
