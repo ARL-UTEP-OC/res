@@ -238,7 +238,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
             ########Connection creation##########
             connCreatePayload = {"name":connName,
             "parentIdentifier":"ROOT",
-            "protocol":"rdp",
+            "protocol":"vnc",
             "attributes":{"max-connections":maxConnectionsPerUser, "max-connections-per-user":maxConnectionsPerUser},
             "activeConnections":0,
             "parameters":{
