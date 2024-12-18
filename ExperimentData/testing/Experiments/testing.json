@@ -1,0 +1,54 @@
+{
+    "xml": {
+        "vbox-setup": {
+            "path-to-vboxmanage": "VBoxManage"
+        },
+        "testbed-setup": {
+            "network-config": {
+                "vm-server-ip": "11.0.0.2",
+                "rdp-broker-ip": "",
+                "chat-server-ip": ""
+            },
+            "vm-set": {
+                "base-groupname": "testing",
+                "num-clones": "5",
+                "linked-clones": "true",
+                "clone-snapshots": "true",
+                "base-outname": "_set_",
+                "vrdp-baseport": "1001",
+                "users-filename": "",
+                "vm": [
+                    {
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\defaulta\\defaulta.vmx",
+                        "vrdp-enabled": "false",
+                        "internalnet-basename": [
+                            "intnet"
+                        ]
+                    },
+                    {
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\defaultTemplate\\Ubuntu_20.04\\Ubuntu_20.04.4_VM_LinuxVMImages.COM.vmx",
+                        "vrdp-enabled": "false",
+                        "internalnet-basename": [
+                            "intnet"
+                        ]
+                    },
+                    {
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\kali-linux-2024.3-vmware-amd64.vmwarevm\\kali-linux-2024.3-vmware-amd64.vmx",
+                        "vrdp-enabled": "true",
+                        "internalnet-basename": [
+                            "intnet"
+                        ]
+                    },
+                    {
+                        "name": "C:\\Users\\Acosta\\VMware_VMs\\TinyCore_SC\\TinyCore_SC.vmx",
+                        "vrdp-enabled": "false",
+                        "internalnet-basename": [
+                            "intnet"
+                        ]
+                    }
+                ],
+                "material": []
+            }
+        }
+    }
+}

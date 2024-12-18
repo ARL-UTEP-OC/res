@@ -1,3 +1,4 @@
+import logging.handlers
 import sys
 import logging
 import json
@@ -628,7 +629,7 @@ class MainApp(QWidget):
         self.statusBar.showMessage("Succesfully saved experiment file for " + str(configname), 2000)
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, filename='res.log')
     appctxt = QApplication(sys.argv)
     gui = MainApp()
     QApplication.setStyle(QStyleFactory.create('Fusion')) 

@@ -63,6 +63,7 @@ class VMwareManageWin(VMManage):
         self.writeStatus += 1
         t = threading.Thread(target=self.runConfigureVMNet, args=(vmName, netNum, netName))
         t.start()
+        t.join()
         return 0
 
     def configureVMNets(self, vmName, internalNets):
@@ -79,6 +80,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runConfigureVMNets, args=(vmName, internalNets))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -127,6 +129,7 @@ class VMwareManageWin(VMManage):
             self.guestThreadStatus += 1
             t = threading.Thread(target=self.runGuestCommands, args=(vmName, cmds, delay))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -165,6 +168,7 @@ class VMwareManageWin(VMManage):
         self.writeStatus += 1
         t = threading.Thread(target=self.runVMSInfo)
         t.start()
+        t.join()
         
     def refreshVMInfo(self, vmName):
         logging.debug("VMwareManageWin: refreshVMInfo(): instantiated: " + str(vmName))
@@ -181,6 +185,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMInfo, args=(vmName,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -224,7 +229,7 @@ class VMwareManageWin(VMManage):
 
                 vmStateCmd = "\""+self.vmcli + "\" " + "\""+str(self.tempVMs[aVM].name) + "\" Power query"
                 logging.debug("runVMSInfo(): Running " + vmStateCmd)
-                p = Popen(shlex.split(vmStateCmd, posix=self.POSIX), stdout=PIPE, stderr=PIPE, encoding="utf-8")
+                p = Popen(vmStateCmd, stdout=PIPE, stderr=PIPE, encoding="utf-8")
                 while True:
                     out = p.stdout.readline()
                     if out == '' and p.poll() != None:
@@ -530,6 +535,7 @@ class VMwareManageWin(VMManage):
         self.writeStatus += 1
         t = threading.Thread(target=self.runVMCmd_ovf, args=(cmd,))
         t.start()
+        t.join()
         return 0  
 
     def snapshotVM(self, vmName):
@@ -546,6 +552,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd_cli, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -566,6 +573,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd_ovf, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -584,6 +592,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -602,6 +611,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -620,6 +630,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -638,6 +649,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -656,6 +668,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -673,6 +686,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runRemoveVM, args=(vmName, str(self.vms[vmName].UUID)))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -731,6 +745,7 @@ class VMwareManageWin(VMManage):
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVMConfigAll, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort))
         t.start()
+        t.join()
         return 0
 
     def runCloneVMConfigAll(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort):
@@ -815,6 +830,7 @@ class VMwareManageWin(VMManage):
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVM, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName))
         t.start()
+        t.join()
         return 0
 
     # def writeCloneVM_Config(self, vmName, cloneName, groupName):
@@ -950,6 +966,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runEnableVRDP, args=(vmName, vrdpPort))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
@@ -994,6 +1011,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd_cli, args=(cmd,))
             t.start()
+            t.join()
             return 0
         finally:
             self.lock.release()
