@@ -364,11 +364,18 @@ class VMwareManageWin(VMManage):
             logging.debug("VMwareManageWin: runConfigureVMNet(): instantiated")
             self.prefs_all = self.vc.refresh_inventory_to_dict(self.preferences_filename)
             #Open the preferences.ini file and get number of pvns
-            pvn_count = self.prefs_all['pref']['namedPVNs.count']
+            if 'namedPVNs.count' not in self.prefs_all['pref']:
+                pvn_count = "0"
+                # first get all names/id pairs
+                pvns_names = []
+                pvns_ids = []
+            else:
+                pvn_count = self.prefs_all['pref']['namedPVNs.count']
+                # first get all names/id pairs
+                pvns_names = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.name')
+                pvns_ids = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.pvnID')
             #check if netName exists
-            # first get all names/id pairs
-            pvns_names = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.name')
-            pvns_ids = self.vc.get_matching_keys(self.prefs_all['pref'],'namedPVNs[0-9]+.pvnID')
+
             pvn_names_ids = {}
             if len(pvns_names) != len(pvns_ids):
                 logging.error("preferences.ini is corrupt; pvn names size is not equal to pvn id size")
