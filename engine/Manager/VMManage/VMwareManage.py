@@ -362,6 +362,7 @@ class VMwareManage(VMManage):
         try:
             self.lock.acquire()
             logging.debug("VMwareManage: runConfigureVMNet(): instantiated")
+            self.prefs_all = self.vc.refresh_inventory_to_dict(self.preferences_filename)
             #Open the preferences.ini file and get number of pvns
             if 'namedPVNs.count' not in self.prefs_all['pref']:
                 pvn_count = "0"
