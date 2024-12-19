@@ -8,10 +8,8 @@ class VMwareConfigIO():
     def __init__(self):
         logging.debug("VMwareConfigIO(): instantiated")
         self.vmgroups_dict = {}
-        self.vminventory_dict = {}
         self.s = SystemConfigIO()
-        self.inventory_filename = self.s.getConfig()['VMWARE']['VMANAGE_VM_PATH']
-        self.vminventory_dict = self.refresh_vmpath_to_dict(self.inventory_filename)
+        self.vmpath = self.s.getConfig()['VMWARE']['VMANAGE_VM_PATH']
 
     def get_matching_keys(self, config_dict, pattern):
         logging.debug("VMwareConfigIO(): get_matching_keys instantiated")
@@ -182,20 +180,6 @@ class VMwareConfigIO():
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
 
-    def get_vmlist_name(self):
-        logging.debug("VMwareConfigIO(): get_vmlist_name instantiated")
-        result = []
-        vmlist = self.get_matching_keys(self.vminventory_dict, 'vmlist*')
-        if vmlist is None:
-            return result
-        realvmlist = self.get_keys_with_config(self.vminventory_dict, vmlist, "IsClone")
-        if realvmlist is None:
-            return result
-        for item in realvmlist:
-            result.append(self.vminventory_dict[item]['config'])
-        return result
-
-
     def get_vmnics(self, vmname):
         logging.debug("VMwareConfigIO(): get_vmnics instantiated")
         result = {}
@@ -211,62 +195,15 @@ class VMwareConfigIO():
 
     def get_vmgroups_name(self, vmname):
         logging.debug("VMwareConfigIO(): get_vmgroups_name instantiated")
-        if vmname not in self.vminventory_dict:
-            logging.error("VMwareConfigIO(): VM not found: " + str(vmname))
-            return None
-        return self.vminventory_dict[vmname]
+        strgroupname = ""
+        groupsnames = []
+        mdirname = os.path.dirname(vmname)
+        while os.path.abspath(mdirname) != os.path.abspath(self.vmpath) and mdirname != None:
+            groupname = os.path.basename(mdirname)
+            mdirname = os.path.dirname(mdirname)
+            groupsnames.insert(0,groupname)
+        
+        for groupname in groupsnames:
+            strgroupname = os.path.join(strgroupname,groupname)
+        return strgroupname
     
-    def get_vmlist_disp2num(self):
-        logging.debug("VMwareConfigIO(): get_vmgroups_listnum instantiated")
-        result = {}
-        #get all vmlist items
-        vmlists = self.get_matching_keys(self.vminventory_dict, "vmlist*")
-        if vmlists is None:
-            return result
-        #get list of VMs
-        vms_vmlist = self.get_keys_with_config(self.vminventory_dict, vmlists, "IsClone")
-        if vms_vmlist is None:
-            return result
-        for vm in vms_vmlist:
-            display_name = self.vminventory_dict[vm]["config"]
-            result[display_name] = vm
-        return result
-
-    def get_vmgroup_disp2num(self):
-        logging.debug("VMwareConfigIO(): get_vmgroup_disp2num instantiated")
-        result = {}
-        #get all vmlist items
-        vmlists = self.get_matching_keys(self.vminventory_dict, "vmlist*")
-        if vmlists is None:
-            return result
-        groups_vmlist = self.get_keys_with_config(self.vminventory_dict, vmlists, "Expanded")
-        if groups_vmlist is None:
-            return result
-        for group in groups_vmlist:
-            display_name = self.vminventory_dict[group]["DisplayName"]
-            result[display_name] = group
-        return result
-
-
-'''
-def dict_to_dot(d, prefix=''):
-    result = {}
-    for k, v in d.items():
-        if isinstance(v, dict):
-            result.update(dict_to_dot(v, prefix + k + '.'))
-        else:
-            result[prefix + k] = v
-    return result
-
-my_dict = {
-    'a': 1,
-    'b': {
-        'c': 2,
-        'd': {
-            'e': 3
-        }
-    }
-}
-
-print(dict_to_dot(my_dict)) 
-'''
