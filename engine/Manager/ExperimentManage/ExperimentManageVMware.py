@@ -23,6 +23,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("createExperiment(): instantiated")
         t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runCreateExperiment(self, configname, itype, name):
@@ -89,6 +90,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("startExperiment(): instantiated")
         t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name))
         t.start()
+        t.join()
         return 0
 
     def runStartExperiment(self, configname, itype, name):
@@ -160,6 +162,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("suspendExperiment(): instantiated")
         t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runSuspendExperiment(self, configname, itype="", name=""):
@@ -205,6 +208,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("pauseExperiment(): instantiated")
         t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runPauseExperiment(self, configname, itype, name):
@@ -250,6 +254,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("snapshotExperiment(): instantiated")
         t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runSnapshotExperiment(self, configname, itype, name):
@@ -295,6 +300,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("stopExperiment(): instantiated")
         t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runStopExperiment(self, configname, itype, name):
@@ -338,6 +344,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("removeExperiment(): instantiated")
         t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0
         
     def runRemoveExperiment(self, configname, itype, name):
@@ -381,6 +388,7 @@ class ExperimentManageVMware(ExperimentManage):
         logging.debug("restoreExperimentStates(): instantiated")
         t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name))
         t.start()
+        t.join()
         return 0    
 
     def runRestoreExperiment(self, configname, itype, name):
@@ -444,7 +452,7 @@ if __name__ == "__main__":
     logging.debug("Starting Program")
 
     logging.debug("Instantiating Engine")
-    vbm = VMwareManageWin()
+    vbm = VMwareManage()
     e = ExperimentManageVMware(vbm)
     ####---Create Experiment Test#####
     logging.info("Creating Experiment")
