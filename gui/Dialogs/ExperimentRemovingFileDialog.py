@@ -37,7 +37,7 @@ class ExperimentRemoveThread(QThread):
             else:
                 logging.debug("Experiment file not found: " + str(fullfilename) + " Removing from GUI.")
                 self.successfilenames.append(self.filenames)
-                self.watchsignal.emit("Experiment file not found: " + str(filenames) + " Removing from GUI.", None, True)
+                self.watchsignal.emit("Experiment file not found: " + str(self.filenames) + " Removing from GUI.", None, True)
             logging.debug("ExperimentRemoveThread(): thread ending")    
             return
         except FileNotFoundError:
