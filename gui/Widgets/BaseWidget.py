@@ -103,7 +103,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.numClonesHorBox.addWidget(self.numClonesLabel)
 
         self.numClonesEntry = QtWidgets.QSpinBox()
-        self.numClonesEntry.setRange(1, 50)
+        self.numClonesEntry.setRange(1, 250)
         self.numClonesHorBox.addWidget(self.numClonesEntry)
         self.outerVertBox.addLayout(self.numClonesHorBox)
 

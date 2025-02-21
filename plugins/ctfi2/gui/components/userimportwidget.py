@@ -6,7 +6,7 @@ from .componentfactory import ComponentFactory
 
 
 class UserImportWidget(QDialog):
-    """File selector widget with tweaks stolen from the Reproducible Experiment System
+    """File selector widget with tweaks taken from the Reproducible Experiment System
     (https://github.com/raistlinj/res) """
 
     def __init__(self):
