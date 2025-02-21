@@ -94,9 +94,11 @@ class Engine:
         
     def vmManageRefreshCmd(self, args):
         logging.debug("vmManageRefreshCmd(): instantiated")
-        #will import res package from file
-        self.vmManage.refreshAllVMInfo()
-
+        if args.vmName != "" and args.vmName != "all":
+            name = args.vmName.replace("\"","").replace("'","")
+            return self.vmManage.refreshVMInfo(name)         
+        return self.vmManage.refreshAllVMInfo()
+        
     def packagerStatusCmd(self, args):
         logging.debug("packagerStatusCmd(): instantiated")
         #query packager manager status and then return it here
@@ -436,7 +438,9 @@ class Engine:
         self.vmStatusParser.set_defaults(func=self.vmManageMgrStatusCmd)
 
         self.vmRefreshParser = self.vmManageSubParsers.add_parser('refresh', help='retreive vm information')
-        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd)
+        self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store",
+                                           help='name of vm to retrieve status')
+        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd, name="all")
 
 # -----------Packager
         self.packageManageParser = self.subParsers.add_parser('packager')

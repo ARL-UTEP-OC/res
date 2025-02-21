@@ -7,6 +7,7 @@ from engine.Manager.VMManage.VMManage import VMManage
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
 from engine.Manager.PackageManage.PackageManageVBox import PackageManageVBox
 from engine.Manager.ExperimentManage.ExperimentManageVBox import ExperimentManageVBox
+from engine.Manager.ExperimentManage.ExperimentManageVMware import ExperimentManageVMware
 from engine.Engine import Engine
 import threading
 
