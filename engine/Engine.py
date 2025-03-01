@@ -75,7 +75,7 @@ class Engine:
         #should have status for all managers
         #query all of the managers status and then return them here
 
-        return {"VMMgr" : self.vmManage.getManagerStatus,
+        return {"VMMgr" : self.vmManage.getManagerStatus(),
                     "PackageMgr" : self.packageManage.getPackageManageStatus(),
                     "ConnectionMgr" : self.connectionManage.getConnectionManageStatus(),
                     "ExperimentMgr": self.experimentManage.getExperimentManageStatus(),
@@ -94,11 +94,14 @@ class Engine:
         
     def vmManageRefreshCmd(self, args):
         logging.debug("vmManageRefreshCmd(): instantiated")
-        if args.vmName != "" and args.vmName != "all":
-            name = args.vmName.replace("\"","").replace("'","")
-            return self.vmManage.refreshVMInfo(name)         
-        return self.vmManage.refreshAllVMInfo()
-        
+        #will import res package from file
+        vmName = args.vmName
+        if vmName != None and vmName.strip() != "None" and vmName.strip() != "" and args.vmName.strip() != "all":
+            vmName = vmName.replace("\"","").replace("'","")
+            self.vmManage.refreshVMInfo(vmName)
+        else:
+            self.vmManage.refreshAllVMInfo()
+
     def packagerStatusCmd(self, args):
         logging.debug("packagerStatusCmd(): instantiated")
         #query packager manager status and then return it here
@@ -440,7 +443,7 @@ class Engine:
         self.vmRefreshParser = self.vmManageSubParsers.add_parser('refresh', help='retreive vm information')
         self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store",
                                            help='name of vm to retrieve status')
-        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd, name="all")
+        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd, vmName="all")
 
 # -----------Packager
         self.packageManageParser = self.subParsers.add_parser('packager')
