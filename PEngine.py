@@ -3,8 +3,8 @@ from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Configuration.UserPool import UserPool
 import Pyro5.api
 
-daemon = Pyro5.server.Daemon()         # make a Pyro daemon
-ns = Pyro5.api.locate_ns(host, port)             # find the name server
+daemon = Pyro5.server.Daemon(host="172.17.0.1")         # make a Pyro daemon
+ns = Pyro5.api.locate_ns(host="172.17.0.1", port=10291)             # find the name server
 
 pyroEngine = Pyro5.server.expose(Engine)
 uri = daemon.register(pyroEngine)   # register the greeting maker as a Pyro object
