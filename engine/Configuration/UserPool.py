@@ -76,7 +76,13 @@ class UserPool():
         clonevmjson, numclones = rolledout_json
 
         if creds_file == "":
-            self.addFromBase()
+            #try reading from the config file
+            config_creds_file = self.eco.getExperimentXMLFileData(configname)['xml']["testbed-setup"]['vm-set']['users-filename']
+            #if it's still blank, then generate users
+            if config_creds_file == None or config_creds_file == "":
+                self.addFromBase()
+            else:
+                self.addFromCSV(config_creds_file)
         else:
             self.addFromCSV(creds_file)
 
