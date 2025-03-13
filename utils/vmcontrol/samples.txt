@@ -1,0 +1,37 @@
+###Set 1
+##VBox Windows
+#Run find command, wait, and view output:
+VBoxManage.exe guestcontrol "defaulta" run --exe "/bin/bash" --username user --password toor --wait-stdout --wait-stderr -- -l -c "echo toor | sudo -S /usr/bin/find /etc/"
+
+#Run find command, wait, view output, and echo done after 10 seconds:
+VBoxManage.exe guestcontrol "defaulta" run --exe "/bin/bash" --username user --password toor --wait-stdout --wait-stderr -- -l -c "echo toor | sudo -S /usr/bin/find /etc/ && sleep 10"
+
+#Start find, write output to /tmp/out.txt, wait 10 seconds and then cat output
+VBoxManage.exe guestcontrol "defaulta" run --exe "/bin/bash" --username user --password toor --wait-stdout --wait-stderr -- -l -c "echo toor | sudo -S /usr/bin/find /etc/ | tee /tmp/out.txt | cat && sleep 10 && cat /tmp/out.txt"
+
+#copyfrom example
+VBoxManage.exe guestcontrol "defaulta" copyfrom --username user --password toor --verbose --follow -R /tmp/ "C:\Users\Desktop\tmp"
+
+###Set 4
+##VMware user
+vmrun -gu user -gp user CopyFileFromHostToGuest /home/workshopdev/vmware/hth2024/user-linux-2024.3-vmware-amd64/user-linux-2024.3-vmware-amd64_set_1.vmx ExperimentData/hth2024/Materials/checkConns.sh /tmp/checkConns.sh
+vmrun -gu user -gp user runProgramInGuest /home/workshopdev/vmware/hth2024/user-linux-2024.3-vmware-amd64/user-linux-2024.3-vmware-amd64_set_1.vmx /tmp/checkConns.sh
+vmrun -gu user -gp user CopyFileFromGuestToHost /home/workshopdev/vmware/hth2024/user-linux-2024.3-vmware-amd64/user-linux-2024.3-vmware-amd64_set_1.vmx /tmp/output.txt output1.txt
+vmrun -gu user -gp user deleteFileInGuest /home/workshopdev/vmware/hth2024/user-linux-2024.3-vmware-amd64/user-linux-2024.3-vmware-amd64_set_1.vmx /tmp/output.txt
+vmrun -gu user -gp user deleteFileInGuest /home/workshopdev/vmware/hth2024/user-linux-2024.3-vmware-amd64/user-linux-2024.3-vmware-amd64_set_1.vmx /tmp/checkConns.sh
+
+###Set 3
+##VMware Ubuntu
+-gu user -gp toor CopyFileFromHostToGuest {{RES_CloneName}} ExperimentData/MalwareComms/Materials/checkConns.sh /tmp/checkConns.sh
+-gu user -gp toor runProgramInGuest {{RES_CloneName}} /tmp/checkConns.sh
+-gu user -gp ilovepaycheckmovie runProgramInGuest {{RES_CloneName}} "echo ilovepaycheckmovie | sudo -S /etc/init.d/core-daemon start"
+-gu user -gp ilovepaycheckmovie runProgramInGuest {{RES_CloneName}} "echo ilovepaycheckmovie | sudo -S /bin/sleep 10"
+-gu user -gp ilovepaycheckmovie runProgramInGuest {{RES_CloneName}} "echo ilovepaycheckmovie | sudo -S /bin/sleep 10"
+
+-gu user -gp toor CopyFileFromGuestToHost {{RES_CloneName}} /tmp/8899.txt connCheckOut{{RES_CloneNumber}}_8899.txt
+-gu user -gp toor CopyFileFromGuestToHost {{RES_CloneName}} /tmp/9999.txt connCheckOut{{RES_CloneNumber}}_9999.txt
+-gu user -gp toor deleteFileInGuest {{RES_CloneName}} /tmp/8899output.txt
+-gu user -gp toor deleteFileInGuest {{RES_CloneName}} /tmp/9999output.txt
+-gu user -gp toor deleteFileInGuest {{RES_CloneName}} /tmp/checkConns.sh
+-gu user -gp toor runProgramInGuest {{RES_CloneName}} -interactive /usr/bin/notify-send "From Acosta" "Try again" -u critical -A OK -a Acosta
+

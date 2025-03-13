@@ -1,0 +1,9 @@
+PyQt5==5.15.9
+configparser
+xmltodict
+jinja2
+requests>=2.22.0
+simplejson>=3.16.0
+guacapy==0.10
+rocketchat-API
+Pyro5==5.15
