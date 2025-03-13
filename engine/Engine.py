@@ -435,14 +435,22 @@ class Engine:
         self.vmStatusParser = self.vmManageSubParsers.add_parser('vmstatus', help='retrieve vm status')
         self.vmStatusParser.add_argument('vmName', metavar='<vm name>', action="store",
                                            help='name of vm to retrieve status')
+        self.vmStatusParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.vmStatusParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')                                           
         self.vmStatusParser.set_defaults(func=self.vmManageVMStatusCmd)
 
-        self.vmStatusParser = self.vmManageSubParsers.add_parser('mgrstatus', help='retrieve manager status')
-        self.vmStatusParser.set_defaults(func=self.vmManageMgrStatusCmd)
+        self.vmMgrStatusParser = self.vmManageSubParsers.add_parser('mgrstatus', help='retrieve manager status')
+        self.vmMgrStatusParser.set_defaults(func=self.vmManageMgrStatusCmd)
 
         self.vmRefreshParser = self.vmManageSubParsers.add_parser('refresh', help='retreive vm information')
         self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store",
                                            help='name of vm to retrieve status')
+        self.vmRefreshParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.vmRefreshParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')                                           
         self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd, vmName="all")
 
 # -----------Packager
@@ -450,12 +458,19 @@ class Engine:
         self.packageManageSubParsers = self.packageManageParser.add_subparsers(help='manage packaging of experiments')
 
         self.packageManageStatusParser = self.packageManageSubParsers.add_parser('status', help='retrieve package manager status')
+        self.packageManageStatusParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.packageManageStatusParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.packageManageStatusParser.set_defaults(func=self.packagerStatusCmd)
 
         self.packageManageImportParser = self.packageManageSubParsers.add_parser('import', help='import a RES package from file')
         self.packageManageImportParser.add_argument('resfilename', metavar='<res filename>', action="store",
                                           help='path to res file')
-        #TODO: add an optional vagrant script -- should exist within the res file
+        self.packageManageImportParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.packageManageImportParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.packageManageImportParser.set_defaults(func=self.packagerImportCmd)
 
         self.packageManageExportParser = self.packageManageSubParsers.add_parser('export', help='export an experiment from config to a RES file')
@@ -463,6 +478,10 @@ class Engine:
                                           help='name of experiment')
         self.packageManageExportParser.add_argument('exportpath', metavar='<export path>', action="store",
                                           help='path where res file will be created')
+        self.packageManageExportParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.packageManageExportParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.packageManageExportParser.set_defaults(func=self.packagerExportCmd)
 
 #-----------Connections
@@ -660,6 +679,10 @@ class Engine:
         self.experimentManageRefresshVMsParser = self.experimentManageSubParser.add_parser('refresh', help='refresh experiment VMs info')
         self.experimentManageRefresshVMsParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
+        self.experimentManageRefresshVMsParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageRefresshVMsParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageRefresshVMsParser.set_defaults(func=self.experimentRefreshCmd)
 
         self.experimentManageCreateParser = self.experimentManageSubParser.add_parser('create', help='create clones aka instances of experiment')
@@ -669,6 +692,10 @@ class Engine:
                                           help='set, template, or vm')
         self.experimentManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
                                           help='all, set-number, template-vm-name, or clone-vm-name')                                   
+        self.experimentManageCreateParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageCreateParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageCreateParser.set_defaults(func=self.experimentCreateCmd)
 
         self.experimentManageStartParser = self.experimentManageSubParser.add_parser('start', help='start (headless) clones aka instances of experiment')
@@ -678,6 +705,10 @@ class Engine:
                                           help='set, template, or vm')
         self.experimentManageStartParser.add_argument('name', metavar='<instance-name>', action="store",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageStartParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageStartParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageStartParser.set_defaults(func=self.experimentStartCmd)
 
         self.experimentManageStopParser = self.experimentManageSubParser.add_parser('stop', help='stop clones aka instances of experiment')
@@ -686,7 +717,11 @@ class Engine:
         self.experimentManageStopParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageStopParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                          
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageStopParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageStopParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageStopParser.set_defaults(func=self.experimentStopCmd)
 
         self.experimentManageSuspendParser = self.experimentManageSubParser.add_parser('suspend', help='save state for clones aka instances of experiment')
@@ -695,7 +730,11 @@ class Engine:
         self.experimentManageSuspendParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageSuspendParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                                                      
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageSuspendParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageSuspendParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageSuspendParser.set_defaults(func=self.experimentSuspendCmd)
 
         self.experimentManagePauseParser = self.experimentManageSubParser.add_parser('pause', help='pause clones aka instances of experiment')
@@ -704,7 +743,11 @@ class Engine:
         self.experimentManagePauseParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManagePauseParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                                    
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManagePauseParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManagePauseParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManagePauseParser.set_defaults(func=self.experimentPauseCmd)
 
         self.experimentManageSnapshotParser = self.experimentManageSubParser.add_parser('snapshot', help='snapshot clones aka instances of experiment')
@@ -714,6 +757,10 @@ class Engine:
                                           help='set, template, or vm')
         self.experimentManageSnapshotParser.add_argument('name', metavar='<instance-name>', action="store",
                                           help='all, set-number, template-vm-name, or clone-vm-name')                                              
+        self.experimentManageSnapshotParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageSnapshotParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageSnapshotParser.set_defaults(func=self.experimentSnapshotCmd)
 
         self.experimentManageRestoreParser = self.experimentManageSubParser.add_parser('restore', help='restore experiment to latest snapshot')
@@ -722,7 +769,11 @@ class Engine:
         self.experimentManageRestoreParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageRestoreParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')          
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageRestoreParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageRestoreParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageRestoreParser.set_defaults(func=self.experimentRestoreCmd)
 
         self.experimentManageRemoveParser = self.experimentManageSubParser.add_parser('remove', help='remove clones aka instances of experiment')
@@ -731,7 +782,11 @@ class Engine:
         self.experimentManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                                    
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageRemoveParser.set_defaults(func=self.experimentRemoveCmd)
         
         self.experimentManageGuestCmdStartupParser = self.experimentManageSubParser.add_parser('guestcmd', help='runs VM guest startup commands for experiment clones')
@@ -740,7 +795,11 @@ class Engine:
         self.experimentManageGuestCmdStartupParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageGuestCmdStartupParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                                    
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageGuestCmdStartupParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageGuestCmdStartupParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageGuestCmdStartupParser.set_defaults(func=self.experimentRunGuestCmd)
 
         self.experimentManageGuestCmdStoredParser = self.experimentManageSubParser.add_parser('gueststored', help='runs VM guest stored commands for experiment clones')
@@ -749,7 +808,11 @@ class Engine:
         self.experimentManageGuestCmdStoredParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageGuestCmdStoredParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                                    
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.experimentManageGuestCmdStoredParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.experimentManageGuestCmdStoredParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
         self.experimentManageGuestCmdStoredParser.set_defaults(func=self.experimentRunGuestStoredCmd)
 
     def execute(self, cmd):
@@ -767,4 +830,4 @@ class Engine:
         except argparse.ArgumentError as err:
             logging.error(err.message, '\n', err.argument_name)	
         # except SystemExit:
-            # return
+        #     return ""
