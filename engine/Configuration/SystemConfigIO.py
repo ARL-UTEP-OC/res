@@ -64,6 +64,7 @@ class SystemConfigIO():
             self.config['VMWARE']['VMWARE_PREFSFILE_PATH'] = env_path
             env_path = os.path.expandvars("/home/$USER/.vmware/inventory.vmls")
             self.config['VMWARE']['VMWARE_INVENTORYFILE_PATH'] = env_path
+
             self.config['BROWSER'] = {}
             self.config['BROWSER']['BROWSER_PATH'] = "firefox"
             self.config['BROWSER']['ARGS'] = "-private-window"
@@ -85,8 +86,19 @@ class SystemConfigIO():
             self.config['BROWSER'] = {}
             self.config['BROWSER']['BROWSER_PATH'] = "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
             self.config['BROWSER']['ARGS'] = "-private-window"
+        
+        #PROXMOX is remote and only works on linux
+        self.config['PROXMOX'] = {}
+        self.config['PROXMOX']['VMANAGE_VMCONF_PATH'] = "/etc/pve/qemu-server/"
+        self.config['PROXMOX']['VMANAGE_QM_PATH'] = "qm"
+        self.config['PROXMOX']['VMANAGE_STORAGE_VOL'] = "local-lvm"
+        self.config['PROXMOX']['VMANAGE_NODE_NAME'] = "acostave"
+        self.config['PROXMOX']['VMANAGE_SERVER'] = "acostanet.ddns.net"
+        self.config['PROXMOX']['VMANAGE_APIPORT'] = "64646"
+        self.config['PROXMOX']['VMANAGE_CMDPORT'] = "5734"
+        #Other platform agnostic settings
         self.config['HYPERVISOR'] = {}
-        self.config['HYPERVISOR']['ACTIVE'] = "VMWARE"
+        self.config['HYPERVISOR']['ACTIVE'] = "PROXMOX"
         self.config['EXPERIMENTS'] = {}
         self.config['EXPERIMENTS']['EXPERIMENTS_PATH'] = "ExperimentData"
         self.config['EXPERIMENTS']['TEMP_DATA_PATH'] = "tmp"

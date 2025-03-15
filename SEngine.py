@@ -1,5 +1,4 @@
 from engine.Engine import Engine
-import argparse
 
 def main():
     eng = Engine.getInstance()

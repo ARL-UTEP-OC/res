@@ -62,6 +62,8 @@ class MainApp(QWidget):
             self.setWindowTitle("ARL South RES v0.9 (VirtualBox Active)")
         elif self.cf.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
             self.setWindowTitle("ARL South RES v0.9 (VMware Workstation Active)")
+        elif self.cf.getConfig()['HYPERVISOR']['ACTIVE'] == 'PROXMOX':
+            self.setWindowTitle("ARL South RES v0.9 (PROXMOX (remote) Active)")
 
         self.tabWidget = QtWidgets.QTabWidget()
         self.tabWidget.setGeometry(QtCore.QRect(0, 15, 668, 565))

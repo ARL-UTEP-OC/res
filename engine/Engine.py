@@ -17,6 +17,7 @@ from engine.Manager.VMManage.VBoxManage import VBoxManage
 from engine.Manager.VMManage.VBoxManageWin import VBoxManageWin
 from engine.Manager.VMManage.VMwareManage import VMwareManage
 from engine.Manager.VMManage.VMwareManageWin import VMwareManageWin
+from engine.Manager.VMManage.ProxmoxManage import ProxmoxManage
 from engine.Configuration.SystemConfigIO import SystemConfigIO
 
 import threading
@@ -45,14 +46,18 @@ class Engine:
         if sys.platform == "linux" or sys.platform == "linux2" or sys.platform == "darwin":
             if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
                 self.vmManage = VBoxManage(True)
-            else:
+            elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManage()
+            else: 
+                self.vmManage = ProxmoxManage()
+                
         else:
             if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
                 self.vmManage = VBoxManageWin(True)
-            else:
+            elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManageWin()
-
+            else:
+                self.vmManage = ProxmoxManage()
         #Create the ConnectionManage
         self.connectionManage = ConnectionManageGuacRDP()
         #Create the ChallengesMange
@@ -60,13 +65,19 @@ class Engine:
         #Create the ExperimentManage
         if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
             self.experimentManage = ExperimentManageVBox(self.vmManage)
-        else:
+        elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
             self.experimentManage = ExperimentManageVMware(self.vmManage)
+        else:
+            pass
+            # self.experimentManage = ExperimentManageProxmox(self.vmManage)
         #Create the PackageManage
         if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
             self.packageManage = PackageManageVBox(self.vmManage, self.experimentManage)
-        else:
+        elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
             self.packageManage = PackageManageVMware(self.vmManage, self.experimentManage)
+        else:
+            pass
+            # self.packageManage = PackageManageProxmox(self.vmManage, self.experimentManage)
         #build the parser
         self.buildParser()
 
@@ -96,11 +107,13 @@ class Engine:
         logging.debug("vmManageRefreshCmd(): instantiated")
         #will import res package from file
         vmName = args.vmName
+        username = args.username
+        password = args.password
         if vmName != None and vmName.strip() != "None" and vmName.strip() != "" and args.vmName.strip() != "all":
             vmName = vmName.replace("\"","").replace("'","")
-            self.vmManage.refreshVMInfo(vmName)
+            self.vmManage.refreshVMInfo(vmName, username, password)
         else:
-            self.vmManage.refreshAllVMInfo()
+            self.vmManage.refreshAllVMInfo(username, password)
 
     def packagerStatusCmd(self, args):
         logging.debug("packagerStatusCmd(): instantiated")
@@ -111,14 +124,18 @@ class Engine:
         logging.debug("packagerImportCmd(): instantiated: ")
         #will import res package from file
         resfilename = args.resfilename
-        return self.packageManage.importPackage(resfilename)
+        username = args.username
+        password = args.password
+        return self.packageManage.importPackage(resfilename, username, password)
 
     def packagerExportCmd(self, args):
         logging.debug("packagerExportCmd(): instantiated")
         #will export package to res file
         experimentname = args.experimentname
         exportpath = args.exportpath
-        return self.packageManage.exportPackage(experimentname, exportpath)
+        username = args.username
+        password = args.password
+        return self.packageManage.exportPackage(experimentname, exportpath, username, password)
 
     def connectionStatusCmd(self, args):
         #query connection manager status and then return it here
@@ -277,33 +294,45 @@ class Engine:
     
     def experimentRefreshCmd(self, args):
         configname = args.configname
-        return self.experimentManage.refreshExperimentVMInfo(configname)
+        username = args.username
+        password = args.password
+
+        return self.experimentManage.refreshExperimentVMInfo(configname, username, password)
         
     def experimentCreateCmd(self, args):
         logging.debug("experimentCreateCmd(): instantiated")
         #will create instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.createExperiment(configname)    
-        return self.experimentManage.createExperiment(configname, itype, name)
+            return self.experimentManage.createExperiment(configname, username, password)    
+        return self.experimentManage.createExperiment(configname, itype, name, username, password)
 
     def experimentStartCmd(self, args):
         logging.debug("experimentStartCmd(): instantiated")
         #will start instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.startExperiment(configname)    
-        return self.experimentManage.startExperiment(configname, itype, name)
+            return self.experimentManage.startExperiment(configname, username, password)    
+        return self.experimentManage.startExperiment(configname, itype, name, username, password)
 
     def experimentSuspendCmd(self, args):
         logging.debug("experimentSuspendCmd(): instantiated")
         #will suspend instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
             return self.experimentManage.suspendExperiment(configname)    
@@ -314,78 +343,101 @@ class Engine:
         #will pause instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.pauseExperiment(configname)    
-        return self.experimentManage.pauseExperiment(configname, itype, name)
+            return self.experimentManage.pauseExperiment(configname, username, password)    
+        return self.experimentManage.pauseExperiment(configname, itype, name, username, password)
 
     def experimentSnapshotCmd(self, args):
         logging.debug("experimentSnapshotCmd(): instantiated")
         #will snapshot instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.snapshotExperiment(configname)    
-        return self.experimentManage.snapshotExperiment(configname, itype, name)
+            return self.experimentManage.snapshotExperiment(configname, username, password)    
+        return self.experimentManage.snapshotExperiment(configname, itype, name, username, password)
 
     def experimentStopCmd(self, args):
         logging.debug("experimentStopCmd(): instantiated")
         #will start instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.stopExperiment(configname)    
-        return self.experimentManage.stopExperiment(configname, itype, name)
+            return self.experimentManage.stopExperiment(configname, username, password)    
+        return self.experimentManage.stopExperiment(configname, itype, name, username, password)
 
     def experimentRemoveCmd(self, args):
         logging.debug("experimentRemoveCmd(): instantiated")
         #will remove instances of the experiment (clones of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.removeExperiment(configname)    
-        return self.experimentManage.removeExperiment(configname, itype, name)
+            return self.experimentManage.removeExperiment(configname, username, password)    
+        return self.experimentManage.removeExperiment(configname, itype, name, username, password)
 
     def experimentRestoreCmd(self, args):
         logging.debug("experimentRestoreCmd(): instantiated")
         #will restore state of the experiment (latest snapshots of vms) as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.restoreExperiment(configname)    
-        return self.experimentManage.restoreExperiment(configname, itype, name)
+            return self.experimentManage.restoreExperiment(configname, username, password)
+        return self.experimentManage.restoreExperiment(configname, itype, name, username, password)
 
     def experimentRunGuestCmd(self, args):
         logging.debug("experimentRunGuestCmd(): instantiated")
         #will run guest commands of the experiment as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.guestCmdsExperiment(configname)    
-        return self.experimentManage.guestCmdsExperiment(configname, itype, name)
+            return self.experimentManage.guestCmdsExperiment(configname, username, password)    
+        return self.experimentManage.guestCmdsExperiment(configname, itype, name, username, password)
     
     def experimentRunGuestStoredCmd(self, args):
         logging.debug("experimentRunGuestStoredCmd(): instantiated")
         #will run guest commands of the experiment as specified in configfile
         configname = args.configname
         itype=args.itype
+        username = args.username
+        password = args.password
+
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.guestStoredCmdsExperiment(configname)    
-        return self.experimentManage.guestStoredCmdsExperiment(configname, itype, name)
+            return self.experimentManage.guestStoredCmdsExperiment(configname, username, password)    
+        return self.experimentManage.guestStoredCmdsExperiment(configname, itype, name, username, password)
 
     def vmConfigCmd(self, args):
         logging.debug("vmConfigCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
+        username = args.username
+        password = args.password
                 
         #check if vm exists
         logging.debug("vmConfigCmd(): Sending status request for VM: " + vmName)
-        if self.vmManage.getVMStatus(vmName) == None:
+        if self.vmManage.getVMStatus(vmName, username, password) == None:
             logging.error("vmConfigCmd(): vmName does not exist or you need to call refreshAllVMs: " + vmName)
             return None
         logging.debug("vmConfigCmd(): VM found, configuring VM")
@@ -393,34 +445,41 @@ class Engine:
     def vmManageStartCmd(self, args):
         logging.debug("vmManageStartCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
+        username = args.username
+        password = args.password
 
         logging.debug("Configured VM found, starting vm")
         #send start command
-        self.vmManage.startVM(vmName)
+        self.vmManage.startVM(vmName, username, password)
 
     def vmManageSuspendCmd(self, args):
         logging.debug("vmManageSuspendCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
+        username = args.username
+        password = args.password
 
         #send suspend command
-        self.vmManage.suspendVM(vmName)
+        self.vmManage.suspendVM(vmName, username, password)
 
     def vmManagePauseCmd(self, args):
         logging.debug("vmManagePauseCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
+        username = args.username
+        password = args.password
 
         #send pause command
-        self.vmManage.pauseVM(vmName)
+        self.vmManage.pauseVM(vmName, username, password)
 
     def vmManageSnapshotCmd(self, args):
         logging.debug("vmManageSnapshotCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
-
+        username = args.username
+        password = args.password
         #send snapshot command
-        self.vmManage.snapshotVM(vmName)
+        self.vmManage.snapshotVM(vmName, username, password)
 
     def buildParser(self):
-        self.parser = argparse.ArgumentParser(description='Replication Experiment System engine')
+        self.parser = argparse.ArgumentParser(description='Repeatable Experimentation System engine')
         self.subParsers = self.parser.add_subparsers()
 
 # -----------Engine
