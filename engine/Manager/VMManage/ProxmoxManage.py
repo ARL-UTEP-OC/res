@@ -34,6 +34,12 @@ class ProxmoxManage(VMManage):
                 result = self.getManagerStatus()["writeStatus"]
                 time.sleep(.1)
 
+    def basic_blocking_task_status(self, proxmox_api, task_id, node_name):
+        data = {"status": ""}
+        while (data["status"] != "stopped"):
+            data = proxmox_api.nodes(node_name).tasks(task_id).status.get()
+        return data
+
     def configureVMNet(self, vmName, netNum, netName, username=None, password=None):
         logging.debug("ProxmoxManage: configureVMNet(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
@@ -87,7 +93,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 #logging.error("Error in <>(): An error occured ")
                 logging.error("Error in runConfigureVMNets(): An error occured when trying to connect to proxmox")
@@ -106,7 +112,10 @@ class ProxmoxManage(VMManage):
 
                 try:
                     #create bridge if it doesn't exist
-                    proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge')
+                    res = proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge')
+                    self.basic_blocking_task_status(proxapi, res, nodename)
+                    res = proxapi.nodes(nodename)('network').put()
+                    self.basic_blocking_task_status(proxapi, res, nodename)
                 except ResourceException:
                     #logging.error("Error in <>(): An error occured ")
                     logging.error("Error in runConfigureVMNets(): An error occured; interface may already exist: " + str(internalnet))
@@ -118,12 +127,13 @@ class ProxmoxManage(VMManage):
                 kwargs = {f'net{cloneNetNum}': 'e1000,bridge='+str(internalnet)}
                 try:
                     logging.info("runConfigureVMNets(): Configuring Interface: " + str(vmUUID) + " " + str(**kwargs))
-                    result = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
+                    res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
+                    self.basic_blocking_task_status(proxapi, res, nodename)
                 except Exception:
                     logging.error("Error in runConfigureVMNets(): An error occured when trying to configure vm network device")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_traceback)
-                logging.info("Command Output: "+ str(result))
+                logging.info("Command Output: "+ str(res))
                 cloneNetNum += 1            
            
             logging.debug("runConfigureVMNets(): Thread completed")
@@ -245,6 +255,10 @@ class ProxmoxManage(VMManage):
                 vm = VM()
                 vm.name = vmiter['name']
                 vm.UUID = vmiter['vmid']
+                if 'template' in vmiter:
+                    vm.template = vmiter['template']
+                else: 
+                    vm.template = 0
 
                 try:
                     netinfo = proxapi.nodes(nodename)('qemu')(vm.UUID)('config').get()
@@ -328,6 +342,10 @@ class ProxmoxManage(VMManage):
                 vm = VM()
                 vm.name = vmiter['name']
                 vm.UUID = vmiter['vmid']
+                if 'template' in vmiter:
+                    vm.template = vmiter['template']
+                else: 
+                    vm.template = 0
 
                 try:
                     netinfo = proxapi.nodes(nodename)('qemu')(vm.UUID)('config').get()
@@ -392,7 +410,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -408,22 +426,31 @@ class ProxmoxManage(VMManage):
 
             try:
                 #create bridge if it doesn't exist
-                proxapi.nodes(nodename)('network').post(iface=str(netName),node=nodename,type='bridge')
+                res = proxapi.nodes(nodename)('network').post(iface=str(netName),node=nodename,type='bridge',autostart=1)
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except ResourceException:
                 logging.warning("In runConfigureVMNet(): Interface may already exist: " + str(netName))
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            try:
+                res = proxapi.nodes(nodename)('network').put()
+                self.basic_blocking_task_status(proxapi, res, nodename)
+            except ResourceException:
+                logging.error("In runConfigureVMNet(): error when trying to apply configuration update")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
 
             #assign net to bridge
             kwargs = {f'net{netNum}': 'e1000,bridge='+str(netName)}
             try:
-                logging.info("runConfigureVMNets(): Configuring Interface: " + str(vmUUID) + " " + str(**kwargs))
-                result = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
+                logging.info("runConfigureVMNets(): Configuring Interface: " + str(vmUUID))
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except Exception:
                 logging.error("Error in runConfigureVMNets(): An error occured when trying to configure vm network device")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
-            logging.info("Command Output: "+ str(result))
+            logging.info("Command Output: "+ str(res))
             cloneNetNum += 1            
            
             logging.debug("runConfigureVMNets(): Thread completed")
@@ -447,7 +474,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user='user',password='pass')
+                proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -455,9 +482,9 @@ class ProxmoxManage(VMManage):
                 return None
             cmdNum = 1
             for cmd in cmds:
-                logging.info("runRemoteCmds(): Running cmd # " + str(cmdNum) + " of " + len(cmds) + ": " + str(cmd))
+                logging.info("runRemoteCmds(): Running cmd # " + str(cmdNum) + " of " + str(len(cmds)) + ": " + str(cmd))
                 res = proxssh._exec(shlex.split(cmd))
-                logging.info("runRemoteCmds(): Command completed: " + res)
+                logging.info("runRemoteCmds(): Command completed: " + str(res))
             logging.debug("runRemoteCmds(): Thread completed")
         except Exception:
             logging.error("runRemoteCmds() Error: " + " cmd: " + cmd)
@@ -509,6 +536,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: snapshotVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
             exists = vmName in self.vms
             if not exists:
                 logging.error("snapshotVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
@@ -520,7 +548,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -530,7 +558,8 @@ class ProxmoxManage(VMManage):
             try:
                 #get latest snapshot
                 snapname = "s"+str(int(time.time()))
-                res = proxapi.nodes(nodename)('qemu')(vmUUID)('snapshot').post(snapname=snapname)
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('snapshot').post(snapname=snapname, vmstate=1)
+                self.basic_blocking_task_status(proxapi, res, nodename)
                 logging.info("snapshotVM(): Snapshot created: " + snapname + " " + str(res))
             except Exception:
                 logging.error("Error in snapshotVM(): An error occured when trying to create snapshot "+snapname+" -- perhaps it doesn't exist")
@@ -571,6 +600,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: startVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
             exists = vmName in self.vms
             if not exists:
                 logging.error("startVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
@@ -582,7 +612,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in startVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -590,7 +620,8 @@ class ProxmoxManage(VMManage):
                 return None
 
             try:
-                proxapi.nodes(nodename)('qemu')(vmUUID)('status')('start').post()
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('status')('start').post()
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except Exception:
                 logging.error("Error in startVM(): An error occured when trying to start vm "+str(vmUUID)+" -- perhaps it doesn't exist")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -612,6 +643,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: pauseVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
             exists = vmName in self.vms
             if not exists:
                 logging.error("pauseVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
@@ -623,7 +655,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in pauseVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -631,7 +663,8 @@ class ProxmoxManage(VMManage):
                 return None
 
             try:
-                proxapi.nodes(nodename)('qemu')(vmUUID)('status')('pause').post()
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('status')('suspend').post()
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except Exception:
                 logging.error("Error in pauseVM(): An error occured when trying to start vm "+str(vmUUID)+" -- perhaps it doesn't exist")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -652,6 +685,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: suspendVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
             exists = vmName in self.vms
             if not exists:
                 logging.error("suspendVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
@@ -663,7 +697,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in suspendVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -671,7 +705,8 @@ class ProxmoxManage(VMManage):
                 return None
 
             try:
-                proxapi.nodes(nodename)('qemu')(vmUUID)('status')('suspend').post()
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('status')('suspend').post(todisk=1)
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except Exception:
                 logging.error("Error in suspendVM(): An error occured when trying to start vm "+str(vmUUID)+" -- perhaps it doesn't exist")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -691,6 +726,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: stopVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
             exists = vmName in self.vms
             if not exists:
                 logging.error("stopVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
@@ -702,7 +738,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in stopVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -710,7 +746,8 @@ class ProxmoxManage(VMManage):
                 return None
 
             try:
-                proxapi.nodes(nodename)('qemu')(vmUUID)('status')('stop').post()
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('status')('stop').post()
+                self.basic_blocking_task_status(proxapi, res, nodename)
             except Exception:
                 logging.error("Error in stopVM(): An error occured when trying to start vm "+str(vmUUID)+" -- perhaps it doesn't exist")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -759,7 +796,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in runRemoveVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -806,7 +843,7 @@ class ProxmoxManage(VMManage):
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             #runVMInfo obtains it's own lock
-            self.runVMInfo(vmName)
+            self.runVMInfo(vmName, username, password)
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVMConfigAll, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort, username, password))
@@ -830,7 +867,7 @@ class ProxmoxManage(VMManage):
                 self.lock.release()
             # clone the VM
             self.writeStatus += 1
-            self.runCloneVM(vmName, cloneName, cloneSnapshots, linkedClones, groupName)
+            self.runCloneVM(vmName, cloneName, cloneSnapshots, linkedClones, groupName, username, password)
             
             #netsetup
             try:
@@ -881,7 +918,7 @@ class ProxmoxManage(VMManage):
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             #runVMInfo obtains it's own lock
-            self.runVMInfo(vmName)
+            self.runVMInfo(vmName, username, password)
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVM, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName, username, password))
@@ -904,13 +941,13 @@ class ProxmoxManage(VMManage):
                 self.lock.release()
 
             vmUUID = str(self.vms[vmName].UUID)
-            logging.debug("runRemoveVM(): adding 1 "+ str(self.writeStatus))
+            logging.debug("runCloneVM(): adding 1 "+ str(self.writeStatus))
             
             try:
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in runRemoveVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -919,11 +956,16 @@ class ProxmoxManage(VMManage):
 
             #get id from name
             #check if vm is a template already, if not, make it one
-            istemplate = self.vms[vmName].template
+            if self.vms[vmName].template == None:
+                istemplate = 0
+            else:
+                istemplate = self.vms[vmName].template
             #convert to template (to allow linked clones)
             if istemplate == 0:
                 try:
                     res = proxapi.nodes(nodename)('qemu')(vmUUID)('template').post()
+                    self.basic_blocking_task_status(proxapi, res, nodename)
+                    self.vms[vmName].template = 1
                     logging.info("runCloneVM(): Completed setting vm to template: " + str(res))
                 except Exception:
                     print("Error in <>(): An error occured when trying set vm to template")
@@ -943,29 +985,25 @@ class ProxmoxManage(VMManage):
 
             #now issue the create clone command
             try:
-                res = proxapi.nodes(nodename)('qemu')(vmUUID)('clone').post(newid=newid, full=0)
+                res = proxapi.nodes(nodename)('qemu')(vmUUID)('clone').post(name=cloneName, newid=newid, full=0)
+                self.basic_blocking_task_status(proxapi, res, nodename)
                 logging.info("runCloneVM(): Clone created: " + str(res))
             except Exception:
                 print("Error in <>(): An error occured when trying to set clone vm")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
-            try:
-                res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(template=0)
-                logging.info("runCloneVM(): Completed setting vm to non-template mode: " + str(res))
-            except Exception:
-                print("Error in runCloneVM An error occured when trying to set vm to non-template mode")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            # once it's a template, I don't think there's a way back... so we'll just leave it as a template for now
+            # try:
+            #     res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(template=0)
+            #     self.basic_blocking_task_status(proxapi, res, nodename)
+            #     logging.info("runCloneVM(): Completed setting vm to non-template mode: " + str(res))
+            # except Exception:
+            #     print("Error in runCloneVM An error occured when trying to set vm to non-template mode")
+            #     exc_type, exc_value, exc_traceback = sys.exc_info()
+            #     traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.writeStatus += 1
             #just add to self.vms if it's not there and then call the vminfo
-            try:
-                self.lock.acquire()
-                exists = cloneName in self.vms
-                if exists == False:
-                    self.vms[cloneName] = None
-            finally:
-                self.lock.release()
-            self.runVMInfo(cloneName)
+            self.runVMInfo(cloneName, username, password)
 
         except Exception:
             logging.error("runCloneVM(): Error in runCloneVM(): An error occured; it could be due to a missing snapshot for the VM")
@@ -1050,7 +1088,7 @@ class ProxmoxManage(VMManage):
                 server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
                 port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port, user=username, password=password, verify_ssl=False)
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             except Exception:
                 logging.error("Error in runRestoreLatestSnapVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -1068,7 +1106,8 @@ class ProxmoxManage(VMManage):
 
                 #restore latest snapshot
                 if latest_snap != None:
-                    proxapi.nodes(nodename)('qemu')(vmUUID)('snapshot')(latest_snap)('rollback').post(start='0')
+                    res = proxapi.nodes(nodename)('qemu')(vmUUID)('snapshot')(latest_snap)('rollback').post(start='0')
+                    self.basic_blocking_task_status(proxapi, res, nodename)
                 else:
                     Exception
                     
