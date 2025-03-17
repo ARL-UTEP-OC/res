@@ -92,7 +92,7 @@ class ExperimentManageVBox(ExperimentManage):
         t.join()
         self.vmstatus = self.vmManage.getManagerStatus()["vmstatus"]
 
-    def runRefreshExperimentVMInfo(self, configname), username=None, password=None:
+    def runRefreshExperimentVMInfo(self, configname, username=None, password=None):
         logging.debug("refreshExperimentVMInfo(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_REFRESHING
