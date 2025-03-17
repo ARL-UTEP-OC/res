@@ -21,14 +21,14 @@ class ExperimentManageVMware(ExperimentManage):
 
 
     #abstractmethod
-    def createExperiment(self, configname, itype="", name=""):
+    def createExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("createExperiment(): instantiated")
         t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name))
         t.start()
         #t.join()
         return 0
 
-    def runCreateExperiment(self, configname, itype, name):
+    def runCreateExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runCreateExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_CREATING
@@ -90,14 +90,14 @@ class ExperimentManageVMware(ExperimentManage):
         finally:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
-    def refreshExperimentVMInfo(self, configName):
+    def refreshExperimentVMInfo(self, configName, username=None, password=None):
         logging.debug("refreshExperimentVMInfo: refreshAllVMInfo(): instantiated")      
         t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,))
         t.start()
         t.join()
         self.vmstatus = self.vmManage.getManagerStatus()["vmstatus"]
 
-    def runRefreshExperimentVMInfo(self, configname):
+    def runRefreshExperimentVMInfo(self, configname, username=None, password=None):
         logging.debug("refreshExperimentVMInfo(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_REFRESHING
@@ -128,14 +128,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def startExperiment(self, configname, itype="", name=""):
+    def startExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("startExperiment(): instantiated")
         t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name))
         t.start()
         t.join()
         return 0
 
-    def runStartExperiment(self, configname, itype, name):
+    def runStartExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runStartExperiment(): instantiated")
         try:
             #Will first clone the vms and then run their start commands if any
@@ -206,14 +206,14 @@ class ExperimentManageVMware(ExperimentManage):
         finally:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
-    def guestCmdsExperiment(self, configname, itype="", name=""):
+    def guestCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("guestCmdsExperiment(): instantiated")
         t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runGuestCmdsExperiment(self, configname, itype, name):
+    def runGuestCmdsExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runGuestCmdsExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMMANDING
@@ -265,14 +265,14 @@ class ExperimentManageVMware(ExperimentManage):
         finally:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
-    def guestStoredCmdsExperiment(self, configname, itype="", name=""):
+    def guestStoredCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
         t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runGuestStoredCmdsExperiment(self, configname, itype, name):
+    def runGuestStoredCmdsExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMMANDING
@@ -325,14 +325,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def suspendExperiment(self, configname, itype="", name=""):
+    def suspendExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("suspendExperiment(): instantiated")
         t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runSuspendExperiment(self, configname, itype, name):
+    def runSuspendExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runSuspendExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_SUSPENDING
@@ -371,14 +371,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def pauseExperiment(self, configname, itype="", name=""):
+    def pauseExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("pauseExperiment(): instantiated")
         t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runPauseExperiment(self, configname, itype, name):
+    def runPauseExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runPauseExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_PAUSING
@@ -417,14 +417,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def snapshotExperiment(self, configname, itype="", name=""):
+    def snapshotExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("snapshotExperiment(): instantiated")
         t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runSnapshotExperiment(self, configname, itype, name):
+    def runSnapshotExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runSnapshotExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_SNAPSHOTTING
@@ -463,14 +463,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def stopExperiment(self, configname, itype="", name=""):
+    def stopExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("stopExperiment(): instantiated")
         t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runStopExperiment(self, configname, itype, name):
+    def runStopExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runStopExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_STOPPING
@@ -507,14 +507,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def removeExperiment(self, configname, itype="", name=""):
+    def removeExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("removeExperiment(): instantiated")
         t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0
         
-    def runRemoveExperiment(self, configname, itype, name):
+    def runRemoveExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runRemoveExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_REMOVING
@@ -551,14 +551,14 @@ class ExperimentManageVMware(ExperimentManage):
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
 
     #abstractmethod
-    def restoreExperiment(self, configname, itype="", name=""):
+    def restoreExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("restoreExperimentStates(): instantiated")
         t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name))
         t.start()
         t.join()
         return 0    
 
-    def runRestoreExperiment(self, configname, itype, name):
+    def runRestoreExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runRestoreExperiment(): instantiated")
         try:
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_RESTORING

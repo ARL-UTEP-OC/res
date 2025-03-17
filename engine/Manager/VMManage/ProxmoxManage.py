@@ -525,12 +525,64 @@ class ProxmoxManage(VMManage):
 
     def importVM(self, filepath, username=None, password=None):
         logging.debug("ProxmoxManage: importVM(): instantiated")
-        cmd = "import \"" + filepath + "\" --options keepallmacs"
+        #first get the next available id using pvesh
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
-        t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
+        t = threading.Thread(target=self.runImportVM, args=(filepath,username, password))
         t.start()
-        return 0  
+        return 0 
+    
+    def runImportVM(self, filepath, username=None, password=None):
+        logging.debug("ProxmoxManage: runRemoteCmds(): instantiated")
+        try:
+            self.readStatus = VMManage.MANAGER_READING
+            logging.debug("runRemoteCmds(): adding 1 "+ str(self.writeStatus))
+
+            try:
+                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
+                port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+                nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
+                pveshpath = self.cf.getConfig()['PROXMOX']['VMANAGE_PVESH_PATH']
+                qmrestore = self.cf.getConfig()['PROXMOX']['VMANAGE_QMRESTORE_PATH']
+                qmpath = self.cf.getConfig()['PROXMOX']['VMANAGE_QM_PATH']
+                storagepath = self.cf.getConfig()['PROXMOX']['VMANAGE_STORAGE_VOL']
+                proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            except Exception:
+                logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            try:
+                #get next available id
+                cmd = pveshpath + " get /cluster/nextid"
+                logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
+                res = proxssh._exec(shlex.split(cmd))
+                newid = res.strip()
+                logging.info("runRemoteCmds(): Next available id: " + str(newid))
+            except Exception:
+                logging.error("Error in runRemoteCmds(): An error occured when trying to get next available id")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            try:
+                #import vm
+                cmd = qmrestore + " " + filepath + "  " + str(newid) + " --storage " + storagepath
+                logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
+                res = proxssh._exec(shlex.split(cmd))
+            except Exception:
+                logging.error("Error in runRemoteCmds(): An error occured when trying to get next available id")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            logging.debug("runRemoteCmds(): Thread completed")
+        except Exception:
+            logging.error("runRemoteCmds() Error: " + " cmd: " + cmd)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+        finally:
+            self.readStatus = VMManage.MANAGER_IDLE
+            self.writeStatus -= 1
+            logging.debug("runRemoteCmds(): sub 1 "+ str(self.writeStatus))
 
     def snapshotVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: snapshotVM(): instantiated")
@@ -591,8 +643,6 @@ class ProxmoxManage(VMManage):
                 logging.error("exportVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
                 return -1
             filepath = filepath.replace("\"","")
-            exportfilename = os.path.join(filepath,vmName+".ova")
-            cmd = "export " + self.vms[vmName].UUID + " -o \"" + exportfilename# + "\" --iso"
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
@@ -600,6 +650,41 @@ class ProxmoxManage(VMManage):
             return 0
         finally:
             self.lock.release()
+
+    def runExportVM(self, vmName, filepath, username=None, password=None):
+        logging.debug("ProxmoxManage: runExportVM(): instantiated")
+        try:
+            vmUUID = str(self.vms[vmName].UUID)
+            logging.debug("runExportVM(): adding 1 "+ str(self.writeStatus))
+            
+            try:
+                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
+                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
+                nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
+                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+            except Exception:
+                logging.error("Error in runExportVM(): An error occured when trying to connect to proxmox")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+
+            try:
+                res = proxapi.nodes(nodename)('vzdump').post(remove='0',compress='zstd',dumpdir=filepath,vmid=vmUUID,zstd='0')
+                self.basic_blocking_task_status(proxapi, res, nodename)
+            except Exception:
+                logging.error("Error in runExportVM(): An error occured when trying to export VM: " + str(vmName))
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+            logging.debug("runExportVM(): Thread completed")
+        except Exception:
+            logging.error("runExportVM() Error.")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+        finally:
+            self.readStatus = VMManage.MANAGER_IDLE
+            self.writeStatus -= 1
+            logging.debug("runExportVM(): sub 1 "+ str(self.writeStatus))
 
     def runStatusChangeVM(self, vmName, status, username=None, password=None, **additional_attr):
         logging.debug("ProxmoxManage: runStatusChangeVM(): instantiated")

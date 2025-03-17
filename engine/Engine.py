@@ -105,7 +105,6 @@ class Engine:
         
     def vmManageRefreshCmd(self, args):
         logging.debug("vmManageRefreshCmd(): instantiated")
-        #will import res package from file
         vmName = args.vmName
         username = args.username
         password = args.password

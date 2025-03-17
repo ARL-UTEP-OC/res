@@ -32,31 +32,31 @@ class ExperimentManage:
         self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_UNKNOWN
 
     #abstractmethod
-    def createExperiment(self, configname):
+    def createExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def startExperiment(self, configname):
+    def startExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def suspendExperiment(self, configname):
+    def suspendExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def pauseExperiment(self, configname):
+    def pauseExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def snapshotExperiment(self, configname):
+    def snapshotExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def stopExperiment(self, configname):
+    def stopExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     #abstractmethod
-    def removeExperiment(self, configname):
+    def removeExperiment(self, configname, username, password):
         raise NotImplementedError()
 
     def getExperimentManageStatus(self):
