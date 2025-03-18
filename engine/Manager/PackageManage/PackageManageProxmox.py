@@ -21,13 +21,13 @@ class PackageManageProxmox(PackageManage):
         self.s.readConfig()
 
     #abstractmethod
-    def importPackage(self, resfilename, runVagrantProvisionScript=False):
+    def importPackage(self, resfilename, runVagrantProvisionScript=False, username=None, password=None):
         logging.debug("importPackage(): instantiated")
-        t = threading.Thread(target=self.runImportPackage, args=(resfilename,))
+        t = threading.Thread(target=self.runImportPackage, args=(resfilename, None, username, password))
         t.start()
         return 0
     
-    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None):
+    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None, username=None, password=None):
         logging.debug("runImportPackage(): instantiated")
         try:
             self.writeStatus = PackageManage.PACKAGE_MANAGE_IMPORTING
@@ -40,13 +40,10 @@ class PackageManageProxmox(PackageManage):
             tmpPathBaseImportedExperiment = os.path.join(tmpPathBase, assumedExperimentName)
             targetPathBase = os.path.join(self.s.getConfig()['EXPERIMENTS']['EXPERIMENTS_PATH'], assumedExperimentName)
 
-            self.unzipWorker(resfilename, tmpPathBase)
+            self.unzipWorker(resfilename, tmpPathBase, username, password)
             logging.info("runImportPackage(): completed unzipping contents")
             tmpPathVMs = os.path.join(tmpPathBase, assumedExperimentName, "VMs")
-            #For ova files
-                #call vmManage to import VMs as specified in config file; wait and query the vmManage status, and then set the complete status
-                # Get all files that end with .ova
-                #import and then snapshot
+
             vmFilenames = []
             if os.path.exists(tmpPathVMs):
                 vmFilenames = os.listdir(tmpPathVMs)
@@ -126,7 +123,7 @@ class PackageManageProxmox(PackageManage):
             self.writeStatus = PackageManage.PACKAGE_MANAGE_COMPLETE
             return None
 
-    def unzipWorker(self, resfilename, tmpOutPath):
+    def unzipWorker(self, resfilename, tmpOutPath, username, password):
         logging.debug("unzipWorker() initiated " + str(resfilename))
         zipPath = resfilename
         block_size = 1048576
@@ -192,9 +189,9 @@ class PackageManageProxmox(PackageManage):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-    def importVMWorker(self, vmFilepath):
+    def importVMWorker(self, vmFilepath, username=None, password=None):
         logging.debug("importVMWorker(): instantiated")
-        self.vmManage.importVM(vmFilepath)
+        self.vmManage.importVM(vmFilepath, username, password)
 
         res = self.vmManage.getManagerStatus()
         logging.debug("Waiting for import to complete...")
@@ -205,9 +202,9 @@ class PackageManageProxmox(PackageManage):
         logging.info("Import complete...")
         logging.debug("importVMWorker(): complete")
 
-    def snapshotVMWorker(self, vmName):
+    def snapshotVMWorker(self, vmName, username=None, password=None):
         logging.debug("snapshotVMWorker(): instantiated")
-        self.vmManage.snapshotVM(vmName)
+        self.vmManage.snapshotVM(vmName, username=username, password=password)
         res = self.vmManage.getManagerStatus()
         logging.debug("Waiting for snapshot create to complete...")
         while res["writeStatus"] != self.vmManage.MANAGER_IDLE:

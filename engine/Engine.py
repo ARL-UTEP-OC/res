@@ -13,6 +13,7 @@ from engine.Manager.PackageManage.PackageManageVBox import PackageManageVBox
 from engine.Manager.PackageManage.PackageManageVMware import PackageManageVMware
 from engine.Manager.ExperimentManage.ExperimentManageVBox import ExperimentManageVBox
 from engine.Manager.ExperimentManage.ExperimentManageVMware import ExperimentManageVMware
+from engine.Manager.ExperimentManage.ExperimentManageProxmox import ExperimentManageProxmox
 from engine.Manager.VMManage.VBoxManage import VBoxManage
 from engine.Manager.VMManage.VBoxManageWin import VBoxManageWin
 from engine.Manager.VMManage.VMwareManage import VMwareManage
@@ -49,7 +50,7 @@ class Engine:
             elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManage()
             else: 
-                self.vmManage = ProxmoxManage()
+                self.vmManage = ProxmoxManage(True)
                 
         else:
             if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
@@ -68,8 +69,7 @@ class Engine:
         elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
             self.experimentManage = ExperimentManageVMware(self.vmManage)
         else:
-            pass
-            # self.experimentManage = ExperimentManageProxmox(self.vmManage)
+            self.experimentManage = ExperimentManageProxmox(self.vmManage)
         #Create the PackageManage
         if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
             self.packageManage = PackageManageVBox(self.vmManage, self.experimentManage)
@@ -308,7 +308,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.createExperiment(configname, username, password)    
+            return self.experimentManage.createExperiment(configname, "", "", username, password)    
         return self.experimentManage.createExperiment(configname, itype, name, username, password)
 
     def experimentStartCmd(self, args):
@@ -321,7 +321,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.startExperiment(configname, username, password)    
+            return self.experimentManage.startExperiment(configname, "", "", username, password)    
         return self.experimentManage.startExperiment(configname, itype, name, username, password)
 
     def experimentSuspendCmd(self, args):
@@ -334,8 +334,8 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.suspendExperiment(configname)    
-        return self.experimentManage.suspendExperiment(configname, itype, name)
+            return self.experimentManage.suspendExperiment(configname, "", "", username, password)
+        return self.experimentManage.suspendExperiment(configname, itype, name, username, password)
 
     def experimentPauseCmd(self, args):
         logging.debug("experimentPauseCmd(): instantiated")
@@ -347,7 +347,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.pauseExperiment(configname, username, password)    
+            return self.experimentManage.pauseExperiment(configname, "", "", username, password)
         return self.experimentManage.pauseExperiment(configname, itype, name, username, password)
 
     def experimentSnapshotCmd(self, args):
@@ -360,7 +360,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.snapshotExperiment(configname, username, password)    
+            return self.experimentManage.snapshotExperiment(configname, "", "", username, password)    
         return self.experimentManage.snapshotExperiment(configname, itype, name, username, password)
 
     def experimentStopCmd(self, args):
@@ -373,7 +373,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.stopExperiment(configname, username, password)    
+            return self.experimentManage.stopExperiment(configname, "", "", username, password)    
         return self.experimentManage.stopExperiment(configname, itype, name, username, password)
 
     def experimentRemoveCmd(self, args):
@@ -386,7 +386,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.removeExperiment(configname, username, password)    
+            return self.experimentManage.removeExperiment(configname, "", "", username, password)    
         return self.experimentManage.removeExperiment(configname, itype, name, username, password)
 
     def experimentRestoreCmd(self, args):
@@ -399,7 +399,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.restoreExperiment(configname, username, password)
+            return self.experimentManage.restoreExperiment(configname, "", "", username, password)
         return self.experimentManage.restoreExperiment(configname, itype, name, username, password)
 
     def experimentRunGuestCmd(self, args):
@@ -412,7 +412,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.guestCmdsExperiment(configname, username, password)    
+            return self.experimentManage.guestCmdsExperiment(configname, "", "", username, password)    
         return self.experimentManage.guestCmdsExperiment(configname, itype, name, username, password)
     
     def experimentRunGuestStoredCmd(self, args):
@@ -425,7 +425,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.guestStoredCmdsExperiment(configname, username, password)    
+            return self.experimentManage.guestStoredCmdsExperiment(configname, "", "", username, password)    
         return self.experimentManage.guestStoredCmdsExperiment(configname, itype, name, username, password)
 
     def vmConfigCmd(self, args):
@@ -493,10 +493,6 @@ class Engine:
         self.vmStatusParser = self.vmManageSubParsers.add_parser('vmstatus', help='retrieve vm status')
         self.vmStatusParser.add_argument('vmName', metavar='<vm name>', action="store",
                                            help='name of vm to retrieve status')
-        self.vmStatusParser.add_argument('--username', metavar='<username>', action="store",
-                                          help='Username for connecting to host')
-        self.vmStatusParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')                                           
         self.vmStatusParser.set_defaults(func=self.vmManageVMStatusCmd)
 
         self.vmMgrStatusParser = self.vmManageSubParsers.add_parser('mgrstatus', help='retrieve manager status')
@@ -735,8 +731,8 @@ class Engine:
         self.experimentManageStatusParser.set_defaults(func=self.experimentStatusCmd)
 
         self.experimentManageRefresshVMsParser = self.experimentManageSubParser.add_parser('refresh', help='refresh experiment VMs info')
-        self.experimentManageRefresshVMsParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageRefresshVMsParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageRefresshVMsParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
         self.experimentManageRefresshVMsParser.add_argument('--password', metavar='<password>', action="store",
@@ -744,8 +740,8 @@ class Engine:
         self.experimentManageRefresshVMsParser.set_defaults(func=self.experimentRefreshCmd)
 
         self.experimentManageCreateParser = self.experimentManageSubParser.add_parser('create', help='create clones aka instances of experiment')
-        self.experimentManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageCreateParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageCreateParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -757,8 +753,8 @@ class Engine:
         self.experimentManageCreateParser.set_defaults(func=self.experimentCreateCmd)
 
         self.experimentManageStartParser = self.experimentManageSubParser.add_parser('start', help='start (headless) clones aka instances of experiment')
-        self.experimentManageStartParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageStartParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageStartParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageStartParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -770,8 +766,8 @@ class Engine:
         self.experimentManageStartParser.set_defaults(func=self.experimentStartCmd)
 
         self.experimentManageStopParser = self.experimentManageSubParser.add_parser('stop', help='stop clones aka instances of experiment')
-        self.experimentManageStopParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageStopParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageStopParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageStopParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -783,8 +779,8 @@ class Engine:
         self.experimentManageStopParser.set_defaults(func=self.experimentStopCmd)
 
         self.experimentManageSuspendParser = self.experimentManageSubParser.add_parser('suspend', help='save state for clones aka instances of experiment')
-        self.experimentManageSuspendParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageSuspendParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageSuspendParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageSuspendParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -796,8 +792,8 @@ class Engine:
         self.experimentManageSuspendParser.set_defaults(func=self.experimentSuspendCmd)
 
         self.experimentManagePauseParser = self.experimentManageSubParser.add_parser('pause', help='pause clones aka instances of experiment')
-        self.experimentManagePauseParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')                                
+        self.experimentManagePauseParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManagePauseParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManagePauseParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -809,8 +805,8 @@ class Engine:
         self.experimentManagePauseParser.set_defaults(func=self.experimentPauseCmd)
 
         self.experimentManageSnapshotParser = self.experimentManageSubParser.add_parser('snapshot', help='snapshot clones aka instances of experiment')
-        self.experimentManageSnapshotParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageSnapshotParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageSnapshotParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageSnapshotParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -822,8 +818,8 @@ class Engine:
         self.experimentManageSnapshotParser.set_defaults(func=self.experimentSnapshotCmd)
 
         self.experimentManageRestoreParser = self.experimentManageSubParser.add_parser('restore', help='restore experiment to latest snapshot')
-        self.experimentManageRestoreParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageRestoreParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageRestoreParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageRestoreParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -835,8 +831,8 @@ class Engine:
         self.experimentManageRestoreParser.set_defaults(func=self.experimentRestoreCmd)
 
         self.experimentManageRemoveParser = self.experimentManageSubParser.add_parser('remove', help='remove clones aka instances of experiment')
-        self.experimentManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageRemoveParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -848,8 +844,8 @@ class Engine:
         self.experimentManageRemoveParser.set_defaults(func=self.experimentRemoveCmd)
         
         self.experimentManageGuestCmdStartupParser = self.experimentManageSubParser.add_parser('guestcmd', help='runs VM guest startup commands for experiment clones')
-        self.experimentManageGuestCmdStartupParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageGuestCmdStartupParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageGuestCmdStartupParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageGuestCmdStartupParser.add_argument('name', metavar='<instance-name>', action="store",
@@ -861,8 +857,8 @@ class Engine:
         self.experimentManageGuestCmdStartupParser.set_defaults(func=self.experimentRunGuestCmd)
 
         self.experimentManageGuestCmdStoredParser = self.experimentManageSubParser.add_parser('gueststored', help='runs VM guest stored commands for experiment clones')
-        self.experimentManageGuestCmdStoredParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
+        self.experimentManageGuestCmdStoredParser.add_argument('configname', metavar='<config name>', action="store",
+                                          help='config name as it appears in the experiment')
         self.experimentManageGuestCmdStoredParser.add_argument('itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
         self.experimentManageGuestCmdStoredParser.add_argument('name', metavar='<instance-name>', action="store",

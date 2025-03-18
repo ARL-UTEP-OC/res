@@ -395,7 +395,7 @@ class VBoxManage(VMManage):
             self.writeStatus -= 1
             logging.debug("runVMCmd(): sub 1 "+ str(self.writeStatus))
 
-    def getVMStatus(self, vmName, username=None, password=None):
+    def getVMStatus(self, vmName):
         logging.debug("VBoxManage: getVMStatus(): instantiated " + vmName)
         exists = False
         try:

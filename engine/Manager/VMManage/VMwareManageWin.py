@@ -437,7 +437,7 @@ class VMwareManageWin(VMManage):
             self.writeStatus -= 1
             logging.debug("runVMCmd(): sub 1 "+ str(self.writeStatus))
 
-    def getVMStatus(self, vmName, username=None, password=None):
+    def getVMStatus(self, vmName):
         logging.debug("VMwareManageWin: getVMStatus(): instantiated " + vmName)
         try:
             self.lock.acquire()

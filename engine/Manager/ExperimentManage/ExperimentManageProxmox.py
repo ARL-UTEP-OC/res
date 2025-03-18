@@ -6,8 +6,7 @@ import json
 import os
 from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Manager.VMManage.VMManage import VMManage
-from engine.Manager.VMManage.VMwareManage import VMwareManage
-from engine.Manager.VMManage.VMwareManageWin import VMwareManageWin
+from engine.Manager.VMManage.ProxmoxManage import ProxmoxManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 
 class ExperimentManageProxmox(ExperimentManage):
@@ -41,7 +40,7 @@ class ExperimentManageProxmox(ExperimentManage):
                     vmName = vm
                     logging.debug("runCreateExperiment(): working with vm: " + str(vmName))
                     #Create clones preserving internal networks, etc.
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     refreshedVMName = False
@@ -92,7 +91,7 @@ class ExperimentManageProxmox(ExperimentManage):
 
     def refreshExperimentVMInfo(self, configName, username=None, password=None):
         logging.debug("refreshExperimentVMInfo: refreshAllVMInfo(): instantiated")      
-        t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,))
+        t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,username, password))
         t.start()
         t.join()
         self.vmstatus = self.vmManage.getManagerStatus()["vmstatus"]
@@ -130,7 +129,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def startExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("startExperiment(): instantiated")
-        t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name))
+        t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -155,7 +154,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runStartExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runStartExperiment(): Starting: " + str(vmName))
@@ -175,7 +174,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runStartExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runStartExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -208,7 +207,7 @@ class ExperimentManageProxmox(ExperimentManage):
 
     def guestCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("guestCmdsExperiment(): instantiated")
-        t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -231,7 +230,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runGuestCmdsExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runGuestCmdsExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -267,7 +266,7 @@ class ExperimentManageProxmox(ExperimentManage):
 
     def guestStoredCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
-        t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -290,7 +289,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runGuestStoredCmdsExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runGuestStoredCmdsExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -327,7 +326,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def suspendExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("suspendExperiment(): instantiated")
-        t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -351,7 +350,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(vmName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runSuspendExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSuspendExperiment(): Suspending: " + str(vmName))
@@ -373,7 +372,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def pauseExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("pauseExperiment(): instantiated")
-        t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -397,7 +396,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue                            
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runPauseExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runPauseExperiment(): Pausing: " + str(vmName))
@@ -419,7 +418,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def snapshotExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("snapshotExperiment(): instantiated")
-        t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -443,7 +442,7 @@ class ExperimentManageProxmox(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(vmName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runSnapshotExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSnapshotExperiment(): Snapshotting: " + str(vmName))
@@ -465,7 +464,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def stopExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("stopExperiment(): instantiated")
-        t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -487,7 +486,7 @@ class ExperimentManageProxmox(ExperimentManage):
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then run it if it does
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runStopExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runStopExperiment(): Stopping: " + str(vmName))
@@ -509,7 +508,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def removeExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("removeExperiment(): instantiated")
-        t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -531,7 +530,7 @@ class ExperimentManageProxmox(ExperimentManage):
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then remove it if it does
-                    if not os.path.exists(cloneVMName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runRemoveExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRemoveExperiment(): Removing: " + str(cloneVMName))
@@ -553,7 +552,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def restoreExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("restoreExperimentStates(): instantiated")
-        t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0    
@@ -575,7 +574,7 @@ class ExperimentManageProxmox(ExperimentManage):
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then run it if it does
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runRestoreExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRestoreExperiment(): Restoring latest for : " + str(cloneVMName))
@@ -619,7 +618,7 @@ if __name__ == "__main__":
     logging.debug("Starting Program")
 
     logging.debug("Instantiating Engine")
-    vbm = VMwareManage()
+    vbm = ProxmoxManage()
     e = ExperimentManageProxmox(vbm)
     ####---Create Experiment Test#####
     logging.info("Creating Experiment")

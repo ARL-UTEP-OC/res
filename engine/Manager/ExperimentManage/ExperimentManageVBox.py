@@ -35,49 +35,53 @@ class ExperimentManageVBox(ExperimentManage):
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
             status = self.vmManage.getManagerStatus()["writeStatus"]
-            for vm in clonevmjson.keys(): 
-                vmName = vm
-                logging.debug("runCreateExperiment(): working with vm: " + str(vmName))
-                #Create clones preserving internal networks, etc.
-                if self.vmManage.getVMStatus(vmName) == None:
-                    logging.error("VM Name: " + str(vmName) + " does not exist; skipping...")
-                    continue
-                refreshedVMName = False
-                #get names for clones
-                for cloneinfo in clonevmjson[vm]:
-                    cloneVMName = cloneinfo["name"]
-                    if cloneVMName not in validvmnames:
-                        status = self.vmManage.getManagerStatus()["writeStatus"]
+            for i in range(1, numclones + 1):
+                for vm in clonevmjson.keys():
+                    vmName = vm
+                    logging.debug("runCreateExperiment(): working with vm: " + str(vmName))
+                    #Create clones preserving internal networks, etc.
+                    if self.vmManage.getVMStatus(vmName) == None:
+                        logging.error("VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
-                    cloneGroupName = cloneinfo["group-name"]
-                    cloneSnapshots = cloneinfo["clone-snapshots"]
-                    linkedClones = cloneinfo["linked-clones"]
-                    internalnets = cloneinfo["networks"]
+                    refreshedVMName = False
+                    #get names for clones
+                    for cloneinfo in clonevmjson[vm]:
+                        if cloneinfo["groupNum"] == str(i):
+                            cloneVMName = cloneinfo["name"]
+                            if cloneVMName not in validvmnames:
+                                status = self.vmManage.getManagerStatus()["writeStatus"]
+                                continue
+                            cloneGroupName = cloneinfo["group-name"]
+                            cloneSnapshots = cloneinfo["clone-snapshots"]
+                            linkedClones = cloneinfo["linked-clones"]
+                            internalnets = cloneinfo["networks"]
 
-                    logging.debug("vmName: " + str(vmName) + " cloneVMName: " + str(cloneVMName) + " cloneSnaps: " + str(cloneSnapshots) + " linked: " + str(linkedClones) + " cloneGroupName: " + str(cloneGroupName))
+                            logging.debug("vmName: " + str(vmName) + " cloneVMName: " + str(cloneVMName) + " cloneSnaps: " + str(cloneSnapshots) + " linked: " + str(linkedClones) + " cloneGroupName: " + str(cloneGroupName))
 
-                    # vrdp info
-                    vrdpPort = None
-                    if "vrdpPort" in cloneinfo:
-                        #set interface to vrde
-                        logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
-                        vrdpPort = str(cloneinfo["vrdpPort"])
+                            # vrdp info
+                            vrdpPort = None
+                            if "vrdpPort" in cloneinfo:
+                                #set interface to vrde
+                                logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
+                                vrdpPort = str(cloneinfo["vrdpPort"])
 
-                    # Clone; we want to refresh the vm info in case any new snapshots have been added, but only once
-                    if refreshedVMName == False:
-                        self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=True)
-                    else:
-                        self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=False)
-                        refreshedVMName = True
-                    status = self.vmManage.getManagerStatus()["writeStatus"]
-            while status != VMManage.MANAGER_IDLE:
-                #waiting for vmmanager clone vm to finish reading/writing...
-                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing..." + str(status))
-                time.sleep(.1)
+                            # Clone; we want to refresh the vm info in case any new snapshots have been added, but only once
+                            if refreshedVMName == False:
+                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=True, username=username, password=password)
+                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
+                            else:
+                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=False, username=username, password=password)
+                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
+                                refreshedVMName = True
                 status = self.vmManage.getManagerStatus()["writeStatus"]
-            
-            logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
-            logging.debug("runCreateExperiment(): Complete...")
+                while status != VMManage.MANAGER_IDLE:
+                    #waiting for vmmanager clone vm to finish reading/writing...
+                    logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                    time.sleep(1)
+                    status = self.vmManage.getManagerStatus()["writeStatus"]
+                
+                logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
+                logging.debug("runCreateExperiment(): Complete...")
         except Exception:
             logging.error("runCloneVM(): Error in runCreateExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -132,6 +136,7 @@ class ExperimentManageVBox(ExperimentManage):
     def runStartExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runStartExperiment(): instantiated")
         try:
+            #Will first clone the vms and then run their start commands if any
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_STARTING
             #call vmManage to start clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
@@ -154,7 +159,7 @@ class ExperimentManageVBox(ExperimentManage):
                             logging.debug("runStartExperiment(): Starting: " + str(vmName))
                             self.vmManage.startVM(cloneVMName)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                #waiting for vmmanager start vm to finish reading/writing...
+            #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
             #now that the VMs have started, we want to run the commands on each; no waiting needed
             for i in range(1, numclones + 1):
@@ -518,7 +523,7 @@ class ExperimentManageVBox(ExperimentManage):
                     cloneVMName = cloneinfo["name"]
                     if cloneVMName not in validvmnames:
                         continue
-                    #Check if clone exists and then run it if it does
+                    #Check if clone exists and then remove it if it does
                     if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runRemoveExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
