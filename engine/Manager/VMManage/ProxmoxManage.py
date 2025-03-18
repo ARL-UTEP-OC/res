@@ -26,15 +26,76 @@ class ProxmoxManage(VMManage):
         self.lock = RLock()
         self.vms = {}
         self.tempVMs = {}
-        if initializeVMManage:
-            self.refreshAllVMInfo(username=username, password=password)
+        self.proxapi = None
+        self.proxssh = None
+        if initializeVMManage and username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
+            logging.info("ProxmoxManage.__init__(): Initializing ProxmoxManage; collecting VM information...")
+            self.proxapi = self.getProxAPI(username=username, password=password)
+            sshuser = username[:-4]
+            self.proxssh = self.getProxSSH(username=sshuser, password=password)
+            self.refreshAllVMInfo()
             result = self.getManagerStatus()["writeStatus"]
             while result != self.MANAGER_IDLE:
             #waiting for manager to finish query...
                 result = self.getManagerStatus()["writeStatus"]
                 time.sleep(.1)
+            logging.info("ProxmoxManage.__init__(): Done...")
+
+    def getProxAPI(self, username=None, password=None):
+        logging.debug("ProxmoxManage: getProxAPI(): instantiated")
+        try:
+            server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
+            if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+            elif self.proxapi != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxapi = None
+                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+            return self.proxapi
+        except Exception:
+            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.proxapi = None
+            return None
+        
+    def getProxSSH(self, username=None, password=None):
+        logging.debug("ProxmoxManage: getProxSSH(): instantiated")
+        try:
+            server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+            if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxssh._exec(["exit"])               
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            return self.proxssh
+        except Exception:
+            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.proxssh = None
+            return None
+
+    def checkVMExistsRetry(self, vmName, caller, retryMax=5, sleeptime=.5):
+        logging.debug("ProxmoxManage: checkVMExistsRetry(): instantiated")
+        #Check that vm does exist
+        retryMax = 5
+        retry =1
+        exists = vmName in self.vms
+        while exists == False:
+            logging.error(caller + "(): " + vmName + " not found in list of known vms: \r\n" + str(vmName) + " retrying attempt " + str(retry) + " of " + str(retryMax))
+            if retry < retryMax:
+                time.sleep(sleeptime)
+                retry += 1
+                exists = vmName in self.vms
+            else:
+                logging.error(caller + "(): " + vmName + " not found in list of known vms: \r\n" + str(vmName) + " giving up")
+                return -1
+        return 0
 
     def basic_blocking_task_status(self, proxmox_api, task_id, node_name):
+        logging.debug("ProxmoxManage: basic_blocking_task_status(): instantiated")
         retry = 5
         data = {"status": ""}
         while (isinstance(data, dict) and "status" in data and data["status"] != "stopped"):
@@ -52,38 +113,26 @@ class ProxmoxManage(VMManage):
     def configureVMNet(self, vmName, netNum, netName, username=None, password=None):
         logging.debug("ProxmoxManage: configureVMNet(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
-        exists = False
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("configureVMNet(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runConfigureVMNet, args=(vmName, netNum, netName, username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "configureVMNet") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runConfigureVMNet, args=(vmName, netNum, netName, username, password))
+        t.start()
+        return 0
 
     def configureVMNets(self, vmName, internalNets, username=None, password=None):
         logging.debug("ProxmoxManage: configureVMNets(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
-        exists = False
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("configureVMNets(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runConfigureVMNets, args=(vmName, internalNets, username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "configureVMNets") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runConfigureVMNets, args=(vmName, internalNets, username, password))
+        t.start()
+        return 0
 
     def runConfigureVMNets(self, vmName, internalNets, username=None, password=None):
         try:
@@ -93,16 +142,12 @@ class ProxmoxManage(VMManage):
             cloneNetNum = 0
             logging.debug("runConfigureVMNets(): Processing internal net names: " + str(internalNets))
             vmUUID = ""
+            vmUUID = str(self.vms[vmName].UUID)
             try:
-                self.lock.acquire()
-                vmUUID = str(self.vms[vmName].UUID)
-            finally:
-                self.lock.release()
-            try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 #logging.error("Error in <>(): An error occured ")
                 logging.error("Error in runConfigureVMNets(): An error occured when trying to connect to proxmox")
@@ -123,12 +168,17 @@ class ProxmoxManage(VMManage):
                     #create bridge if it doesn't exist
                     res = proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge')
                     self.basic_blocking_task_status(proxapi, res, nodename)
-                    res = proxapi.nodes(nodename)('network').put()
-                    # self.basic_blocking_task_status(proxapi, res, nodename)
                 except ResourceException:
                     logging.warning("runConfigureVMNets(): interface may already exist: " + str(internalnet))
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+                try:
+                    res = proxapi.nodes(nodename)('network').put()
+                except ResourceException:
+                    logging.error("In runConfigureVMNet(): error when trying to apply configuration update")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
 
                 #assign net to bridge
                 kwargs = {f'net{cloneNetNum}': 'e1000,bridge='+str(internalnet)}
@@ -155,19 +205,12 @@ class ProxmoxManage(VMManage):
     def guestCommands(self, vmName, cmds, delay=0, username=None, password=None):
         logging.debug("guestCommands(): instantiated")
         # #check to make sure the vm is known, if not should refresh or check name:
-        # exists = False
-        # try:
-        #     self.lock.acquire()
-        #     exists = vmName in self.vms
-        #     if not exists:
-        #         logging.error("guestCommands(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-        #         return -1
-        #     self.guestThreadStatus += 1
-        #     t = threading.Thread(target=self.runGuestCommands, args=(vmName, cmds, delay, username, password))
-        #     t.start()
-        #     return 0
-        # finally:
-        #     self.lock.release()
+        # if self.checkVMExistsRetry(vmName, "guestCommands") == -1:
+        #     return -1
+        #  self.guestThreadStatus += 1
+        #  t = threading.Thread(target=self.runGuestCommands, args=(vmName, cmds, delay, username, password))
+        #  t.start()
+        #  return 0
 
     def runGuestCommands(self, vmName, cmds, delay, username=None, password=None):
         logging.debug("ProxmoxManage: runGuestCommands(): instantiated")
@@ -208,35 +251,29 @@ class ProxmoxManage(VMManage):
     def refreshVMInfo(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: refreshVMInfo(): instantiated: " + str(vmName))
         logging.debug("refreshVMInfo() refresh VMs thread")
-        #check to make sure the vm is known, if not should refresh or check name:
-        exists = False
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.warning("refreshVMInfo(): " + vmName + " not found in list of known vms... refreshing all\r\n")
-                t = threading.Thread(target=self.runVMSInfo, args=(username, password))
-                self.readStatus = VMManage.MANAGER_READING
-                self.writeStatus += 1
-                t.start()
-            else:
-                self.readStatus = VMManage.MANAGER_READING
-                self.writeStatus += 1
-                t = threading.Thread(target=self.runVMInfo, args=(vmName,username, password))
-                t.start()
-            return 0
-        finally:
-            self.lock.release()
+        res = self.checkVMExistsRetry(vmName, "refreshVMInfo",sleeptime=.1)
+
+        if res == -1:
+            logging.warning("refreshVMInfo(): " + vmName + " not found in list of known vms... refreshing all\r\n")
+            t = threading.Thread(target=self.runVMSInfo, args=(username, password))
+            self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
+            t.start()
+        else:
+            self.readStatus = VMManage.MANAGER_READING
+            self.writeStatus += 1
+            t = threading.Thread(target=self.runVMInfo, args=(vmName,username, password))
+            t.start()
+        return 0
     
     def runVMSInfo(self, username=None, password=None):
         logging.debug("ProxmoxManage: runVMSInfo(): instantiated")
         try:
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
-                
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runConfigureVMNets(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -316,17 +353,16 @@ class ProxmoxManage(VMManage):
             self.writeStatus -= 1
             logging.debug("runVMSInfo(): sub 1 "+ str(self.writeStatus))
 
-    def runVMInfo(self, vmName, username=None, password=None):
+    def runVMInfo(self, vmName, username=None, password=None, vmid=None):
         logging.debug("ProxmoxManage: runVMInfo(): instantiated")
         try:
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
-                
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None           
             except Exception:
-                logging.error("Error in runConfigureVMNets(): An error occured when trying to connect to proxmox")
+                logging.error("Error in runVMInfo(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
@@ -336,21 +372,29 @@ class ProxmoxManage(VMManage):
             try:
                 allinfo = proxapi.cluster.resources.get(type='vm')
             except Exception:
-                logging.error("Error in runVMSInfo: An error occured when trying to get cluster info")
+                logging.error("Error in runVMInfo(): An error occured when trying to get cluster info")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return -1
             vm = None
             
             for vmiter in allinfo:
-                if 'name' not in vmiter or vmiter['name'] != vmName:
+                if vmid == None and ('name' not in vmiter or vmiter['name'] != vmName):
+                    # print("Skipping because vmid == None and " + str(vmiter['name']) + " != " + str(vmName))
                     continue
+                if vmid != None and ('vmid' not in vmiter or str(vmiter['vmid']) != vmid):
+                    # print("Skipping because vmid != None and " + str(vmiter['vmid']) + " != " + str(vmid))
+                    continue
+                #print("Moving on because " + str(vmiter['name']) + " == " + str(vmName) + " or " + str(vmiter['vmid']) + " == " + str(vmid))
                 # net info
                 #GET UUID
                 logging.debug("runVMSInfo(): adding 1 "+ str(self.writeStatus))
                 vm = VM()
-                vm.name = vmiter['name']
-                vm.UUID = vmiter['vmid']
+                vm.name = vmName
+                if vmid == None:
+                    vm.UUID = vmiter['vmid']
+                else:
+                    vm.UUID = vmid
                 if 'template' in vmiter:
                     vm.template = vmiter['template']
                 else: 
@@ -359,7 +403,7 @@ class ProxmoxManage(VMManage):
                 try:
                     netinfo = proxapi.nodes(nodename)('qemu')(vm.UUID)('config').get()
                 except Exception:
-                    logging.error("Error in <>(): An error occured when trying to get vm info")
+                    logging.error("Error in runVMInfo(): An error occured when trying to get vm info")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_traceback)
 
@@ -388,13 +432,10 @@ class ProxmoxManage(VMManage):
                 vm.latestSnapUUID = latest_snap
                 break
             if vm is None:
-                logging.error("runVMInfo(): VM not found: " + vmName)
+                logging.error("runVMInfo(): VM not found: " + vmName + "cluster info: " + str(allinfo))
                 return -1
-            try:
-                self.lock.acquire()
-                self.vms[vm.name] = vm
-            finally:
-                self.lock.release()
+
+            self.vms[vm.name] = vm
             logging.debug("runVMSInfo(): completed")
         except Exception:
             logging.error("Error in runVMSInfo(): An error occured ")
@@ -413,16 +454,12 @@ class ProxmoxManage(VMManage):
             cloneNetNum = 1
             logging.debug("runConfigureVMNet(): Processing internal net names: " + str(netName))
             vmUUID = ""
+            vmUUID = str(self.vms[vmName].UUID)
             try:
-                self.lock.acquire()
-                vmUUID = str(self.vms[vmName].UUID)
-            finally:
-                self.lock.release()
-            try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -446,7 +483,6 @@ class ProxmoxManage(VMManage):
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
             try:
                 res = proxapi.nodes(nodename)('network').put()
-                self.basic_blocking_task_status(proxapi, res, nodename)
             except ResourceException:
                 logging.error("In runConfigureVMNet(): error when trying to apply configuration update")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -483,10 +519,10 @@ class ProxmoxManage(VMManage):
             logging.debug("runRemoteCmds(): adding 1 "+ str(self.writeStatus))
 
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
-                nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username[:-4],password=password)
+                sshuser = username[:-4]
+                proxssh = self.getProxSSH(username=sshuser,password=password)
+                if proxssh == None:
+                    return None
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -509,29 +545,20 @@ class ProxmoxManage(VMManage):
 
     def getVMStatus(self, vmName):
         logging.debug("ProxmoxManage: getVMStatus(): instantiated " + vmName)
-        exists = False
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("getVMStatus(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            resVM = self.vms[vmName]
-            #Don't want to rely on python objects in case we go with 3rd party clients in the future
-            return {"vmName" : resVM.name, "vmUUID" : resVM.UUID, "setupStatus" : resVM.setupStatus, "vmState" : resVM.state, "adaptorInfo" : resVM.adaptorInfo, "groups" : resVM.groups, "latestSnapUUID": resVM.latestSnapUUID}
-        finally:
-            self.lock.release()        
+        if self.checkVMExistsRetry(vmName, "getVMStatus") == -1:
+            return -1
+
+        resVM = self.vms[vmName]
+        #Don't want to rely on python objects in case we go with 3rd party clients in the future
+        return {"vmName" : resVM.name, "vmUUID" : resVM.UUID, "setupStatus" : resVM.setupStatus, "vmState" : resVM.state, "adaptorInfo" : resVM.adaptorInfo, "groups" : resVM.groups, "latestSnapUUID": resVM.latestSnapUUID}
         
     def getManagerStatus(self):
         logging.debug("ProxmoxManage: getManagerStatus(): instantiated")
         vmStatus = {}
-        try:
-            self.lock.acquire()
-            for vmName in self.vms:
-                resVM = self.vms[vmName]
-                vmStatus[resVM.name] = {"vmUUID" : resVM.UUID, "setupStatus" : resVM.setupStatus, "vmState" : resVM.state, "adaptorInfo" : resVM.adaptorInfo, "groups" : resVM.groups}
-        finally:
-            self.lock.release()
+
+        for vmName in self.vms:
+            resVM = self.vms[vmName]
+            vmStatus[resVM.name] = {"vmUUID" : resVM.UUID, "setupStatus" : resVM.setupStatus, "vmState" : resVM.state, "adaptorInfo" : resVM.adaptorInfo, "groups" : resVM.groups}
         
         return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "vmstatus" : vmStatus}
 
@@ -551,14 +578,12 @@ class ProxmoxManage(VMManage):
             logging.debug("runRemoteCmds(): adding 1 "+ str(self.writeStatus))
 
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
-                nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
                 pveshpath = self.cf.getConfig()['PROXMOX']['VMANAGE_PVESH_PATH']
                 qmrestore = self.cf.getConfig()['PROXMOX']['VMANAGE_QMRESTORE_PATH']
-                qmpath = self.cf.getConfig()['PROXMOX']['VMANAGE_QM_PATH']
                 storagepath = self.cf.getConfig()['PROXMOX']['VMANAGE_STORAGE_VOL']
-                proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+                proxssh = self.getProxSSH(username=username[:-4],password=password)
+                if proxssh == None:
+                    return None
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -598,12 +623,11 @@ class ProxmoxManage(VMManage):
 
     def snapshotVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: snapshotVM(): instantiated")
+        if self.checkVMExistsRetry(vmName, "snapshotVM") == -1:
+            return -1
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
-        exists = vmName in self.vms
-        if not exists:
-            logging.error("snapshotVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-            return -1
+
         t = threading.Thread(target=self.runSnapshotVM, args=(vmName, username, password))
         t.start()
 
@@ -614,10 +638,10 @@ class ProxmoxManage(VMManage):
             logging.debug("snapshotVM(): adding 1 "+ str(self.writeStatus))
             
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -648,20 +672,16 @@ class ProxmoxManage(VMManage):
     def exportVM(self, vmName, filepath, username=None, password=None):
         logging.debug("ProxmoxManage: exportVM(): instantiated")
         #first remove any quotes that may have been entered before (because we will add some after we add the file and extension)
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("exportVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            filepath = filepath.replace("\"","")
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "exportVM") == -1:
+            return -1
+
+        filepath = filepath.replace("\"","")
+        cmd = ""
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
+        t.start()
+        return 0
 
     def runExportVM(self, vmName, filepath, username=None, password=None):
         logging.debug("ProxmoxManage: runExportVM(): instantiated")
@@ -670,10 +690,10 @@ class ProxmoxManage(VMManage):
             logging.debug("runExportVM(): adding 1 "+ str(self.writeStatus))
             
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runExportVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -705,10 +725,10 @@ class ProxmoxManage(VMManage):
             logging.debug("runStatusChangeVM(): adding 1 "+ str(self.writeStatus))
             
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runStatusChangeVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -739,114 +759,85 @@ class ProxmoxManage(VMManage):
     def startVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: startVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("startVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            if self.vms[vmName].state == "paused":
-                t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'resume', username, password))
-            else:
-                t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'start', username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "startVM") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        if self.vms[vmName].state == "paused":
+            t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'resume', username, password))
+        else:
+            t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'start', username, password))
+        t.start()
+        return 0
 
     def pauseVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: pauseVM(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("pauseVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'suspend', username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "pauseVM") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'suspend', username, password))
+        t.start()
+        return 0
 
     def suspendVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: suspendVM(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("suspendVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'suspend', username, password), kwargs={'todisk':'1'})
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "suspendVM") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'suspend', username, password), kwargs={'todisk':'1'})
+        t.start()
+        return 0
 
     def stopVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: stopVM(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("stopVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'stop', username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "stopVM") == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runStatusChangeVM, args=(vmName, 'stop', username, password))
+        t.start()
+        return 0
 
     def removeVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: removeVM(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("removeVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                return -1
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runRemoveVM, args=(vmName, username, password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "removeVM",sleeptime=.05) == -1:
+            return -1
+
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runRemoveVM, args=(vmName, username, password))
+        t.start()
+        return 0
 
     def runRemoveVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: runRemoveVM(): instantiated")
         try:
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runRemoveVM(): adding 1 "+ str(self.writeStatus))
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("runRemoveVM(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
+            if self.checkVMExistsRetry(vmName, "runRemoveVM",sleeptime=.05) == -1:
                 return -1
+
             vmUUID = str(self.vms[vmName].UUID)
             logging.debug("runRemoveVM(): adding 1 "+ str(self.writeStatus))
             
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runRemoveVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
-
+            success = False
             try:
                 proxapi.nodes(nodename)('qemu')(vmUUID).delete(node=nodename, vmid=vmUUID)
                 success = True
@@ -873,15 +864,8 @@ class ProxmoxManage(VMManage):
 
     def cloneVMConfigAll(self, vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort, refreshVMInfo=False, username=None, password=None):
         logging.debug("ProxmoxManage: cloneVMConfigAll(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("cloneVMConfigAll(): " + vmName + " not found in list of known vms: \r\n" + str(self.vms))
-                return -1
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "cloneVMConfigAll") == -1:
+            return -1
 
         if refreshVMInfo == True:
             self.readStatus = VMManage.MANAGER_READING
@@ -900,31 +884,16 @@ class ProxmoxManage(VMManage):
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runCloneVMConfigAll(): adding 1 "+ str(self.writeStatus))
             #first clone
-            #Check that vm does exist
-            try:
-                self.lock.acquire()
-                exists = vmName in self.vms
-                if not exists:
-                    logging.error("runCloneVMConfigAll(): " + vmName + " not found in list of known vms: \r\n" + str(vmName))
-                    return
-            finally:
-                self.lock.release()
+            if self.checkVMExistsRetry(vmName, "runCloneVMConfigAll_vm") == -1:
+                return -1
+
             # clone the VM
             self.writeStatus += 1
             self.runCloneVM(vmName, cloneName, cloneSnapshots, linkedClones, groupName, username, password)
             
             #netsetup
-            retry = 5
-            exists = cloneName in self.vms
-            for x in range(retry):
-                if not exists:
-                    logging.error("runCloneVMConfigAll(): " + cloneName + " not found in list of known vms: \r\n" + str(cloneName) + " retrying attempt " + str(x) + " of " + str(retry))
-                    time.sleep(.5)
-                else:
-                    break
-                exists = cloneName in self.vms
-            if not exists:
-                logging.error("runCloneVMConfigAll(): " + cloneName + " not found in list of known vms: \r\n" + str(cloneName) + " not setting up vmnets and snapshots")
+            #Check that clone exists
+            if self.checkVMExistsRetry(cloneName, "runCloneVMConfigAll_clone") == -1:
                 return -1
 
             self.writeStatus += 1
@@ -950,21 +919,15 @@ class ProxmoxManage(VMManage):
 
     def cloneVM(self, vmName, cloneName, cloneSnapshots, linkedClones=True, groupName=None, refreshVMInfo=True, username=None, password=None):
         logging.debug("ProxmoxManage: cloneVM(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("cloneVM(): " + vmName + " not found in list of known vms: \r\n" + str(self.vms))
-                return -1
-        finally:
-            self.lock.release()
+        #Check that vm does exist
+        if self.checkVMExistsRetry(vmName, "cloneVM") == -1:
+            return -1
 
         if refreshVMInfo == True:
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            #runVMInfo obtains it's own lock
             self.runVMInfo(vmName, username, password)
+
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVM, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName, username, password))
@@ -977,23 +940,19 @@ class ProxmoxManage(VMManage):
             self.readStatus = VMManage.MANAGER_READING
             logging.debug("runCloneVM(): adding 1 "+ str(self.writeStatus))
             #First check that the clone doesn't exist:
-            try:
-                self.lock.acquire()
-                exists = cloneName in self.vms
-                if exists:
-                    logging.error("runCloneVM(): A VM with the clone name already exists and is registered... skipping " + str(cloneName))
-                    return
-            finally:
-                self.lock.release()
+            exists = cloneName in self.vms
+            if exists:
+                logging.warning("runCloneVM(): A VM with the clone name already exists and is registered... skipping " + str(cloneName))
+                return
 
             vmUUID = str(self.vms[vmName].UUID)
             logging.debug("runCloneVM(): adding 1 "+ str(self.writeStatus))
             
             try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runRemoveVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -1049,7 +1008,7 @@ class ProxmoxManage(VMManage):
             #     traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.writeStatus += 1
             #just add to self.vms if it's not there and then call the vminfo
-            self.runVMInfo(cloneName, username, password)
+            self.runVMInfo(cloneName, username, password, newid)
 
         except Exception:
             logging.error("runCloneVM(): Error in runCloneVM(): An error occured; it could be due to a missing snapshot for the VM")
@@ -1062,15 +1021,8 @@ class ProxmoxManage(VMManage):
 
     def enableVRDPVM(self, vmName, vrdpPort, username=None, password=None):
         logging.debug("ProxmoxManage: enabledVRDP(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("enabledVRDP(): " + vmName + " not found in list of known vms: \r\n" + str(self.vms))
-                return -1
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "enableVRDPVM") == -1:
+            return -1
 
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
@@ -1080,23 +1032,16 @@ class ProxmoxManage(VMManage):
 
     def runEnableVRDP(self, vmName, vrdpPort, username=None, password=None):
         logging.debug("ProxmoxManage: runEnableVRDP(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("enabledVRDP(): " + vmName + " not found in list of known vms: \r\n" + str(self.vms))
-                return -1
+        if self.checkVMExistsRetry(vmName, "runEnableVRDP") == -1:
+            return -1
 
-            self.readStatus = VMManage.MANAGER_READING
-            logging.debug("runEnableVRDP(): adding 1 "+ str(self.writeStatus))
+        self.readStatus = VMManage.MANAGER_READING
+        logging.debug("runEnableVRDP(): adding 1 "+ str(self.writeStatus))
 
-            logging.debug("runEnableVRDP(): Processing restore latest snapshot for: " + str(vmName))
-            vmUUID = ""
-            vmUUID = str(self.vms[vmName].UUID)
+        logging.debug("runEnableVRDP(): Processing restore latest snapshot for: " + str(vmName))
+        vmUUID = ""
+        vmUUID = str(self.vms[vmName].UUID)
 
-        finally:
-            self.lock.release()       
         try:
             #add vnc port to config file            
             vncport = int(vrdpPort) - 5900
@@ -1125,16 +1070,12 @@ class ProxmoxManage(VMManage):
 
             logging.debug("runRestoreLatestSnapVM(): Processing restore latest snapshot for: " + str(vmName))
             vmUUID = ""
+            vmUUID = str(self.vms[vmName].UUID)
             try:
-                self.lock.acquire()
-                vmUUID = str(self.vms[vmName].UUID)
-            finally:
-                self.lock.release()
-            try:
-                server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
-                port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+                proxapi = self.getProxAPI(username, password)
+                if proxapi == None:
+                    return None
             except Exception:
                 logging.error("Error in runRestoreLatestSnapVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -1173,18 +1114,12 @@ class ProxmoxManage(VMManage):
 
     def restoreLatestSnapVM(self, vmName, username=None, password=None):
         logging.debug("ProxmoxManage: restoreLatestSnapVM(): instantiated")
-        #check to make sure the vm is known, if not should refresh or check name:
-        try:
-            self.lock.acquire()
-            exists = vmName in self.vms
-            if not exists:
-                logging.error("restoreLatestSnapVM(): " + vmName + " not found in list of known vms: \r\n" + str(self.vms))
-                return -1
-            cmd = "snapshot " + str(self.vms[vmName].UUID) + " restorecurrent"
-            self.readStatus = VMManage.MANAGER_READING
-            self.writeStatus += 1
-            t = threading.Thread(target=self.runRestoreLatestSnapVM, args=(vmName,username,password))
-            t.start()
-            return 0
-        finally:
-            self.lock.release()
+        if self.checkVMExistsRetry(vmName, "restoreLatestSnapVM") == -1:
+            return -1
+
+        cmd = "snapshot " + str(self.vms[vmName].UUID) + " restorecurrent"
+        self.readStatus = VMManage.MANAGER_READING
+        self.writeStatus += 1
+        t = threading.Thread(target=self.runRestoreLatestSnapVM, args=(vmName,username,password))
+        t.start()
+        return 0

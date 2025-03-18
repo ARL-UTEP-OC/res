@@ -7,6 +7,8 @@ def main():
             command_line = input(">> ")
             if command_line == "exit" or command_line == "quit" or command_line == "q" or command_line == "exit()":
                 break
+            elif command_line.strip() == "":
+                continue
             print(str(eng.execute(command_line)))
         except SystemExit:
             # break
