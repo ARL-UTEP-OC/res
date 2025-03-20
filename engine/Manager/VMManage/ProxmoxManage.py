@@ -67,7 +67,7 @@ class ProxmoxManage(VMManage):
             if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
             elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxssh._exec(["exit"])               
+                self.proxssh = None
                 self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
             return self.proxssh
         except Exception:
@@ -94,7 +94,7 @@ class ProxmoxManage(VMManage):
                 return -1
         return 0
 
-    def basic_blocking_task_status(self, proxmox_api, task_id, node_name):
+    def basic_blocking_task_status(self, proxmox_api, task_id, node_name, caller=""):
         logging.debug("ProxmoxManage: basic_blocking_task_status(): instantiated")
         retry = 5
         data = {"status": ""}
@@ -104,7 +104,7 @@ class ProxmoxManage(VMManage):
                 for x in range(retry):
                     data = proxmox_api.nodes(node_name).tasks(task_id).status.get()
                     if (isinstance(data, dict) == False or 'status' not in data):
-                        logging.warning("basic_blocking_task_status(): GOT INVALID DATA: " + str(data) + " " + str(task_id) + " retry attempt: " + str(x) + " of " + str(retry))
+                        logging.warning("basic_blocking_task_status(): GOT INVALID DATA: " + str(data) + " " + str(task_id) + " " + caller + " retry attempt: " + str(x) + " of " + str(retry))
                         time.sleep(.1)
                     else:
                         break
@@ -166,26 +166,20 @@ class ProxmoxManage(VMManage):
 
                 try:
                     #create bridge if it doesn't exist
-                    res = proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge')
-                    self.basic_blocking_task_status(proxapi, res, nodename)
+                    res = proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge',autostart=1)
+                    res = proxapi.nodes(nodename)('network').put()
+                    # self.basic_blocking_task_status(proxapi, res, nodename,'network')
                 except ResourceException:
                     logging.warning("runConfigureVMNets(): interface may already exist: " + str(internalnet))
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                try:
-                    res = proxapi.nodes(nodename)('network').put()
-                except ResourceException:
-                    logging.error("In runConfigureVMNet(): error when trying to apply configuration update")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_exception(exc_type, exc_value, exc_traceback)
+                    # exc_type, exc_value, exc_traceback = sys.exc_info()
+                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
                 #assign net to bridge
                 kwargs = {f'net{cloneNetNum}': 'e1000,bridge='+str(internalnet)}
                 try:
                     logging.info("runConfigureVMNets(): Configuring Interface: " + str(vmUUID))
                     res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
-                    self.basic_blocking_task_status(proxapi, res, nodename)
+                    self.basic_blocking_task_status(proxapi, res, nodename, 'config')
                 except Exception:
                     logging.error("Error in runConfigureVMNets(): An error occured when trying to configure vm network device")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -476,24 +470,19 @@ class ProxmoxManage(VMManage):
             try:
                 #create bridge if it doesn't exist
                 res = proxapi.nodes(nodename)('network').post(iface=str(netName),node=nodename,type='bridge',autostart=1)
-                self.basic_blocking_task_status(proxapi, res, nodename)
+                res = proxapi.nodes(nodename)('network').put()
+                # self.basic_blocking_task_status(proxapi, res, nodename, 'network')
             except ResourceException:
                 logging.warning("In runConfigureVMNet(): Interface may already exist: " + str(netName))
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-            try:
-                res = proxapi.nodes(nodename)('network').put()
-            except ResourceException:
-                logging.error("In runConfigureVMNet(): error when trying to apply configuration update")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
             #assign net to bridge
             kwargs = {f'net{netNum}': 'e1000,bridge='+str(netName)}
             try:
                 logging.info("runConfigureVMNet(): Configuring Interface: " + str(vmUUID))
                 res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
-                self.basic_blocking_task_status(proxapi, res, nodename)
+                self.basic_blocking_task_status(proxapi, res, nodename, 'config')
             except Exception:
                 logging.error("Error in runConfigureVMNet(): An error occured when trying to configure vm network device")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -519,12 +508,15 @@ class ProxmoxManage(VMManage):
             logging.debug("runRemoteCmds(): adding 1 "+ str(self.writeStatus))
 
             try:
-                sshuser = username[:-4]
-                proxssh = self.getProxSSH(username=sshuser,password=password)
+                if username != None and len(username) > 4 and password != None and username.strip() != "" and password.strip() != "":
+                    sshuser = username[:-4]
+                    proxssh = self.getProxSSH(username=sshuser,password=password)
+                else:
+                    proxssh = self.getProxSSH(username, password)
                 if proxssh == None:
                     return None
             except Exception:
-                logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
+                logging.error("Error in runRemoteCmds(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
@@ -1044,8 +1036,8 @@ class ProxmoxManage(VMManage):
 
         try:
             #add vnc port to config file            
-            vncport = int(vrdpPort) - 5900
-            cmd = 'sed -i "$ a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf'
+            vncport = 4100 + int(vrdpPort)
+            cmd = 'sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf'
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))

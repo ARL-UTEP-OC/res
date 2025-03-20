@@ -1,7 +1,9 @@
 from engine.Engine import Engine
 
 def main():
+    print("Initializing System, please wait...")
     eng = Engine.getInstance()
+    print("Done")
     while True:
         try:
             command_line = input(">> ")
@@ -9,6 +11,7 @@ def main():
                 break
             elif command_line.strip() == "":
                 continue
+            print("executing, please wait...")
             print(str(eng.execute(command_line)))
         except SystemExit:
             # break
