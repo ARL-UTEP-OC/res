@@ -204,11 +204,11 @@ class BaseWidget(QtWidgets.QWidget):
             basejsondata["testbed-setup"]["vm-set"] = {}
 
         if "vm-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["vm-server-ip"] = "11.0.0.2"
+            basejsondata["testbed-setup"]["network-config"]["vm-server-ip"] = "11.0.0.1"
         self.vmServerIPLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vm-server-ip"])
         ###
         if "rdp-broker-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = ""
+            basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = "11.0.0.1:8080"
         self.rdpBrokerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"])
         ###
         if "chat-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
@@ -240,7 +240,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.baseOutnameLineEdit.setText(basejsondata["testbed-setup"]["vm-set"]["base-outname"])
         ###
         if "vrdp-baseport" not in basejsondata["testbed-setup"]["vm-set"]:
-            basejsondata["testbed-setup"]["vm-set"]["vrdp-baseport"] = "1001"
+            basejsondata["testbed-setup"]["vm-set"]["vrdp-baseport"] = "6000"
         self.vrdpBaseportLineEdit.setText(basejsondata["testbed-setup"]["vm-set"]["vrdp-baseport"])
         ###
         if "users-filename" not in basejsondata["testbed-setup"]["vm-set"]:
