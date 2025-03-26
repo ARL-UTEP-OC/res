@@ -1,9 +1,11 @@
 PyQt5==5.15.9
-configparser
+configparser==7.2.0
 xmltodict
-jinja2
+jinja2==3.1.6
 requests>=2.22.0
 simplejson>=3.16.0
 guacapy==0.10
-rocketchat-API
+rocketchat-API==1.35.0
 Pyro5==5.15
+proxmoxer==2.2.0
+paramiko==3.5.1
