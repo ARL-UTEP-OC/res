@@ -2,9 +2,16 @@ from engine.Engine import Engine
 from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Configuration.UserPool import UserPool
 import Pyro5.api
+import sys
 
-daemon = Pyro5.server.Daemon(host="172.17.0.1")         # make a Pyro daemon
-ns = Pyro5.api.locate_ns(host="172.17.0.1", port=10291)             # find the name server
+if len(sys) != 2:
+    print("usage: PEngine.py Host-IP Host-Port")
+
+hostip = sys.argv[0]
+hostport = sys.argv[1]
+
+daemon = Pyro5.server.Daemon(host=hostip)         # make a Pyro daemon
+ns = Pyro5.api.locate_ns(host=hostip, port=hostport)             # find the name server
 
 pyroEngine = Pyro5.server.expose(Engine)
 uri = daemon.register(pyroEngine)   # register the greeting maker as a Pyro object
