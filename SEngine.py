@@ -1,8 +1,15 @@
 from engine.Engine import Engine
+import sys
 
 def main():
-    print("Initializing System, please wait...")
-    eng = Engine.getInstance()
+    if len(sys.argv) == 2:
+        print("Initializing System, please wait...")
+        username = sys.argv[0]
+        password = sys.argv[1]
+        eng = Engine(username, password)
+    else:
+        print("Initializing System, please wait...")
+        eng = Engine()
     print("Done")
     while True:
         try:

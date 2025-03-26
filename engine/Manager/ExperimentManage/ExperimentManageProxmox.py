@@ -24,7 +24,7 @@ class ExperimentManageProxmox(ExperimentManage):
         logging.debug("createExperiment(): instantiated")
         t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name, username, password))
         t.start()
-        #t.join()
+        t.join()
         return 0
 
     def runCreateExperiment(self, configname, itype, name, username=None, password=None):
@@ -65,20 +65,14 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
                                 vrdpPort = str(cloneinfo["vrdpPort"])
 
-                            # Clone; we want to refresh the vm info in case any new snapshots have been added, but only once
-                            if refreshedVMName == False:
-                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=True, username=username, password=password)
-                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
-                            else:
-                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=False, username=username, password=password)
-                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
-                                refreshedVMName = True
-                status = self.vmManage.getManagerStatus()["writeStatus"]
-                while status != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager clone vm to finish reading/writing...
-                    logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
-                    time.sleep(1)
+                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
+                            logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
                     status = self.vmManage.getManagerStatus()["writeStatus"]
+                    while status != VMManage.MANAGER_IDLE:
+                        #waiting for vmmanager clone vm to finish reading/writing...
+                        logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                        time.sleep(1)
+                        status = self.vmManage.getManagerStatus()["writeStatus"]
                 
                 logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
                 logging.debug("runCreateExperiment(): Complete...")
