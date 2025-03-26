@@ -28,18 +28,22 @@ class ProxmoxManage(VMManage):
         self.tempVMs = {}
         self.proxapi = None
         self.proxssh = None
-        if initializeVMManage and username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
-            logging.info("ProxmoxManage.__init__(): Initializing ProxmoxManage; collecting VM information...")
+        self.setRemoteCreds(initializeVMManage, username, password)
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        logging.info("ProxmoxManage.setRemoteCreds(): Initializing ProxmoxManage; collecting VM information...")
+        if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
             self.proxapi = self.getProxAPI(username=username, password=password)
             sshuser = username[:-4]
             self.proxssh = self.getProxSSH(username=sshuser, password=password)
-            self.refreshAllVMInfo()
-            result = self.getManagerStatus()["writeStatus"]
-            while result != self.MANAGER_IDLE:
-            #waiting for manager to finish query...
+            if refresh:
+                self.refreshAllVMInfo()
                 result = self.getManagerStatus()["writeStatus"]
-                time.sleep(.1)
-            logging.info("ProxmoxManage.__init__(): Done...")
+                while result != self.MANAGER_IDLE:
+                #waiting for manager to finish query...
+                    result = self.getManagerStatus()["writeStatus"]
+                    time.sleep(.1)
+        logging.info("ProxmoxManage.setRemoteCreds(): Done...")
 
     def getProxAPI(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
@@ -280,6 +284,8 @@ class ProxmoxManage(VMManage):
 
             for vmiter in allinfo:
                 # net info
+                if vmiter['node'] != nodename:
+                    continue
                 #GET UUID
                 logging.debug("runVMSInfo(): adding 1 "+ str(self.writeStatus))
                 vm = VM()

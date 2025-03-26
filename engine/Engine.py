@@ -50,8 +50,10 @@ class Engine:
             elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManage()
             else: 
-                self.vmManage = ProxmoxManage(True)
-                
+                if username != None and password != None:
+                    self.vmManage = ProxmoxManage(True, username, password)
+                else:
+                    self.vmManage = ProxmoxManage(False)
         else:
             if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
                 self.vmManage = VBoxManageWin(True)
@@ -83,6 +85,10 @@ class Engine:
             # self.packageManage = PackageManageProxmox(self.vmManage, self.experimentManage)
         #build the parser
         self.buildParser()
+    
+    def setRemoteCreds(self, refresh, username, password):
+        logging.debug("setRemoteCreds(): instantiated")
+        self.vmManage.setRemoteCreds(refresh, username, password)
 
     def engineStatusCmd(self, args):
         logging.debug("engineStatusCmd(): instantiated")
