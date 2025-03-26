@@ -86,7 +86,7 @@ class ConnectionActionDialog(QDialog):
             self.methodComboBox.setCurrentIndex(1)
         self.layout.addRow(QLabel("Method:"), self.methodComboBox)
         
-        self.maxConnectionsLineEdit = QLineEdit("1")
+        self.maxConnectionsLineEdit = QLineEdit("3")
         self.heightLineEdit = QLineEdit("1400")
         self.widthLineEdit = QLineEdit("1050")
         self.bitdepthComboBox = QComboBox()

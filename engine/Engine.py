@@ -36,7 +36,7 @@ class Engine:
                     cls.__singleton_instance = cls()
         return cls.__singleton_instance
 
-    def __init__(self):
+    def __init__(self, username=None, password=None):
         #Virtually private constructor
         #if Engine.__singleton_instance != None:
         #    raise Exception("Use the getInstance method to obtain an instance of this class")
@@ -58,7 +58,10 @@ class Engine:
             elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManageWin()
             else:
-                self.vmManage = ProxmoxManage()
+                if username != None and password != None:
+                    self.vmManage = ProxmoxManage(True, username, password)
+                else:
+                    self.vmManage = ProxmoxManage(False)
         #Create the ConnectionManage
         self.connectionManage = ConnectionManageGuacRDP()
         #Create the ChallengesMange
