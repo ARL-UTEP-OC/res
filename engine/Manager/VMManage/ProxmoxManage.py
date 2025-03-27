@@ -521,7 +521,7 @@ class ProxmoxManage(VMManage):
                 logging.info("runRemoteCmds(): Command completed: " + str(res))
             logging.debug("runRemoteCmds(): Thread completed")
         except Exception:
-            logging.error("runRemoteCmds() Error: " + " cmd: " + cmd)
+            logging.error("runRemoteCmds() Error: " + " cmd: " + str(cmd))
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
@@ -1031,10 +1031,12 @@ class ProxmoxManage(VMManage):
         try:
             #add vnc port to config file            
             vncport = int(vrdpPort) - 5900
-            cmd = 'sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf'
+            cmds = []
+            cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
+            t = threading.Thread(target=self.runRemoteCmds, args=(cmds,username, password))
             t.start()
             return 0  
 
