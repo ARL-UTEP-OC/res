@@ -8,6 +8,7 @@ from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Manager.VMManage.VMManage import VMManage
 from engine.Manager.VMManage.ProxmoxManage import ProxmoxManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
+from engine.Configuration.SystemConfigIO import SystemConfigIO
 
 class ExperimentManageProxmox(ExperimentManage):
     def __init__(self, vmManage):
@@ -16,8 +17,9 @@ class ExperimentManageProxmox(ExperimentManage):
         #Create an instance of vmManage
         self.vmManage = vmManage
         self.eco = ExperimentConfigIO.getInstance()
+        self.cf = SystemConfigIO()
+        self.max_createjobs = self.cf.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS']
         self.vmstatus = {}
-
 
     #abstractmethod
     def createExperiment(self, configname, itype="", name="", username=None, password=None):
@@ -67,15 +69,26 @@ class ExperimentManageProxmox(ExperimentManage):
 
                             self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
                             logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
-                    status = self.vmManage.getManagerStatus()["writeStatus"]
-                    while status != VMManage.MANAGER_IDLE:
-                        #waiting for vmmanager clone vm to finish reading/writing...
-                        logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
-                        time.sleep(1)
-                        status = self.vmManage.getManagerStatus()["writeStatus"]
-                
-                logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
-                logging.debug("runCreateExperiment(): Complete...")
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                            while status > int(self.max_createjobs):
+                                #waiting for vmmanager clone vm to finish reading/writing...
+                                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                                print("waiting until it's less than " + self.max_createjobs + " current: " + str(status))
+                                time.sleep(1)
+                                status = self.vmManage.getManagerStatus()["writeStatus"]
+
+            status = self.vmManage.getManagerStatus()["writeStatus"]
+            while status != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager clone vm to finish reading/writing...
+                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                time.sleep(1)
+                status = self.vmManage.getManagerStatus()["writeStatus"]
+            logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
+            logging.debug("runCreateExperiment(): applying network configuration")
+            print("runCreateExperiment(): applying network configuration")
+            self.vmManage.refreshNetwork(username=username, password=password)
+            logging.debug("runCreateExperiment(): Complete...")
+            print("runCreateExperiment(): Complete...")
         except Exception:
             logging.error("runCloneVM(): Error in runCreateExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -515,12 +528,17 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            #if itype and name are "" (remove all), then also remove the network adaptors
+            removeAdaptors = False
+            if itype == "" and name == "":
+                removeAdaptors = True
             for vm in clonevmjson.keys(): 
                 vmName = vm
                 logging.debug("runRemoveExperiment(): working with vm: " + str(vmName))
                 #get names for clones and remove them
                 for cloneinfo in clonevmjson[vm]:
                     cloneVMName = cloneinfo["name"]
+                    networks = cloneinfo["networks"]
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then remove it if it does
@@ -529,10 +547,14 @@ class ExperimentManageProxmox(ExperimentManage):
                         continue
                     logging.debug("runRemoveExperiment(): Removing: " + str(cloneVMName))
                     self.vmManage.removeVM(cloneVMName, username=username, password=password)
+                    if removeAdaptors:
+                        self.vmManage.removeNetworks(networks)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runRemoveExperiment(): Complete...")
+            #now update the network configurations
+            self.vmManage.refreshNetwork()
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runRemoveExperiment(): Error in runRemoveExperiment(): An error occured ")

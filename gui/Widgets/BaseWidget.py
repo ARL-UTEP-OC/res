@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtGui import QIntValidator
 import logging
 
 class BaseWidget(QtWidgets.QWidget):
@@ -54,7 +55,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.rdpBrokerLabel.setObjectName("rdpBrokerLabel")
         self.rdpBrokerLabel.setText("RDP Broker Address:")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLabel)
-        self.rdpBrokerLineEdit = QtWidgets.QLineEdit() 
+        self.rdpBrokerLineEdit = QtWidgets.QLineEdit()
         self.rdpBrokerLineEdit.setObjectName("rdpBrokerLineEdit")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLineEdit)
         self.outerVertBox.addLayout(self.rdpBrokerHorBox)
@@ -156,6 +157,8 @@ class BaseWidget(QtWidgets.QWidget):
 
         self.vrdpBaseportLineEdit = QtWidgets.QLineEdit()
         self.vrdpBaseportLineEdit.setObjectName("vrdpBaseportLineEdit")
+        validator = QIntValidator(5900,65000)
+        self.vrdpBaseportLineEdit.setValidator(validator)
         self.vrdpBaseportHorBox.addWidget(self.vrdpBaseportLineEdit)
         self.outerVertBox.addLayout(self.vrdpBaseportHorBox)
 

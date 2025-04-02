@@ -2,10 +2,10 @@ from engine.Engine import Engine
 import sys
 
 def main():
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         print("Initializing System, please wait...")
-        username = sys.argv[0]
-        password = sys.argv[1]
+        username = sys.argv[1]
+        password = sys.argv[2]
         eng = Engine(username, password)
     else:
         print("Initializing System, please wait...")
