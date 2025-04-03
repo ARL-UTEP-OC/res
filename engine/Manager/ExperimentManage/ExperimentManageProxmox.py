@@ -19,6 +19,7 @@ class ExperimentManageProxmox(ExperimentManage):
         self.eco = ExperimentConfigIO.getInstance()
         self.cf = SystemConfigIO()
         self.max_createjobs = self.cf.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS']
+        self.snap_waittime = self.cf.getConfig()['PROXMOX']['VMANAGE_SNAPWAITTIME']
         self.vmstatus = {}
 
     #abstractmethod
@@ -362,9 +363,9 @@ class ExperimentManageProxmox(ExperimentManage):
                                 continue
                             logging.debug("runSuspendExperiment(): Suspending: " + str(vmName))
                             self.vmManage.suspendVM(cloneVMName, username=username, password=password)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager suspend vm to finish reading/writing...
-                    time.sleep(.1)
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager suspend vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runSuspendingExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -408,9 +409,9 @@ class ExperimentManageProxmox(ExperimentManage):
                                 continue
                             logging.debug("runPauseExperiment(): Pausing: " + str(vmName))
                             self.vmManage.pauseVM(cloneVMName, username=username, password=password)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager pause vm to finish reading/writing...
-                    time.sleep(.1)
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager pause vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runPauseExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -454,9 +455,12 @@ class ExperimentManageProxmox(ExperimentManage):
                                 continue
                             logging.debug("runSnapshotExperiment(): Snapshotting: " + str(vmName))
                             self.vmManage.snapshotVM(cloneVMName, username=username, password=password)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager snapshot vm to finish reading/writing...
-                    time.sleep(.1)
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                            #if snaps are taken too fast, the lock on /etc/pve/ will cause an error... need a wait time in-between
+                            time.sleep(float(self.snap_waittime))
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager snapshot vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runSnapshotExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -530,8 +534,10 @@ class ExperimentManageProxmox(ExperimentManage):
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
             #if itype and name are "" (remove all), then also remove the network adaptors
             removeAdaptors = False
+            removeUnusedLVM = False
             if itype == "" and name == "":
                 removeAdaptors = True
+                removeUnusedLVM = True
             for vm in clonevmjson.keys(): 
                 vmName = vm
                 logging.debug("runRemoveExperiment(): working with vm: " + str(vmName))
@@ -553,6 +559,9 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runRemoveExperiment(): Complete...")
+            #Remove old lvm that are inactive
+            if removeUnusedLVM:
+                self.vmManage.runRemoteCmds(["lvscan  | grep inactive | awk -F \"'\" '{print $2}' | xargs lvremove"])
             #now update the network configurations
             self.vmManage.refreshNetwork()
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE

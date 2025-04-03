@@ -580,9 +580,9 @@ class Engine:
                                           help='URL path to broker service')
         self.connectionManageCreateParser.add_argument('method', metavar='<method>', action="store",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.connectionManageCreateParser.add_argument('maxConnections', metavar='<maxConnections>', action="store", default="3",
+        self.connectionManageCreateParser.add_argument('maxConnections', metavar='<maxConnections>', action="store", default="10",
                                           help='Max number of connections allowed per remote conn')
-        self.connectionManageCreateParser.add_argument('maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="3", 
+        self.connectionManageCreateParser.add_argument('maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
                                           help='Max number of connections allowed per user per remote conn')
         self.connectionManageCreateParser.add_argument('width', metavar='<width>', action="store", default="1400",
                                           help='Width of remote connection display')

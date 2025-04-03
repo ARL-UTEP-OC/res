@@ -83,11 +83,10 @@ class ProxmoxManage(VMManage):
             self.proxssh = None
             return None
 
-    def checkVMExistsRetry(self, vmName, caller, retryMax=5, sleeptime=.1):
+    def checkVMExistsRetry(self, vmName, caller, retryMax=1, sleeptime=.1):
         logging.debug("ProxmoxManage: checkVMExistsRetry(): instantiated")
         #TODO: check if locked instead
         #Check that vm does exist
-        retryMax = 1
         retry =1
         exists = vmName in self.vms
         while exists == False:
@@ -170,6 +169,7 @@ class ProxmoxManage(VMManage):
 
                 #assign net to bridge
                 kwargs = {f'net{cloneNetNum}': 'e1000,bridge='+str(internalnet)}
+                # kwargs = {f'net{cloneNetNum}': 'virtio,bridge='+str(internalnet)}
                 try:
                     logging.info("runConfigureVMNets(): Configuring Interface: " + str(vmUUID))
                     res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
@@ -477,6 +477,7 @@ class ProxmoxManage(VMManage):
 
             #assign net to bridge
             kwargs = {f'net{netNum}': 'e1000,bridge='+str(netName)}
+            # kwargs = {f'net{netNum}': 'virtio,bridge='+str(netName)}
             try:
                 logging.info("runConfigureVMNet(): Configuring Interface: " + str(vmUUID))
                 res = proxapi.nodes(nodename)('qemu')(vmUUID)('config').post(**kwargs)
@@ -650,7 +651,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: runSnapshotVM(): instantiated")
         try:
             vmUUID = str(self.vms[vmName].UUID)
-            logging.debug("snapshotVM(): adding 1 "+ str(self.writeStatus))
+            logging.debug("runSnapshotVM(): adding 1 "+ str(self.writeStatus))
             
             try:
                 nodename = self.cf.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
@@ -668,15 +669,15 @@ class ProxmoxManage(VMManage):
                 snapname = "s"+str(int(time.time()))
                 res = proxapi.nodes(nodename)('qemu')(vmUUID)('snapshot').post(snapname=snapname, vmstate=1)
                 self.basic_blocking_task_status(proxapi, res)
-                logging.info("snapshotVM(): Snapshot created: " + snapname + " " + str(res))
+                logging.info("runSnapshotVM(): Snapshot created: " + snapname + " " + str(res))
             except Exception:
-                logging.error("Error in snapshotVM(): An error occured when trying to create snapshot "+snapname+" -- perhaps it doesn't exist")
+                logging.error("Error in runSnapshotVM(): An error occured when trying to create snapshot "+snapname+" -- perhaps it doesn't exist")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-            logging.debug("snapshotVM(): Thread completed")
+            logging.debug("runSnapshotVM(): Thread completed")
         except Exception:
-            logging.error("snapshotVM() Error.")
+            logging.error("runSnapshotVM() Error.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
@@ -965,7 +966,8 @@ class ProxmoxManage(VMManage):
                 self.runEnableVRDP(cloneName, vrdpPort, username, password)
             
             #create snap
-            self.snapshotVM(cloneName, username, password)
+            self.writeStatus += 1
+            self.runSnapshotVM(cloneName, username, password)
             logging.debug("runCloneVMConfigAll(): Thread completed")
 
         except Exception:
@@ -1117,8 +1119,7 @@ class ProxmoxManage(VMManage):
             cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            t = threading.Thread(target=self.runRemoteCmds, args=(cmds,username, password))
-            t.start()
+            self.runRemoteCmds(cmds,username, password)
             return 0  
 
         except Exception:

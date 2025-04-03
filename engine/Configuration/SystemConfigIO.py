@@ -99,6 +99,7 @@ class SystemConfigIO():
         self.config['PROXMOX']['VMANAGE_APIPORT'] = "64646"
         self.config['PROXMOX']['VMANAGE_CMDPORT'] = "5734"
         self.config['PROXMOX']['VMANAGE_MAXCREATEJOBS'] = "20"
+        self.config['PROXMOX']['VMANAGE_SNAPWAITTIME'] = "2.0"
         #Other platform agnostic settings
         self.config['HYPERVISOR'] = {}
         self.config['HYPERVISOR']['ACTIVE'] = "PROXMOX"
