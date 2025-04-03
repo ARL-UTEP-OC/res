@@ -31,51 +31,51 @@ class VMManage:
         raise NotImplementedError()
     
     #abstractmethod
-    def getVMStatus(self, vmName):
+    def getVMStatus(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def refreshAllVMInfo(self):
+    def refreshAllVMInfo(self, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def refreshVMInfo(self):
+    def refreshVMInfo(self, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def startVM(self, vmName):
+    def startVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def pauseVM(self, vmName):
+    def pauseVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def snapshotVM(self, vmName):
+    def snapshotVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def suspendVM(self, vmName):
+    def suspendVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
     #abstractmethod
-    def stopVM(self, vmName):
+    def stopVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
-    def guestCommands(self, VMName, cmds):
+    def guestCommands(self, VMName, cmds, username=None, password=None):
         raise NotImplementedError()
 
-    def importVM(self, filepath):
+    def importVM(self, filepath, username=None, password=None):
         raise NotImplementedError()
 
-    def snapshotVM(self, vmName):
+    def snapshotVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
 
-    def exportVM(self, vmName, filepath):
+    def exportVM(self, vmName, filepath, username=None, password=None):
         raise NotImplementedError()
 
-    def cloneVM(self, vmName, cloneName):
+    def cloneVM(self, vmName, cloneName, username=None, password=None):
         raise NotImplementedError()
 
-    def removeVM(self, vmName):
+    def removeVM(self, vmName, username=None, password=None):
         raise NotImplementedError()

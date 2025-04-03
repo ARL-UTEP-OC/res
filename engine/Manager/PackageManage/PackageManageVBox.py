@@ -23,13 +23,13 @@ class PackageManageVBox(PackageManage):
         self.s.readConfig()
 
     #abstractmethod
-    def importPackage(self, resfilename, runVagrantProvisionScript=False):
+    def importPackage(self, resfilename, runVagrantProvisionScript=False, username=None, password=None):
         logging.debug("importPackage(): instantiated")
         t = threading.Thread(target=self.runImportPackage, args=(resfilename,))
         t.start()
         return 0
     
-    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None):
+    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None, username=None, password=None):
         logging.debug("runImportPackage(): instantiated")
         try:
             self.writeStatus = PackageManage.PACKAGE_MANAGE_IMPORTING
@@ -200,13 +200,13 @@ class PackageManageVBox(PackageManage):
         logging.info("snapshotVMWorker(): complete")
 
     #abstractmethod
-    def exportPackage(self, experimentname, exportpath):
+    def exportPackage(self, experimentname, exportpath, username=None, password=None):
         logging.debug("exportPackage: instantiated")
         t = threading.Thread(target=self.runExportPackage, args=(experimentname, exportpath,))
         t.start()
         return 0
 
-    def runExportPackage(self, experimentname, exportpath):
+    def runExportPackage(self, experimentname, exportpath, username=None, password=None):
         logging.debug("runExportPackage(): instantiated")
         try:
             self.writeStatus = PackageManage.PACKAGE_MANAGE_EXPORTING

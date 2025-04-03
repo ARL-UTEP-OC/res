@@ -6,26 +6,28 @@ import json
 import os
 from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Manager.VMManage.VMManage import VMManage
-from engine.Manager.VMManage.VMwareManage import VMwareManage
-from engine.Manager.VMManage.VMwareManageWin import VMwareManageWin
+from engine.Manager.VMManage.ProxmoxManage import ProxmoxManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
+from engine.Configuration.SystemConfigIO import SystemConfigIO
 
-class ExperimentManageVMware(ExperimentManage):
+class ExperimentManageProxmox(ExperimentManage):
     def __init__(self, vmManage):
-        logging.debug("ExperimentManageVMware(): instantiated")
+        logging.debug("ExperimentManageProxmox(): instantiated")
         ExperimentManage.__init__(self)
         #Create an instance of vmManage
         self.vmManage = vmManage
         self.eco = ExperimentConfigIO.getInstance()
+        self.cf = SystemConfigIO()
+        self.max_createjobs = self.cf.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS']
+        self.snap_waittime = self.cf.getConfig()['PROXMOX']['VMANAGE_SNAPWAITTIME']
         self.vmstatus = {}
-
 
     #abstractmethod
     def createExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("createExperiment(): instantiated")
-        t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name, username, password))
         t.start()
-        #t.join()
+        t.join()
         return 0
 
     def runCreateExperiment(self, configname, itype, name, username=None, password=None):
@@ -41,7 +43,7 @@ class ExperimentManageVMware(ExperimentManage):
                     vmName = vm
                     logging.debug("runCreateExperiment(): working with vm: " + str(vmName))
                     #Create clones preserving internal networks, etc.
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     refreshedVMName = False
@@ -66,23 +68,28 @@ class ExperimentManageVMware(ExperimentManage):
                                 logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
                                 vrdpPort = str(cloneinfo["vrdpPort"])
 
-                            # Clone; we want to refresh the vm info in case any new snapshots have been added, but only once
-                            if refreshedVMName == False:
-                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=True)
-                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
-                            else:
-                                self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=False)
-                                logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
-                                refreshedVMName = True
+                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
+                            logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                            while status > int(self.max_createjobs):
+                                #waiting for vmmanager clone vm to finish reading/writing...
+                                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                                print("waiting until it's less than " + self.max_createjobs + " current: " + str(status))
+                                time.sleep(1)
+                                status = self.vmManage.getManagerStatus()["writeStatus"]
+
+            status = self.vmManage.getManagerStatus()["writeStatus"]
+            while status != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager clone vm to finish reading/writing...
+                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                time.sleep(1)
                 status = self.vmManage.getManagerStatus()["writeStatus"]
-                while status != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager clone vm to finish reading/writing...
-                    logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
-                    time.sleep(1)
-                    status = self.vmManage.getManagerStatus()["writeStatus"]
-                
-                logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
-                logging.debug("runCreateExperiment(): Complete...")
+            logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
+            logging.debug("runCreateExperiment(): applying network configuration")
+            print("runCreateExperiment(): applying network configuration")
+            self.vmManage.refreshNetwork(username=username, password=password)
+            logging.debug("runCreateExperiment(): Complete...")
+            print("runCreateExperiment(): Complete...")
         except Exception:
             logging.error("runCloneVM(): Error in runCreateExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -92,7 +99,7 @@ class ExperimentManageVMware(ExperimentManage):
 
     def refreshExperimentVMInfo(self, configName, username=None, password=None):
         logging.debug("refreshExperimentVMInfo: refreshAllVMInfo(): instantiated")      
-        t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,))
+        t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,username, password))
         t.start()
         t.join()
         self.vmstatus = self.vmManage.getManagerStatus()["vmstatus"]
@@ -114,7 +121,7 @@ class ExperimentManageVMware(ExperimentManage):
                         if cloneVMName not in validvmnames:
                             continue
                         logging.debug("refreshExperimentVMInfo(): Refreshing: " + str(cloneVMName))
-                        self.vmManage.refreshVMInfo(cloneVMName)
+                        self.vmManage.refreshVMInfo(cloneVMName, username=username, password=password)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager refresh vm to finish reading/writing...
                 time.sleep(.1)
@@ -130,7 +137,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def startExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("startExperiment(): instantiated")
-        t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name))
+        t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -155,11 +162,11 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runStartExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runStartExperiment(): Starting: " + str(vmName))
-                            self.vmManage.startVM(cloneVMName)
+                            self.vmManage.startVM(cloneVMName, username=username, password=password)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
             #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
@@ -175,7 +182,7 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runStartExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runStartExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -194,7 +201,7 @@ class ExperimentManageVMware(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStartupCmds.append(mcmd[1])
                                 logging.debug("runStartExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStartupCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay)
+                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, username=username, password=password)
             logging.debug("runStartExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -208,7 +215,7 @@ class ExperimentManageVMware(ExperimentManage):
 
     def guestCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("guestCmdsExperiment(): instantiated")
-        t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -231,7 +238,7 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runGuestCmdsExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runGuestCmdsExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -250,7 +257,7 @@ class ExperimentManageVMware(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStartupCmds.append(mcmd[1])
                                 logging.debug("runGuestCmdsExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStartupCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay)
+                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, username=username, password=password)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
@@ -267,7 +274,7 @@ class ExperimentManageVMware(ExperimentManage):
 
     def guestStoredCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
-        t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -290,7 +297,7 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(cloneVMName) == None:
                                 logging.error("runGuestStoredCmdsExperiment(): VM Name: " + str(cloneVMName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runGuestStoredCmdsExperiment(): command(s) setup on " + str(cloneVMName) )
@@ -309,7 +316,7 @@ class ExperimentManageVMware(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStoredCmds.append(mcmd[1])
                                 logging.debug("runGuestStoredCmdsExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStoredCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStoredCmds, storedDelay)
+                                self.vmManage.guestCommands(cloneVMName, orderedStoredCmds, storedDelay, username=username, password=password)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager to finish reading/writing...
                 time.sleep(.1)
@@ -327,7 +334,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def suspendExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("suspendExperiment(): instantiated")
-        t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -351,14 +358,14 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(vmName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runSuspendExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSuspendExperiment(): Suspending: " + str(vmName))
-                            self.vmManage.suspendVM(cloneVMName)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager suspend vm to finish reading/writing...
-                    time.sleep(.1)
+                            self.vmManage.suspendVM(cloneVMName, username=username, password=password)
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager suspend vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runSuspendingExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -373,7 +380,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def pauseExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("pauseExperiment(): instantiated")
-        t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -397,14 +404,14 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue                            
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(cloneVMName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runPauseExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runPauseExperiment(): Pausing: " + str(vmName))
-                            self.vmManage.pauseVM(cloneVMName)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager pause vm to finish reading/writing...
-                    time.sleep(.1)
+                            self.vmManage.pauseVM(cloneVMName, username=username, password=password)
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager pause vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runPauseExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -419,7 +426,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def snapshotExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("snapshotExperiment(): instantiated")
-        t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -443,14 +450,17 @@ class ExperimentManageVMware(ExperimentManage):
                             if cloneVMName not in validvmnames:
                                 continue
                             #Check if clone exists and then run it if it does
-                            if not os.path.exists(vmName):
+                            if self.vmManage.getVMStatus(vmName) == None:
                                 logging.error("runSnapshotExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSnapshotExperiment(): Snapshotting: " + str(vmName))
-                            self.vmManage.snapshotVM(cloneVMName)
-                while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
-                    #waiting for vmmanager snapshot vm to finish reading/writing...
-                    time.sleep(.1)
+                            self.vmManage.snapshotVM(cloneVMName, username=username, password=password)
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                            #if snaps are taken too fast, the lock on /etc/pve/ will cause an error... need a wait time in-between
+                            time.sleep(float(self.snap_waittime))
+            while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
+                #waiting for vmmanager snapshot vm to finish reading/writing...
+                time.sleep(.1)
             logging.debug("runSnapshotExperiment(): Complete...")
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
@@ -465,7 +475,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def stopExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("stopExperiment(): instantiated")
-        t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -487,11 +497,11 @@ class ExperimentManageVMware(ExperimentManage):
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then run it if it does
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runStopExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runStopExperiment(): Stopping: " + str(vmName))
-                    self.vmManage.stopVM(cloneVMName)
+                    self.vmManage.stopVM(cloneVMName, username=username, password=password)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
@@ -509,7 +519,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def removeExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("removeExperiment(): instantiated")
-        t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0
@@ -522,24 +532,38 @@ class ExperimentManageVMware(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            #if itype and name are "" (remove all), then also remove the network adaptors
+            removeAdaptors = False
+            removeUnusedLVM = False
+            if itype == "" and name == "":
+                removeAdaptors = True
+                removeUnusedLVM = True
             for vm in clonevmjson.keys(): 
                 vmName = vm
                 logging.debug("runRemoveExperiment(): working with vm: " + str(vmName))
                 #get names for clones and remove them
                 for cloneinfo in clonevmjson[vm]:
                     cloneVMName = cloneinfo["name"]
+                    networks = cloneinfo["networks"]
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then remove it if it does
-                    if not os.path.exists(cloneVMName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runRemoveExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRemoveExperiment(): Removing: " + str(cloneVMName))
-                    self.vmManage.removeVM(cloneVMName)
+                    self.vmManage.removeVM(cloneVMName, username=username, password=password)
+                    if removeAdaptors:
+                        self.vmManage.removeNetworks(networks)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runRemoveExperiment(): Complete...")
+            #Remove old lvm that are inactive
+            if removeUnusedLVM:
+                self.vmManage.runRemoteCmds(["lvscan  | grep inactive | awk -F \"'\" '{print $2}' | xargs lvremove"])
+            #now update the network configurations
+            self.vmManage.refreshNetwork()
             self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runRemoveExperiment(): Error in runRemoveExperiment(): An error occured ")
@@ -553,7 +577,7 @@ class ExperimentManageVMware(ExperimentManage):
     #abstractmethod
     def restoreExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("restoreExperimentStates(): instantiated")
-        t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name))
+        t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
         return 0    
@@ -575,11 +599,11 @@ class ExperimentManageVMware(ExperimentManage):
                     if cloneVMName not in validvmnames:
                         continue
                     #Check if clone exists and then run it if it does
-                    if not os.path.exists(vmName):
+                    if self.vmManage.getVMStatus(vmName) == None:
                         logging.error("runRestoreExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRestoreExperiment(): Restoring latest for : " + str(cloneVMName))
-                    self.vmManage.restoreLatestSnapVM(cloneVMName)
+                    self.vmManage.restoreLatestSnapVM(cloneVMName, username=username, password=password)
                     while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                         #waiting for vmmanager stop vm to finish reading/writing...
                         time.sleep(.1)
@@ -619,8 +643,8 @@ if __name__ == "__main__":
     logging.debug("Starting Program")
 
     logging.debug("Instantiating Engine")
-    vbm = VMwareManage()
-    e = ExperimentManageVMware(vbm)
+    vbm = ProxmoxManage()
+    e = ExperimentManageProxmox(vbm)
     ####---Create Experiment Test#####
     logging.info("Creating Experiment")
     e.createExperiment("sample")

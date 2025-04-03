@@ -12,7 +12,13 @@ proxapi = ProxmoxAPI('server', port=port, user='user@pam', password='pass', veri
 proxssh = ssh_paramiko.SshParamikoSession('server',port=port, user='user',password='pass')
 #######Get vm power status:
 vmstatuss = {}
-allinfo = proxapi.cluster.resources.get(type='vm')
+try:
+    allinfo = proxapi.cluster.resources.get(type='vm')
+except Exception:
+    #logging.error("Error in <>(): An error occured ")
+    print("Error in <>(): An error occured when trying to get cluster info")
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    traceback.print_exception(exc_type, exc_value, exc_traceback)
 
 for vmiter in allinfo:
     # net info
