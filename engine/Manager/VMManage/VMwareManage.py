@@ -695,8 +695,6 @@ class VMwareManage(VMManage):
             vmLatestSnapUUID = "1"
 
             tmpCloneName = cloneName
-            if " " in tmpCloneName and not tmpCloneName.startswith("\"") and not tmpCloneName.endswith("\""):
-                tmpCloneName = "\"" + str(tmpCloneName) + "\""
             #Call runVMCommand
             if os.path.exists(tmpCloneName):
                 logging.warning("CLONE ALREADY EXISTS, skipping: " + str(tmpCloneName))
