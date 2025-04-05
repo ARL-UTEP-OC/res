@@ -9,6 +9,7 @@ from engine.Manager.VMManage.VMManage import VMManage
 from engine.Manager.VMManage.VBoxManage import VBoxManage
 from engine.Manager.VMManage.VBoxManageWin import VBoxManageWin
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
+from engine.Configuration.SystemConfigIO import SystemConfigIO
 
 class ExperimentManageVBox(ExperimentManage):
     def __init__(self, vmManage):
@@ -17,6 +18,10 @@ class ExperimentManageVBox(ExperimentManage):
         #Create an instance of vmManage
         self.vmManage = vmManage
         self.eco = ExperimentConfigIO.getInstance()
+        self.cf = SystemConfigIO()
+        self.max_createjobs = self.cf.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS']
+        self.snap_waittime = self.cf.getConfig()['PROXMOX']['VMANAGE_SNAPWAITTIME']
+
         self.vmstatus = {}
 
 
@@ -73,6 +78,7 @@ class ExperimentManageVBox(ExperimentManage):
                                 self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, refreshVMInfo=False, username=username, password=password)
                                 logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
                                 refreshedVMName = True
+
                 status = self.vmManage.getManagerStatus()["writeStatus"]
                 while status != VMManage.MANAGER_IDLE:
                     #waiting for vmmanager clone vm to finish reading/writing...
@@ -114,6 +120,15 @@ class ExperimentManageVBox(ExperimentManage):
                             continue
                         logging.debug("refreshExperimentVMInfo(): Refreshing: " + str(cloneVMName))
                         self.vmManage.refreshVMInfo(cloneVMName)
+
+                        status = self.vmManage.getManagerStatus()["writeStatus"]
+                        while status > int(self.max_createjobs)/2:
+                            #waiting for vmmanager clone vm to finish reading/writing...
+                            logging.debug("runStartExperiment(): waiting for vmmanager clone vm to finish starting..." + str(status) + ":: " + str(i))
+                            print("waiting until it's less than " + self.max_createjobs + " current: " + str(status))
+                            time.sleep(1)
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                        
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager refresh vm to finish reading/writing...
                 time.sleep(.1)
@@ -158,6 +173,13 @@ class ExperimentManageVBox(ExperimentManage):
                                 continue
                             logging.debug("runStartExperiment(): Starting: " + str(vmName))
                             self.vmManage.startVM(cloneVMName)
+                            status = self.vmManage.getManagerStatus()["writeStatus"]
+                            while status > int(self.max_createjobs):
+                                #waiting for vmmanager clone vm to finish reading/writing...
+                                logging.debug("runStartExperiment(): waiting for vmmanager clone vm to finish starting..." + str(status) + ":: " + str(i))
+                                print("waiting until it's less than " + self.max_createjobs + " current: " + str(status))
+                                time.sleep(1)
+                                status = self.vmManage.getManagerStatus()["writeStatus"]
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
             #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
