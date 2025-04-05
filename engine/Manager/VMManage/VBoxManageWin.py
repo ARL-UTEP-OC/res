@@ -461,7 +461,7 @@ class VBoxManageWin(VMManage):
                 return -1
             filepath = filepath.replace("\"","")
             exportfilename = os.path.join(filepath,vmName+".ova")
-            cmd = "export " + self.vms[vmName].UUID + " -o \"" + exportfilename# + "\" --iso"
+            cmd = "export " + self.vms[vmName].UUID + " -o \"" + exportfilename + "\"" # --iso"
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             t = threading.Thread(target=self.runVMCmd, args=(cmd,))
