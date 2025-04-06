@@ -24,6 +24,14 @@ class MaterialCopyThread(QThread):
     def run(self):
         logging.debug("MaterialCopyThread(): instantiated")
         stringExec = "Copying file to " + str(self.destinationPath)
+        try:
+            if not os.path.exists(self.destinationPath):
+                os.makedirs(self.destinationPath)
+                logging.debug("MaterialCopyThread(): created directory: " + str(self.destinationPath))
+        except Exception as e:
+            logging.error("Error in MaterialCopyThread(): Could not create directory: " + str(self.destinationPath))
+            return
+        
         self.watchsignal.emit(stringExec, None, None)
         try:
             logging.debug("destinationPathStatus(): Copying " + str(self.destinationPath) + " " + str(self.filenames) )
