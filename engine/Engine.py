@@ -134,7 +134,8 @@ class Engine:
         resfilename = args.resfilename
         username = args.username
         password = args.password
-        return self.packageManage.importPackage(resfilename, username, password)
+        vms = args.no_vms
+        return self.packageManage.importPackage(resfilename, username, password, vms)
 
     def packagerExportCmd(self, args):
         logging.debug("packagerExportCmd(): instantiated")
@@ -143,7 +144,8 @@ class Engine:
         exportpath = args.exportpath
         username = args.username
         password = args.password
-        return self.packageManage.exportPackage(experimentname, exportpath, username, password)
+        vms = args.no_vms
+        return self.packageManage.exportPackage(experimentname, exportpath, username, password, vms)
 
     def connectionStatusCmd(self, args):
         #query connection manager status and then return it here
@@ -534,6 +536,8 @@ class Engine:
                                           help='Username for connecting to host')
         self.packageManageImportParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
+        self.packageManageImportParser.add_argument('--no-vms', action="store_false",
+                                          help='Do not import vms')
         self.packageManageImportParser.set_defaults(func=self.packagerImportCmd)
 
         self.packageManageExportParser = self.packageManageSubParsers.add_parser('export', help='export an experiment from config to a RES file')
@@ -545,6 +549,8 @@ class Engine:
                                           help='Username for connecting to host')
         self.packageManageExportParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
+        self.packageManageExportParser.add_argument('--no-vms', action="store_false",
+                                          help='Do not export vms')
         self.packageManageExportParser.set_defaults(func=self.packagerExportCmd)
 
 #-----------Connections

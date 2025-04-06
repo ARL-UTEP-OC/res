@@ -21,13 +21,14 @@ class PackageManageVMware(PackageManage):
         self.s.readConfig()
 
     #abstractmethod
-    def importPackage(self, resfilename, runVagrantProvisionScript=False, username=None, password=None):
+    def importPackage(self, resfilename, runVagrantProvisionScript=False, username=None, password=None, vms=True):
         logging.debug("importPackage(): instantiated")
-        t = threading.Thread(target=self.runImportPackage, args=(resfilename,))
+        t = threading.Thread(target=self.runImportPackage, args=(resfilename, None, username, password, vms))
         t.start()
+        t.join()
         return 0
     
-    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None, username=None, password=None):
+    def runImportPackage(self, resfilename, vagrantProvisionScriptfilename=None, username=None, password=None, vms=True):
         logging.debug("runImportPackage(): instantiated")
         try:
             self.writeStatus = PackageManage.PACKAGE_MANAGE_IMPORTING
@@ -42,36 +43,36 @@ class PackageManageVMware(PackageManage):
 
             self.unzipWorker(resfilename, tmpPathBase)
             logging.info("runImportPackage(): completed unzipping contents")
-            tmpPathVMs = os.path.join(tmpPathBase, assumedExperimentName, "VMs")
-            #For ova files
-                #call vmManage to import VMs as specified in config file; wait and query the vmManage status, and then set the complete status
-                # Get all files that end with .ova
-                #import and then snapshot
-            vmFilenames = []
-            if os.path.exists(tmpPathVMs):
-                vmFilenames = os.listdir(tmpPathVMs)
-            logging.debug("runImportPackage(): Unzipped files: " + str(vmFilenames))
-            vmNum = 1
-            for vmFilename in vmFilenames:
-                if vmFilename.endswith(".ova"):
-                    logging.debug("runImportPackage(): Importing " + str(vmFilename))
-                logging.info("Importing VM " + str(vmNum) + " of " + str(len(vmFilenames)))
-                #Import the VM using a system call
-                self.importVMWorker(os.path.join(tmpPathVMs, vmFilename))
-                #since we added a new VM, we have to refresh
-                #need to update filenames in JSON here
-                self.vmManage.refreshAllVMInfo()
-                result = self.vmManage.getManagerStatus()["writeStatus"]
-                while result != self.vmManage.MANAGER_IDLE:
-                #waiting for manager to finish query...
+            if vms:
+                tmpPathVMs = os.path.join(tmpPathBase, assumedExperimentName, "VMs")
+                #For ova files
+                    #call vmManage to import VMs as specified in config file; wait and query the vmManage status, and then set the complete status
+                    # Get all files that end with .ova
+                    #import and then snapshot
+                vmFilenames = []
+                if os.path.exists(tmpPathVMs):
+                    vmFilenames = os.listdir(tmpPathVMs)
+                logging.debug("runImportPackage(): Unzipped files: " + str(vmFilenames))
+                vmNum = 1
+                for vmFilename in vmFilenames:
+                    if vmFilename.endswith(".ova"):
+                        logging.debug("runImportPackage(): Importing " + str(vmFilename))
+                    logging.info("Importing VM " + str(vmNum) + " of " + str(len(vmFilenames)))
+                    #Import the VM using a system call
+                    self.importVMWorker(os.path.join(tmpPathVMs, vmFilename))
+                    #since we added a new VM, we have to refresh
+                    #need to update filenames in JSON here
+                    self.vmManage.refreshAllVMInfo()
                     result = self.vmManage.getManagerStatus()["writeStatus"]
-                    time.sleep(.1)
+                    while result != self.vmManage.MANAGER_IDLE:
+                    #waiting for manager to finish query...
+                        result = self.vmManage.getManagerStatus()["writeStatus"]
+                        time.sleep(.1)
 
-                #now take a snapshot
-                self.snapshotVMWorker(os.path.join(vmFilename[:-4]))
-                vmNum = vmNum + 1
+                    #now take a snapshot
+                    self.snapshotVMWorker(os.path.join(vmFilename[:-4]))
+                    vmNum = vmNum + 1
 
-            #TODO: move all unzipped files (except ovas) to experiment path)
             #remove experiment from experiment folder if it already exists
             if os.path.exists(tmpPathBaseImportedExperiment) == False:
                 logging.error("Experiment folder not found after decompressing files... Skipping: " + str(tmpPathBaseImportedExperiment))
@@ -217,13 +218,14 @@ class PackageManageVMware(PackageManage):
         logging.info("snapshotVMWorker(): complete")
 
     #abstractmethod
-    def exportPackage(self, experimentname, exportpath, username=None, password=None):
+    def exportPackage(self, experimentname, exportpath, username=None, password=None, vms=True):
         logging.debug("exportPackage: instantiated")
-        t = threading.Thread(target=self.runExportPackage, args=(experimentname, exportpath,))
+        t = threading.Thread(target=self.runExportPackage, args=(experimentname, exportpath,username, password, vms))
         t.start()
+        t.join()
         return 0
 
-    def runExportPackage(self, experimentname, exportpath, username=None, password=None):
+    def runExportPackage(self, experimentname, exportpath, username=None, password=None, vms=True):
         logging.debug("runExportPackage(): instantiated")
         try:
             self.writeStatus = PackageManage.PACKAGE_MANAGE_EXPORTING
@@ -254,14 +256,15 @@ class PackageManageVMware(PackageManage):
                 os.makedirs(tmpPathMaterials)
             if os.path.exists(tmpPathExperiments) == False:
                 os.makedirs(tmpPathExperiments)
-                        
-            #export vms that are part of this experiment to the temp folder
-            vmNames = self.em.getExperimentVMNames(experimentname)
-            logging.debug("runExportPackage(): preparing to export experiment vms: " + str(vmNames))
-            for vmName in vmNames:
-                logging.info("runExportPackage(): exporting: " + str(vmName))
-                self.exportVMWorker(vmName, tmpPathVMs)
-                logging.info("runExportPackage(): exporting of " + str(vmName) + " complete")
+            
+            if vms:
+                #export vms that are part of this experiment to the temp folder
+                vmNames = self.em.getExperimentVMNames(experimentname)
+                logging.debug("runExportPackage(): preparing to export experiment vms: " + str(vmNames))
+                for vmName in vmNames:
+                    logging.info("runExportPackage(): exporting: " + str(vmName))
+                    self.exportVMWorker(vmName, tmpPathVMs)
+                    logging.info("runExportPackage(): exporting of " + str(vmName) + " complete")
 
             #add to zip everything that exists in the experiment folder
             logging.info("runExportPackage(): zipping files")

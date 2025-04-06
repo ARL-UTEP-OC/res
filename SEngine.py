@@ -1,4 +1,5 @@
 from engine.Engine import Engine
+import logging
 import sys
 
 def main():
@@ -10,6 +11,7 @@ def main():
     else:
         print("Initializing System, please wait...")
         eng = Engine()
+    logging.getLogger().setLevel(logging.INFO)        
     print("Done")
     while True:
         try:
