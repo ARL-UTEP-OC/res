@@ -570,13 +570,13 @@ class Engine:
         self.connectionManageRefreshParser = self.connectionManageSubParser.add_parser('refresh', help='retrieve all connection manager status')
         self.connectionManageRefreshParser.add_argument('hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageRefreshParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageRefreshParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageRefreshParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageRefreshParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRefreshParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageRefreshParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageRefreshParser.set_defaults(func=self.connectionRefreshCmd)
 
@@ -585,29 +585,29 @@ class Engine:
                                           help='path to config file')
         self.connectionManageCreateParser.add_argument('hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageCreateParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageCreateParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageCreateParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageCreateParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageCreateParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageCreateParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageCreateParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageCreateParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.connectionManageCreateParser.add_argument('maxConnections', metavar='<maxConnections>', action="store", default="10",
+        self.connectionManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
                                           help='Max number of connections allowed per remote conn')
-        self.connectionManageCreateParser.add_argument('maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
+        self.connectionManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
                                           help='Max number of connections allowed per user per remote conn')
-        self.connectionManageCreateParser.add_argument('width', metavar='<width>', action="store", default="1400",
+        self.connectionManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
                                           help='Width of remote connection display')
-        self.connectionManageCreateParser.add_argument('height', metavar='<height>', action="store", default="1050",
+        self.connectionManageCreateParser.add_argument('--height', metavar='<height>', action="store", default="1050",
                                           help='Height of remote connection display')
-        self.connectionManageCreateParser.add_argument('bitdepth', metavar='<bitdepth>', action="store", default="16",
+        self.connectionManageCreateParser.add_argument('--bitdepth', metavar='<bitdepth>', action="store", default="16",
                                           help='Bit-depth (8, 16, 24, or 32)')
-        self.connectionManageCreateParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.connectionManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.connectionManageCreateParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.connectionManageCreateParser.set_defaults(func=self.connectionCreateCmd)
         
@@ -616,32 +616,32 @@ class Engine:
                                           help='path to config file')
         self.connectionManageRemoveParser.add_argument('hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageRemoveParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageRemoveParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageRemoveParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageRemoveParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRemoveParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageRemoveParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.connectionManageRemoveParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.connectionManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.connectionManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.connectionManageRemoveParser.set_defaults(func=self.connectionRemoveCmd)
 
         self.connectionManageClearAllParser = self.connectionManageSubParser.add_parser('clear', help='Clear all connections in database')
         self.connectionManageClearAllParser.add_argument('hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageClearAllParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageClearAllParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageClearAllParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageClearAllParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageClearAllParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageClearAllParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageClearAllParser.set_defaults(func=self.connectionClearAllCmd)
 
@@ -650,9 +650,9 @@ class Engine:
                                           help='path to config file')
         self.connectionManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
                                           help='experiment instance number')
-        self.connectionManageOpenParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageOpenParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.connectionManageOpenParser.set_defaults(func=self.connectionOpenCmd)
 

@@ -122,6 +122,7 @@ class ChallengesManageCTFd(ChallengesManage):
             user_dict = api_session.users_get()
             for item in user_dict:
                 users.append(item['name'])
+            created_users = []
             try:
                 for (username, password) in usersConns:
                     for challenge in usersConns[(username, password)]:
@@ -131,7 +132,7 @@ class ChallengesManageCTFd(ChallengesManage):
                         #only if this is a specific challenges to create; based on itype and name
                         if cloneVMName in validchallengesnames:
                             #if user doesn't exist, create it
-                            if username not in users:
+                            if username not in users and username not in created_users:
                                 logging.debug( "Creating User: " + username)
                                 try:
                                     result = self.create_user(api_session, username, password)
@@ -139,13 +140,13 @@ class ChallengesManageCTFd(ChallengesManage):
                                         logging.error("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
                                     else:
                                         logging.info("runCreateChallengesUsers(): Added user: " + username)
-                                        users.append(username)
+                                        created_users.append(username)
                                 except Exception:
                                     logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): when trying to add user.")
                                     exc_type, exc_value, exc_traceback = sys.exc_info()
                                     traceback.print_exception(exc_type, exc_value, exc_traceback)
-                            else:
-                                logging.warning("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
+                            # else:
+                            #     logging.warning("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
             except Exception:
                     logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): when trying to add challenge users.")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -242,7 +243,7 @@ class ChallengesManageCTFd(ChallengesManage):
 
             usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
             logging.debug("runRemoveChallengesConnections(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " method: " + str(method) + " creds_file: " + creds_file)
-
+            removed_users = []
             for (username, password) in usersConns:
                 logging.debug( "Removing User: " + username)
                 try:
@@ -250,13 +251,14 @@ class ChallengesManageCTFd(ChallengesManage):
                         cloneVMName = challenge[0]
                         if cloneVMName in validnames:
                             #don't try to remove the user if it doesn't exist or if it's already been removed
-                            if username in user_id and user_id[username] != None:
+                            if username in user_id and user_id[username] != None and username not in removed_users:
                                 result = api_session.user_delete(id=user_id[username])
                                 if result != True:
                                     logging.error("Could not remove user, perhaps the user doesn't exists; skipping... "+ str(username))
                                 else:
                                     logging.info("Removed User: " + str(username))
                                     user_id[username] = None
+                                    removed_users.append(username)
                             else:
                                 logging.warning("Did not remove user, because the user doesn't exists; skipping... "+ str(username))
 
