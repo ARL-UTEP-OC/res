@@ -51,9 +51,9 @@ class ExperimentManageProxmox(ExperimentManage):
                     for cloneinfo in clonevmjson[vm]:
                         if cloneinfo["groupNum"] == str(i):
                             cloneVMName = cloneinfo["name"]
-                            # if cloneVMName not in validvmnames:
-                            #     status = self.vmManage.getManagerStatus()["writeStatus"]
-                            #     continue
+                            if cloneVMName not in validvmnames:
+                                status = self.vmManage.getManagerStatus()["writeStatus"]
+                                continue
                             cloneGroupName = cloneinfo["group-name"]
                             cloneSnapshots = cloneinfo["clone-snapshots"]
                             linkedClones = cloneinfo["linked-clones"]
@@ -68,7 +68,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
                                 vrdpPort = str(cloneinfo["vrdpPort"])
 
-                            # self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
+                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
                             logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
                             status = self.vmManage.getManagerStatus()["writeStatus"]
                             while status > int(self.max_createjobs):
