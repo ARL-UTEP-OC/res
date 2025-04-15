@@ -23,6 +23,7 @@ class ChallengesManageCTFd(ChallengesManage):
         logging.debug("create_user(): instantiated")
         if email == "":
             email = username+str(email_ext)
+        logging.debug("create_user(): Adding User: " + str(username))
         result = api_session.user_add(name=username, password=password, email=email, type=type, verified=verified, hidden=hidden, banned=banned, fields=fields)
         if result != {}:
             return True
@@ -36,6 +37,7 @@ class ChallengesManageCTFd(ChallengesManage):
         for (user, password) in users_passes:
             name = user
             if name.lower() not in (string.lower() for string in ignore):
+                logging.debug("create_user(): Adding User: " + str(name))
                 results.append((user, self.create_user(api_session, user, password)))
         return results
     
@@ -93,6 +95,7 @@ class ChallengesManageCTFd(ChallengesManage):
         logging.debug("createChallengesUsers(): instantiated")
         t = threading.Thread(target=self.runCreateChallengesUsers, args=(configname, ctfdHostname, username, password, method, creds_file, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runCreateChallengesUsers(self, configname, ctfdHostname, musername, mpassword, method, creds_file, itype, name):
@@ -105,7 +108,7 @@ class ChallengesManageCTFd(ChallengesManage):
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_CREATING
+
             logging.debug("runCreateChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + musername + " method: " + str(method) + " creds_file: " + creds_file)
             ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
@@ -113,7 +116,7 @@ class ChallengesManageCTFd(ChallengesManage):
 
             if api_session == None:
                 logging.error("runCreateChallengesUsers(): Error with ctfd challenges... skipping: " + str(ctfdHostname) + " " + str(musername))
-                self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+    
                 return -1
             users = []
             user_dict = api_session.users_get()
@@ -132,9 +135,11 @@ class ChallengesManageCTFd(ChallengesManage):
                             if username not in users and username not in created_users:
                                 logging.debug( "Creating User: " + username)
                                 try:
+                                    logging.info("runCreateChallengesUsers(): Adding User: " + str(username))
                                     result = self.create_user(api_session, username, password)
                                     if result == False:
                                         logging.error("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
+                                    else:
                                         created_users.append(username)
                                 except Exception:
                                     logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): when trying to add user.")
@@ -145,34 +150,32 @@ class ChallengesManageCTFd(ChallengesManage):
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_traceback)
             logging.debug("runCreateChallengesUsers(): Complete...")
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+
         except Exception:
             logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def clearAllChallengesUsers(self, ctfdHostname, username, password, method):
         logging.debug("clearAllChallengesUsers(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runClearAllChallengesUsers, args=(ctfdHostname, username, password, method))
         t.start()
+        t.join()
         return 0
 
     def runClearAllChallengesUsers(self, ctfdHostname, username, password, method):
         try:
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_REMOVING
-            
             logging.debug("runClearAllChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " method: " + str(method))
             ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
                 logging.error("runClearAllChallengesUsers(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
-                self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+    
                 return -1
 
             # Get list of all users
@@ -181,7 +184,7 @@ class ChallengesManageCTFd(ChallengesManage):
             for item in user_dict:
                 username = item['name']
                 id = item['id']
-                logging.debug( "Removing Username: " + str(username) + " ID: " + str(id))
+                logging.info( "Removing User: " + str(username) + " ID: " + str(id))
                 try:
                     result = api_session.user_delete(id=id)
                     if result == False:
@@ -194,20 +197,18 @@ class ChallengesManageCTFd(ChallengesManage):
             logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def removeChallengesUsers(self, configname, ctfdHostname, username, password, method, creds_file="", itype="", name=""):
         logging.debug("removeChallengesUsers(): instantiated")
         t = threading.Thread(target=self.runRemoveChallengesUsers, args=(configname,ctfdHostname, username, password, method, creds_file, itype, name))
         t.start()
+        t.join()
         return 0
 
     def runRemoveChallengesUsers(self, configname, ctfdHostname, username, password, method, creds_file, itype, name):
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_REMOVING
         logging.debug("runRemoveChallengesUsers(): instantiated")
         #call ctfd backend API to make challenges as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
@@ -219,7 +220,7 @@ class ChallengesManageCTFd(ChallengesManage):
             api_session.login(username,password)
             if api_session == None:
                 logging.error("runRemoveChallengesConnections(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
-                self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+    
                 return -1
             user_dict = api_session.users_get()
             user_id = {}
@@ -237,6 +238,7 @@ class ChallengesManageCTFd(ChallengesManage):
                         if cloneVMName in validnames:
                             #don't try to remove the user if it doesn't exist or if it's already been removed
                             if username in user_id and user_id[username] != None and username not in removed_users:
+                                logging.info("runRemoveChallengesConnections(): Removing User: " + str(username) + " ID: " + str(user_id[username]))
                                 result = api_session.user_delete(id=user_id[username])
                                 if result != True:
                                     logging.error("Could not remove user, perhaps the user doesn't exists; skipping... "+ str(username))
@@ -248,38 +250,32 @@ class ChallengesManageCTFd(ChallengesManage):
                         exc_type, exc_value, exc_traceback = sys.exc_info()
                         traceback.print_exception(exc_type, exc_value, exc_traceback)
             logging.debug("runRemoveChallengesConnections(): Complete...")
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
         except Exception:
             logging.error("runRemoveChallengesConnections(): Error in runRemoveChallengesConnections(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def openChallengeUsersStats(self, configname, experimentid, vmid):
         logging.debug("openChallengeUsersStats(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.openChallengeUsersStats, args=(configname,))
         t.start()
+        t.join()
         return 0
 
     def runOpenChallengeUsersStats(self, configname, experimentid, vmid):
         logging.debug("runOpenChallengeUsersStats(): instantiated")
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_OPENING
-        #open stats using configuration for the specified user
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+        self.writeStatus-=1
 
     #abstractmethod
     def getChallengesManageStatus(self):
         logging.debug("getChallengesManageStatus(): instantiated")
-        #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengeStatus" : [(username, challengeName): {"user_status": user_perm, "challengeStatus": active}] }
-        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : self.challengeUsersStatus, "challengesStats": self.challengesStats}
     
     def getChallengesManageRefresh(self, ctfdHostname, username, password, method):
         logging.debug("getChallengesManageStatus(): instantiated")
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_REFRESHING
         try:
             self.lock.acquire()
             self.challengeUsersStatus.clear()
@@ -289,7 +285,6 @@ class ChallengesManageCTFd(ChallengesManage):
             api_session.login(username,password)
             if api_session == None:
                 logging.error("runRemoveChallengesConnections(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
-                self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
                 return -1
 
             all_users_data = api_session.users_get()
@@ -327,14 +322,12 @@ class ChallengesManageCTFd(ChallengesManage):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             trace_back = traceback.extract_tb(exc_traceback)
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            return None
         finally:
             self.lock.release()
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+
 
     def getChallengesManageGetstats(self, ctfdHostname, username, password, method):
         logging.debug("getChallengesManageGetstats(): instantiated")
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_REFRESHING
         try:
             self.lock.acquire()
             self.challengesStats.clear()
@@ -344,7 +337,6 @@ class ChallengesManageCTFd(ChallengesManage):
             api_session.login(username,password)
             if api_session == None:
                 logging.error("runRemoveChallengesConnections(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
-                self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
                 return -1
 
             all_challenges_data = api_session.challenges_get()
@@ -362,7 +354,6 @@ class ChallengesManageCTFd(ChallengesManage):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             trace_back = traceback.extract_tb(exc_traceback)
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            return None
         finally:
             self.lock.release()
-            self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_COMPLETE
+
