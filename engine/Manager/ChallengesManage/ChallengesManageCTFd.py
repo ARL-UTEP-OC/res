@@ -107,10 +107,7 @@ class ChallengesManageCTFd(ChallengesManage):
         try:
             self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_CREATING
             logging.debug("runCreateChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + musername + " method: " + str(method) + " creds_file: " + creds_file)
-            if method == "HTTPS":
-                ctfdHostname = "https://" + ctfdHostname
-            else:
-                ctfdHostname = "http://" + ctfdHostname
+            ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(musername,mpassword)
 
@@ -138,15 +135,11 @@ class ChallengesManageCTFd(ChallengesManage):
                                     result = self.create_user(api_session, username, password)
                                     if result == False:
                                         logging.error("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
-                                    else:
-                                        logging.info("runCreateChallengesUsers(): Added user: " + username)
                                         created_users.append(username)
                                 except Exception:
                                     logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): when trying to add user.")
                                     exc_type, exc_value, exc_traceback = sys.exc_info()
                                     traceback.print_exception(exc_type, exc_value, exc_traceback)
-                            # else:
-                            #     logging.warning("runCreateChallengesUsers(): Could not add user: " + username + " may already exist; skipping...")
             except Exception:
                     logging.error("runCreateChallengesUsers(): Error in runCreateChallengesUsers(): when trying to add challenge users.")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -174,10 +167,7 @@ class ChallengesManageCTFd(ChallengesManage):
             self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_REMOVING
             
             logging.debug("runClearAllChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " method: " + str(method))
-            if method == "HTTPS":
-                ctfdHostname = "https://" + ctfdHostname
-            else:
-                ctfdHostname = "http://" + ctfdHostname
+            ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -196,8 +186,6 @@ class ChallengesManageCTFd(ChallengesManage):
                     result = api_session.user_delete(id=id)
                     if result == False:
                         logging.warning("runClearAllChallengesUsers(): Could not remove user; perhaps user does not exist on system: " + str(username))
-                    else:
-                        logging.info("runClearAllChallengesUsers(): Removed User - " + str(username))
                 except Exception:
                     logging.error("runClearAllChallengesUsers(): Error in runClearAllChallengesUsers(): when trying to remove user.")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -226,10 +214,7 @@ class ChallengesManageCTFd(ChallengesManage):
         validnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
         userpool = UserPool()
         try:
-            if method == "HTTPS":
-                ctfdHostname = "https://" + ctfdHostname
-            else:
-                ctfdHostname = "http://" + ctfdHostname
+            ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -255,12 +240,8 @@ class ChallengesManageCTFd(ChallengesManage):
                                 result = api_session.user_delete(id=user_id[username])
                                 if result != True:
                                     logging.error("Could not remove user, perhaps the user doesn't exists; skipping... "+ str(username))
-                                else:
-                                    logging.info("Removed User: " + str(username))
                                     user_id[username] = None
                                     removed_users.append(username)
-                            else:
-                                logging.warning("Did not remove user, because the user doesn't exists; skipping... "+ str(username))
 
                 except Exception:
                         logging.error("runRemoveChallengesConnections(): Error in runRemoveChallengesConnections(): when trying to remove challenges.")
@@ -303,10 +284,7 @@ class ChallengesManageCTFd(ChallengesManage):
             self.lock.acquire()
             self.challengeUsersStatus.clear()
             #get users, teams, scores
-            if method == "HTTPS":
-                ctfdHostname = "https://" + ctfdHostname
-            else:
-                ctfdHostname = "http://" + ctfdHostname
+            ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -361,10 +339,7 @@ class ChallengesManageCTFd(ChallengesManage):
             self.lock.acquire()
             self.challengesStats.clear()
             #get users, teams, scores
-            if method == "HTTPS":
-                ctfdHostname = "https://" + ctfdHostname
-            else:
-                ctfdHostname = "http://" + ctfdHostname
+            ctfdHostname = method + "://" + ctfdHostname
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:

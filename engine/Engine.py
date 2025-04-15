@@ -163,7 +163,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.tolower()
         #query connection manager status and then return it here
         return self.connectionManage.getConnectionManageRefresh(hostname, username, password, url_path, method)
         
@@ -175,7 +175,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.tolower()
         maxConnections = args.maxConnections
         maxConnectionsPerUser = args.maxConnectionsPerUser
         width = args.width
@@ -199,7 +199,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.tolower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
@@ -216,7 +216,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.tolower()
         
         return self.connectionManage.clearAllConnections(hostname, username, password, url_path, method)
 
@@ -238,7 +238,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.tolower()
         #query challenge manager status and then return it here
         return self.challengesManage.getChallengesManageRefresh(hostname, username, password, method)
 
@@ -246,7 +246,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.tolower()
         #query challenge manager status and then return it here
         return self.challengesManage.getChallengesManageGetstats(hostname, username, password, method)
 
@@ -257,7 +257,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.tolower()
         creds_file = args.creds_file
         itype = args.itype
         name = args.name
@@ -275,7 +275,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.tolower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
@@ -291,7 +291,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.tolower()
         
         return self.challengesManage.clearAllChallengesUsers(hostname, username, password, method)
 
