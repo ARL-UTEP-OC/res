@@ -326,7 +326,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.createExperiment(configname, "", "", username, password)    
+            return self.experimentManage.createExperiment(configname, "", "", username, password)
         return self.experimentManage.createExperiment(configname, itype, name, username, password)
 
     def experimentStartCmd(self, args):

@@ -205,7 +205,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                                 logging.debug( "Creating Pool: " + username)
                                 try:
                                     result = proxapi.pools.create(poolid=username, comment="Pool for user " + username)
-                                    created_pools.append(username)
+                                    if result == None:
+                                        created_pools.append(username)
                                 except ResourceException:
                                     logging.warning("runCreateConnections(): Pool " + username + " already exists, skipping.")
                                     # exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -219,7 +220,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                                 logging.debug( "Setting Pool Privs for: " + username)
                                 try:
                                     result = proxapi.access.acl.put(path='/pool/'+username, users=username+"@pam", roles='PVEVMUser, PVEPoolUser', propagate=1)
-                                    created_pool_privs.append(username)
+                                    if result == None:
+                                        created_pool_privs.append(username)
                                 except ResourceException:
                                     logging.warning("runCreateConnections(): Pool Privs for " + username + " already exist, skipping.")
                                     # exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -239,8 +241,9 @@ class ConnectionManageProxVNC(ConnectionManage):
                                     vmid = vmname_id[cloneVMName]
                                     # if the VM is not already in the pool, add it
                                     result = proxapi.pools.put(poolid=username, vms=vmid)
-                                    logging.debug("runCreateConnections(): Added VM: " + str(vmid) + " to pool: " + str(username))
-                                    added_vms.append(vmid)
+                                    if result == None:
+                                        logging.debug("runCreateConnections(): Added VM: " + str(vmid) + " to pool: " + str(username))
+                                        added_vms.append(vmid)
                                 except ResourceException:
                                     logging.warning("runCreateConnections(): VM " + str(vmid) + " already in pool: " + username + " skipping.")
                                     # exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -362,7 +365,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                 logging.debug( "Removing Pool: " + pool)
                 try:
                     result = proxapi.pools.delete(poolid=pool)
-                    pools_removed.append(pool)
+                    if result == None:
+                        pools_removed.append(pool)
                 except ResourceException:
                     logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
                     # exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -516,7 +520,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                 logging.debug( "Removing Pool: " + pool)
                 try:
                     result = proxapi.pools.delete(poolid=pool)
-                    pools_removed.append(pool)
+                    if result == None:
+                        pools_removed.append(pool)
                 except ResourceException:
                     logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
                     # exc_type, exc_value, exc_traceback = sys.exc_info()

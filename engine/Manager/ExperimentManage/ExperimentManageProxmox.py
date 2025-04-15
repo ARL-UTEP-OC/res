@@ -25,6 +25,7 @@ class ExperimentManageProxmox(ExperimentManage):
     #abstractmethod
     def createExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("createExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runCreateExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -33,11 +34,10 @@ class ExperimentManageProxmox(ExperimentManage):
     def runCreateExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runCreateExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_CREATING
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-            status = self.vmManage.getManagerStatus()["writeStatus"]
+            # status = self.vmManage.getManagerStatus()["writeStatus"]
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys():
                     vmName = vm
@@ -51,9 +51,9 @@ class ExperimentManageProxmox(ExperimentManage):
                     for cloneinfo in clonevmjson[vm]:
                         if cloneinfo["groupNum"] == str(i):
                             cloneVMName = cloneinfo["name"]
-                            if cloneVMName not in validvmnames:
-                                status = self.vmManage.getManagerStatus()["writeStatus"]
-                                continue
+                            # if cloneVMName not in validvmnames:
+                            #     status = self.vmManage.getManagerStatus()["writeStatus"]
+                            #     continue
                             cloneGroupName = cloneinfo["group-name"]
                             cloneSnapshots = cloneinfo["clone-snapshots"]
                             linkedClones = cloneinfo["linked-clones"]
@@ -68,12 +68,12 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
                                 vrdpPort = str(cloneinfo["vrdpPort"])
 
-                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
+                            # self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
                             logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
                             status = self.vmManage.getManagerStatus()["writeStatus"]
                             while status > int(self.max_createjobs):
                                 #waiting for vmmanager clone vm to finish reading/writing...
-                                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set inner)..." + str(status) + ":: " + str(i))
                                 print("waiting until it's less than " + self.max_createjobs + " current: " + str(status))
                                 time.sleep(1)
                                 status = self.vmManage.getManagerStatus()["writeStatus"]
@@ -81,7 +81,7 @@ class ExperimentManageProxmox(ExperimentManage):
             status = self.vmManage.getManagerStatus()["writeStatus"]
             while status != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager clone vm to finish reading/writing...
-                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set)..." + str(status) + ":: " + str(i))
+                logging.debug("runCreateExperiment(): waiting for vmmanager clone vm to finish reading/writing (cloning set outer)..." + str(status) + ":: " + str(i))
                 time.sleep(1)
                 status = self.vmManage.getManagerStatus()["writeStatus"]
             logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
@@ -95,10 +95,11 @@ class ExperimentManageProxmox(ExperimentManage):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     def refreshExperimentVMInfo(self, configName, username=None, password=None):
         logging.debug("refreshExperimentVMInfo: refreshAllVMInfo(): instantiated")      
+        self.writeStatus+=1
         t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,username, password))
         t.start()
         t.join()
@@ -107,7 +108,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runRefreshExperimentVMInfo(self, configname, username=None, password=None):
         logging.debug("refreshExperimentVMInfo(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_REFRESHING
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, "", "", rolledoutjson)
@@ -126,17 +126,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager refresh vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("refreshExperimentVMInfo(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("refreshExperimentVMInfo(): Error in refreshExperimentVMInfo(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def startExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("startExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runStartExperiment, args=(configname,itype, name, username, password))
         t.start()
         t.join()
@@ -146,7 +146,6 @@ class ExperimentManageProxmox(ExperimentManage):
         logging.debug("runStartExperiment(): instantiated")
         try:
             #Will first clone the vms and then run their start commands if any
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_STARTING
             #call vmManage to start clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -203,18 +202,16 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.debug("runStartExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStartupCmds))
                                 self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, username=username, password=password)
             logging.debug("runStartExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runStartExperiment(): Error in runStartExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     def guestCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("guestCmdsExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runGuestCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -223,7 +220,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runGuestCmdsExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runGuestCmdsExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMMANDING
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
@@ -262,18 +258,16 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runGuestCmdsExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runGuestCmdsExperiment(): Error in runGuestCmdsExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     def guestStoredCmdsExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runGuestStoredCmdsExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -282,7 +276,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runGuestStoredCmdsExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runGuestStoredCmdsExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMMANDING
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
@@ -321,19 +314,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runGuestStoredCmdsExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runGuestStoredCmdsExperiment(): Error in runGuestStoredCmdsExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def suspendExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("suspendExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runSuspendExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -342,7 +333,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runSuspendExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runSuspendExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_SUSPENDING
             #call vmManage to suspend clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -367,19 +357,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager suspend vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runSuspendingExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runSuspendingExperiment(): Error in runSuspendingExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def pauseExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("pauseExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runPauseExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -388,7 +376,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runPauseExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runPauseExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_PAUSING
             #call vmManage to pause clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -413,19 +400,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager pause vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runPauseExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runPauseExperiment(): Error in runPauseExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def snapshotExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("snapshotExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runSnapshotExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -434,7 +419,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runSnapshotExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runSnapshotExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_SNAPSHOTTING
             #call vmManage to snapshot clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -462,19 +446,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager snapshot vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runSnapshotExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runSnapshotExperiment(): Error in runSnapshotExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def stopExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("stopExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runStopExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -483,7 +465,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runStopExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runStopExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_STOPPING
             #call vmManage to stop clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -506,19 +487,17 @@ class ExperimentManageProxmox(ExperimentManage):
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
             logging.debug("runStopExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runStopExperiment(): Error in runStopExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def removeExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("removeExperiment(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runRemoveExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -527,7 +506,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runRemoveExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runRemoveExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_REMOVING
             #call vmManage to remove clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -561,22 +539,22 @@ class ExperimentManageProxmox(ExperimentManage):
             logging.debug("runRemoveExperiment(): Complete...")
             #Remove old lvm that are inactive
             if removeUnusedLVM:
-                self.vmManage.runRemoteCmds(["lvscan  | grep inactive | awk -F \"'\" '{print $2}' | xargs lvremove"])
+                # self.writeStatus+=1
+                # self.vmManage.runRemoteCmds(["lvscan  | grep inactive | awk -F \"'\" '{print $2}' | xargs lvremove"])
+                pass
             #now update the network configurations
             self.vmManage.refreshNetwork()
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runRemoveExperiment(): Error in runRemoveExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def restoreExperiment(self, configname, itype="", name="", username=None, password=None):
         logging.debug("restoreExperimentStates(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runRestoreExperiment, args=(configname, itype, name, username, password))
         t.start()
         t.join()
@@ -585,7 +563,6 @@ class ExperimentManageProxmox(ExperimentManage):
     def runRestoreExperiment(self, configname, itype, name, username=None, password=None):
         logging.debug("runRestoreExperiment(): instantiated")
         try:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_RESTORING
             #call vmManage to restore clones as specified in config file; wait and query the vmManage status, and then set the complete status
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
@@ -608,15 +585,12 @@ class ExperimentManageProxmox(ExperimentManage):
                         #waiting for vmmanager stop vm to finish reading/writing...
                         time.sleep(.1)
             logging.debug("runRestoreExperiment(): Complete...")
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
         except Exception:
             logging.error("runRestoreExperiment(): Error in runRestoreExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
-            return
         finally:
-            self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     def getExperimentManageStatus(self):
         logging.debug("getExperimentManageStatus(): instantiated")
