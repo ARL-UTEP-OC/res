@@ -8,6 +8,7 @@ import sys
 import os
 import re
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
+from engine.Manager.ConnectionManage.ConnectionManageProxVNC import ConnectionManageProxVNC
 from engine.Manager.ChallengesManage.ChallengesManageCTFd import ChallengesManageCTFd
 from engine.Manager.PackageManage.PackageManageVBox import PackageManageVBox
 from engine.Manager.PackageManage.PackageManageVMware import PackageManageVMware
@@ -65,8 +66,14 @@ class Engine:
                 else:
                     self.vmManage = ProxmoxManage(False)
         #Create the ConnectionManage
-        self.connectionManage = ConnectionManageGuacRDP()
-        #Create the ChallengesMange
+        if c.getConfig()['CONNECTIONS']['HANDLER'] == 'PROXMOX':
+            self.connectionManage = ConnectionManageProxVNC()
+            if username != None and password != None:
+                self.connectionManage.setRemoteCreds(username, password)
+        else:
+            self.connectionManage = ConnectionManageGuacRDP()
+
+        #Create the ChallengesManage
         self.challengesManage = ChallengesManageCTFd()
         #Create the ExperimentManage
         if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':

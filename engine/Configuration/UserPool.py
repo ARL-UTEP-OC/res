@@ -39,7 +39,7 @@ class UserPool():
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
 
-    def addFromBase(self, base="user", num=20):
+    def addFromBase(self, base="username", num=20):
         logging.debug("addFromBase(): instantiated")
         for i in range(1,num+1):
             self.num_created_frombase += 1
@@ -52,7 +52,7 @@ class UserPool():
         else:
             if genIfEmpty == True:
                 if len(self.basepool) == 0:
-                    self.addFromBase(base="user")
+                    self.addFromBase(base="username")
                 return self.basepool.pop(0)[0]
             else:
                 return None
@@ -64,7 +64,7 @@ class UserPool():
         else:
             if genIfEmpty==True:
                 if len(self.basepool) == 0:
-                    self.addFromBase(base="user")
+                    self.addFromBase(base="username")
                 return self.basepool.pop(0)
             else:
                 return None

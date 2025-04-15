@@ -692,10 +692,23 @@ class ProxmoxManage(VMManage):
             return -1
 
         filepath = filepath.replace("\"","")
-        cmd = ""
+        dumpdir = os.path.join(filepath, vmName)
+        #check to see if the directory exists, if not create it
+        if not os.path.exists(dumpdir):
+            try:
+                os.makedirs(dumpdir)
+            except OSError as e:
+                logging.error("Error in exportVM(): An error occured when trying to create directory: " + str(e))
+                return -1
+        cmds = []
+        #get vmid from vmName
+        vmUUID = str(self.vms[vmName].UUID)
+        #use vzdump to export the vm
+        cmds.append("vzdump " + str(vmUUID) + " --compress zstd --mode snapshot --remove 0 --zstd 0 --notificationpolicy never --dumpdir " + filepath)
+
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
-        t = threading.Thread(target=self.runRemoteCmds, args=([cmd],username, password))
+        t = threading.Thread(target=self.runRemoteCmds, args=(cmds,username, password))
         t.start()
         return 0
 

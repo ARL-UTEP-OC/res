@@ -106,6 +106,7 @@ class SystemConfigIO():
         self.config['EXPERIMENTS'] = {}
         self.config['EXPERIMENTS']['EXPERIMENTS_PATH'] = "ExperimentData"
         self.config['EXPERIMENTS']['TEMP_DATA_PATH'] = "tmp"
+        self.config['CONNECTIONS']['HANDLER'] = "PROXMOX"
 
     def getConfig(self):
         return self.config
