@@ -273,7 +273,7 @@ class ConnectionManageProxVNC(ConnectionManage):
         t.start()
         return 0
 
-    def runClearAllConnections(self, proxHostname, musername, mpassword, url_path, method, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta"]):
+    def runClearAllConnections(self, proxHostname, musername, mpassword, url_path, method, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
         logging.debug("runClearAllConnections(): instantiated")
         try:
             logging.debug("runClearAllConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " url_path: " + url_path + " method: " + str(method))
