@@ -4,6 +4,7 @@ import threading
 import shlex
 import os
 import csv
+import time
 from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
 from proxmoxer import ProxmoxAPI
 from proxmoxer.core import ResourceException
@@ -24,6 +25,9 @@ class ConnectionManageProxVNC(ConnectionManage):
         self.usersConnsStatus = {}
         self.lock = RLock()
         self.s = SystemConfigIO()
+        self.sshusername = None
+        self.sshpassword = None
+
         if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
             self.setRemoteCreds(username, password)
         self.setRemoteCreds(username, password)
@@ -53,18 +57,32 @@ class ConnectionManageProxVNC(ConnectionManage):
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxapi = None
             return None
-        
+
+    def executeSSH(self, command, sudo=True):
+        feed_password = False
+        if sudo and self.sshusername != "root":
+            command = "sudo -S -p '' %s" % command
+            feed_password = self.sshpassword is not None and len(self.sshpassword) > 0
+        stdin, stdout, stderr = self.proxssh.ssh_client.exec_command(command)
+        if feed_password:
+            stdin.write(self.sshpassword + "\n")
+            stdin.flush()
+        return {'out': stdout.readlines(), 
+                'err': stderr.readlines(),
+                'retval': stdout.channel.recv_exit_status()}        
+
     def getProxSSH(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
             server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
             port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
-            if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
-            elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+            if self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = None
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            self.sshusername = username
+            self.sshpassword = password
             return self.proxssh
+        
         except Exception:
             logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -169,11 +187,13 @@ class ConnectionManageProxVNC(ConnectionManage):
                         #only if this is a specific connection to create; based on itype and name
                         if cloneVMName in validconnsnames:
                             #if user doesn't exist, create it
+                            result = self.executeSSH("/usr/sbin/useradd " + username)
                             if username not in users and username not in created_users_lin:
                                 logging.debug( "Creating User: " + username)
                                 try:
-                                    result = self.proxssh._exec(shlex.split("/usr/sbin/useradd " + username))
-                                    if result != None and  len(result) > 1 and "already exists" in result[1]:
+                                    # result = self.proxssh._exec(shlex.split("/usr/sbin/useradd " + username))
+                                    result = self.executeSSH("/usr/sbin/useradd " + username)
+                                    if result != None and 'err' in result and "already exists" in result['err']:
                                         logging.debug("User" + username + " already exists; skipping...")
                                     else:
                                         created_users_lin.append(username)
@@ -188,7 +208,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                             if username not in users and username not in created_users:
                                 try:
                                     result = self.proxapi.access.users.post(userid=username+"@pam", password=password)
-                                    if result != None and len(result) > 1 and "already exists" in result[1]:
+                                    if result != None and len(result) > 1 and 'already exists' in result[1]:
                                         logging.debug("User" + username + " already exists; skipping...")
                                     else:
                                         created_users.append(username)
@@ -382,8 +402,9 @@ class ConnectionManageProxVNC(ConnectionManage):
                     continue
                 logging.debug( "Removing User: " + user)
                 try:
-                    result = proxssh._exec(shlex.split("userdel " + user))
-                    if result != None and  len(result) > 1 and "does not exist" in result[1]:
+                    # result = proxssh._exec(shlex.split("userdel " + user))
+                    result = self.executeSSH("userdel " + user)
+                    if result != None and 'err' in result and "does not exist" in result['err']:
                         logging.debug("User" + user + " does not exist; skipping...")
                     else:
                         users_removed_lin.append(user)
@@ -400,7 +421,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                     continue
                 try:
                     result = proxapi.access.users(user+"@pam").delete()
-                    if result != None and  len(result) > 1 and "does not exist" in result[1]:
+                    if result != None and len(result) > 1 and 'already exists' in result[1]:
                         logging.debug("User" + user + " does not exist; skipping...")
                     else:
                         users_removed.append(user)
@@ -537,13 +558,14 @@ class ConnectionManageProxVNC(ConnectionManage):
                     continue
                 logging.debug( "Removing User: " + user)
                 try:
-                    result = proxssh._exec(shlex.split("userdel " + user))
-                    if result != None and  len(result) > 1 and "does not exist" in result[1]:
+                    # result = proxssh._exec(shlex.split("userdel " + user))
+                    result = self.executeSSH("userdel " + user)
+                    if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
                         logging.debug("User" + user + " does not exist; skipping...")
                     else:
                         users_removed_lin.append(user)
                 except ResourceException:
-                    logging.warning("runClearAllConnections(): User " + user + " does not exists, skipping.")
+                    logging.warning("runClearAllConnections(): User " + user + " does not exist, skipping.")
                     # exc_type, exc_value, exc_traceback = sys.exc_info()
                     # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
                 except Exception:

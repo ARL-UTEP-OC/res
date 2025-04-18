@@ -30,6 +30,8 @@ class ProxmoxManage(VMManage):
         self.tempVMs = {}
         self.proxapi = None
         self.proxssh = None
+        self.sshusername = None
+        self.sshpassword = None
         self.setRemoteCreds(initializeVMManage, username, password)
 
     def setRemoteCreds(self, refresh=False, username=None, password=None):
@@ -64,7 +66,20 @@ class ProxmoxManage(VMManage):
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxapi = None
             return None
-        
+
+    def executeSSH(self, command, sudo=True):
+        feed_password = False
+        if sudo and self.sshusername != "root":
+            command = "sudo -S -p '' %s" % command
+            feed_password = self.sshpassword is not None and len(self.sshpassword) > 0
+        stdin, stdout, stderr = self.proxssh.ssh_client.exec_command(command)
+        if feed_password:
+            stdin.write(self.sshpassword + "\n")
+            stdin.flush()
+        return {'out': stdout.readlines(), 
+                'err': stderr.readlines(),
+                'retval': stdout.channel.recv_exit_status()}        
+
     def getProxSSH(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
@@ -75,6 +90,8 @@ class ProxmoxManage(VMManage):
             elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = None
                 self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+            self.sshusername = username
+            self.sshpassword = password
             return self.proxssh
         except Exception:
             logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
@@ -530,7 +547,8 @@ class ProxmoxManage(VMManage):
             cmdNum = 1
             for cmd in cmds:
                 logging.info("runRemoteCmds(): Running cmd # " + str(cmdNum) + " of " + str(len(cmds)) + ": " + str(cmd))
-                res = proxssh._exec(shlex.split(cmd))
+                # res = proxssh._exec(shlex.split(cmd))
+                res = self.executeSSH(cmd)
                 logging.info("runRemoteCmds(): Command completed: " + str(res))
             logging.debug("runRemoteCmds(): Thread completed")
         except Exception:
@@ -614,7 +632,8 @@ class ProxmoxManage(VMManage):
                 proposedid = random.randint(1,1000000)
                 cmd = pveshpath + " get /cluster/nextid -vmid " + proposedid
                 logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
-                res = proxssh._exec(shlex.split(cmd))
+                # res = proxssh._exec(shlex.split(cmd))
+                res = self.proxssh.ssh_client.exec_command(cmd)
                 
                 newid = res.strip()
                 logging.info("runRemoteCmds(): Next available id: " + str(newid))
@@ -627,7 +646,8 @@ class ProxmoxManage(VMManage):
                 #import vm
                 cmd = qmrestore + " " + filepath + "  " + str(newid) + " --storage " + storagepath
                 logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
-                res = proxssh._exec(shlex.split(cmd))
+                # res = proxssh._exec(shlex.split(cmd))
+                res = self.proxssh.ssh_client.exec_command(cmd)
             except Exception:
                 logging.error("Error in runRemoteCmds(): An error occured when trying to get next available id")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -1124,8 +1144,8 @@ class ProxmoxManage(VMManage):
             #add vnc port to config file            
             vncport = int(vrdpPort) - 5900
             cmds = []
-            cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
-            cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            # cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            # cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             self.runRemoteCmds(cmds,username, password)
