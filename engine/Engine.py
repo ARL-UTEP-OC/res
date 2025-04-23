@@ -8,6 +8,7 @@ import sys
 import os
 import re
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
+from engine.Manager.ConnectionManage.ConnectionManageProxVNC import ConnectionManageProxVNC
 from engine.Manager.ChallengesManage.ChallengesManageCTFd import ChallengesManageCTFd
 from engine.Manager.PackageManage.PackageManageVBox import PackageManageVBox
 from engine.Manager.PackageManage.PackageManageVMware import PackageManageVMware
@@ -65,8 +66,14 @@ class Engine:
                 else:
                     self.vmManage = ProxmoxManage(False)
         #Create the ConnectionManage
-        self.connectionManage = ConnectionManageGuacRDP()
-        #Create the ChallengesMange
+        if c.getConfig()['CONNECTIONS']['HANDLER'] == 'PROXMOX':
+            self.connectionManage = ConnectionManageProxVNC()
+            if username != None and password != None:
+                self.connectionManage.setRemoteCreds(username, password)
+        else:
+            self.connectionManage = ConnectionManageGuacRDP()
+
+        #Create the ChallengesManage
         self.challengesManage = ChallengesManageCTFd()
         #Create the ExperimentManage
         if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
@@ -134,7 +141,8 @@ class Engine:
         resfilename = args.resfilename
         username = args.username
         password = args.password
-        return self.packageManage.importPackage(resfilename, username, password)
+        vms = args.no_vms
+        return self.packageManage.importPackage(resfilename, username, password, vms)
 
     def packagerExportCmd(self, args):
         logging.debug("packagerExportCmd(): instantiated")
@@ -143,10 +151,11 @@ class Engine:
         exportpath = args.exportpath
         username = args.username
         password = args.password
-        return self.packageManage.exportPackage(experimentname, exportpath, username, password)
+        vms = args.no_vms
+        return self.packageManage.exportPackage(experimentname, exportpath, username, password, vms)
 
     def connectionStatusCmd(self, args):
-        #query connection manager status and then return it here
+        #query connection manager status and then return it here        
         return self.connectionManage.getConnectionManageStatus()
 
     def connectionRefreshCmd(self, args):
@@ -154,7 +163,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.lower()
         #query connection manager status and then return it here
         return self.connectionManage.getConnectionManageRefresh(hostname, username, password, url_path, method)
         
@@ -166,7 +175,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.lower()
         maxConnections = args.maxConnections
         maxConnectionsPerUser = args.maxConnectionsPerUser
         width = args.width
@@ -190,7 +199,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.lower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
@@ -207,7 +216,7 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method
+        method = args.method.lower()
         
         return self.connectionManage.clearAllConnections(hostname, username, password, url_path, method)
 
@@ -216,10 +225,15 @@ class Engine:
         #open a display to the current connection
         configname = args.configname
         experimentid = args.experimentid
+        username = args.username
+        password = args.password
+        hostname = args.hostname
+        url_path = args.url_path
+        method = args.method.lower()
         itype = args.itype
         name = args.itype
 
-        return self.connectionManage.openConnection(configname, experimentid, itype, name)
+        return self.connectionManage.openConnection(configname, hostname, experimentid, itype, name, username, password, url_path, method)
 
     def challengesStatusCmd(self, args):
         #query challenge manager status and then return it here
@@ -229,7 +243,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.lower()
         #query challenge manager status and then return it here
         return self.challengesManage.getChallengesManageRefresh(hostname, username, password, method)
 
@@ -237,7 +251,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.lower()
         #query challenge manager status and then return it here
         return self.challengesManage.getChallengesManageGetstats(hostname, username, password, method)
 
@@ -248,7 +262,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.lower()
         creds_file = args.creds_file
         itype = args.itype
         name = args.name
@@ -266,7 +280,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.lower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
@@ -282,7 +296,7 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method
+        method = args.method.lower()
         
         return self.challengesManage.clearAllChallengesUsers(hostname, username, password, method)
 
@@ -290,11 +304,12 @@ class Engine:
         logging.debug("challengesOpenUsersCmd(): instantiated")
         #open a display to the current user challenge stats
         configname = args.configname
+        hostname = args.hostname
         experimentid = args.experimentid
         itype = args.itype
         name = args.itype
 
-        return self.challengesManage.openChallengeUsersStats(configname, experimentid, itype, name)
+        return self.challengesManage.openChallengeUsersStats(configname, hostname, experimentid, itype, name)
 
     def experimentStatusCmd(self, args):
         #query connection manager status and then return it here
@@ -317,7 +332,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.createExperiment(configname, "", "", username, password)    
+            return self.experimentManage.createExperiment(configname, "", "", username, password)
         return self.experimentManage.createExperiment(configname, itype, name, username, password)
 
     def experimentStartCmd(self, args):
@@ -330,7 +345,7 @@ class Engine:
 
         name = args.name.replace("\"","").replace("'","")
         if name == "all":
-            return self.experimentManage.startExperiment(configname, "", "", username, password)    
+            return self.experimentManage.startExperiment(configname, "", "", username, password,)
         return self.experimentManage.startExperiment(configname, itype, name, username, password)
 
     def experimentSuspendCmd(self, args):
@@ -440,12 +455,10 @@ class Engine:
     def vmConfigCmd(self, args):
         logging.debug("vmConfigCmd(): instantiated")
         vmName = args.vmName.replace("\"","").replace("'","")
-        username = args.username
-        password = args.password
                 
         #check if vm exists
         logging.debug("vmConfigCmd(): Sending status request for VM: " + vmName)
-        if self.vmManage.getVMStatus(vmName, username, password) == None:
+        if self.vmManage.getVMStatus(vmName) == None:
             logging.error("vmConfigCmd(): vmName does not exist or you need to call refreshAllVMs: " + vmName)
             return None
         logging.debug("vmConfigCmd(): VM found, configuring VM")
@@ -508,23 +521,19 @@ class Engine:
         self.vmMgrStatusParser.set_defaults(func=self.vmManageMgrStatusCmd)
 
         self.vmRefreshParser = self.vmManageSubParsers.add_parser('refresh', help='retreive vm information')
-        self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store",
+        self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store", default="all",
                                            help='name of vm to retrieve status')
         self.vmRefreshParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
         self.vmRefreshParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')                                           
-        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd, vmName="all")
+                                          help='Password for connecting to host')                                  
+        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd)
 
 # -----------Packager
         self.packageManageParser = self.subParsers.add_parser('packager')
         self.packageManageSubParsers = self.packageManageParser.add_subparsers(help='manage packaging of experiments')
 
         self.packageManageStatusParser = self.packageManageSubParsers.add_parser('status', help='retrieve package manager status')
-        self.packageManageStatusParser.add_argument('--username', metavar='<username>', action="store",
-                                          help='Username for connecting to host')
-        self.packageManageStatusParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')
         self.packageManageStatusParser.set_defaults(func=self.packagerStatusCmd)
 
         self.packageManageImportParser = self.packageManageSubParsers.add_parser('import', help='import a RES package from file')
@@ -534,6 +543,8 @@ class Engine:
                                           help='Username for connecting to host')
         self.packageManageImportParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
+        self.packageManageImportParser.add_argument('--no-vms', action="store_false",
+                                          help='Do not import vms')
         self.packageManageImportParser.set_defaults(func=self.packagerImportCmd)
 
         self.packageManageExportParser = self.packageManageSubParsers.add_parser('export', help='export an experiment from config to a RES file')
@@ -545,6 +556,8 @@ class Engine:
                                           help='Username for connecting to host')
         self.packageManageExportParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
+        self.packageManageExportParser.add_argument('--no-vms', action="store_false",
+                                          help='Do not export vms')
         self.packageManageExportParser.set_defaults(func=self.packagerExportCmd)
 
 #-----------Connections
@@ -555,92 +568,102 @@ class Engine:
         self.connectionManageStatusParser.set_defaults(func=self.connectionStatusCmd)
 
         self.connectionManageRefreshParser = self.connectionManageSubParser.add_parser('refresh', help='retrieve all connection manager status')
-        self.connectionManageRefreshParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.connectionManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageRefreshParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageRefreshParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageRefreshParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageRefreshParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRefreshParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageRefreshParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageRefreshParser.set_defaults(func=self.connectionRefreshCmd)
 
         self.connectionManageCreateParser = self.connectionManageSubParser.add_parser('create', help='create conns as specified in config file')
         self.connectionManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.connectionManageCreateParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.connectionManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageCreateParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageCreateParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageCreateParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageCreateParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageCreateParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageCreateParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageCreateParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageCreateParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.connectionManageCreateParser.add_argument('maxConnections', metavar='<maxConnections>', action="store", default="10",
+        self.connectionManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
                                           help='Max number of connections allowed per remote conn')
-        self.connectionManageCreateParser.add_argument('maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
+        self.connectionManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
                                           help='Max number of connections allowed per user per remote conn')
-        self.connectionManageCreateParser.add_argument('width', metavar='<width>', action="store", default="1400",
+        self.connectionManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
                                           help='Width of remote connection display')
-        self.connectionManageCreateParser.add_argument('height', metavar='<height>', action="store", default="1050",
+        self.connectionManageCreateParser.add_argument('--height', metavar='<height>', action="store", default="1050",
                                           help='Height of remote connection display')
-        self.connectionManageCreateParser.add_argument('bitdepth', metavar='<bitdepth>', action="store", default="16",
+        self.connectionManageCreateParser.add_argument('--bitdepth', metavar='<bitdepth>', action="store", default="16",
                                           help='Bit-depth (8, 16, 24, or 32)')
-        self.connectionManageCreateParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.connectionManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.connectionManageCreateParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.connectionManageCreateParser.set_defaults(func=self.connectionCreateCmd)
         
         self.connectionManageRemoveParser = self.connectionManageSubParser.add_parser('remove', help='remove conns as specified in config file')
         self.connectionManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.connectionManageRemoveParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.connectionManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageRemoveParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageRemoveParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageRemoveParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageRemoveParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRemoveParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageRemoveParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.connectionManageRemoveParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.connectionManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.connectionManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.connectionManageRemoveParser.set_defaults(func=self.connectionRemoveCmd)
 
         self.connectionManageClearAllParser = self.connectionManageSubParser.add_parser('clear', help='Clear all connections in database')
-        self.connectionManageClearAllParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.connectionManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.connectionManageClearAllParser.add_argument('username', metavar='<username>', action="store",
+        self.connectionManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageClearAllParser.add_argument('password', metavar='<password>', action="store",
+        self.connectionManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageClearAllParser.add_argument('url_path', metavar='<url_path>', action="store",
+        self.connectionManageClearAllParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageClearAllParser.add_argument('method', metavar='<method>', action="store",
+        self.connectionManageClearAllParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageClearAllParser.set_defaults(func=self.connectionClearAllCmd)
 
         self.connectionManageOpenParser = self.connectionManageSubParser.add_parser('open', help='start connection to specified experiment instance and vrdp-enabled vm as specified in config file')
         self.connectionManageOpenParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
+        self.connectionManageOpenParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where Connection host resides')
         self.connectionManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
                                           help='experiment instance number')
-        self.connectionManageOpenParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.connectionManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageOpenParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.connectionManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
+        self.connectionManageOpenParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.connectionManageOpenParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.connectionManageOpenParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
+                                          help='URL path to broker service')
+        self.connectionManageOpenParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
+                                            help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageOpenParser.set_defaults(func=self.connectionOpenCmd)
 
 #-----------Challenges
@@ -651,84 +674,86 @@ class Engine:
         self.challengesManageStatusParser.set_defaults(func=self.challengesStatusCmd)
 
         self.challengesManageRefreshParser = self.challengesManageSubParser.add_parser('refresh', help='retrieve all challenges manager status')
-        self.challengesManageRefreshParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.challengesManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.challengesManageRefreshParser.add_argument('username', metavar='<username>', action="store",
+        self.challengesManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.challengesManageRefreshParser.add_argument('password', metavar='<password>', action="store",
+        self.challengesManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageRefreshParser.add_argument('method', metavar='<method>', action="store",
+        self.challengesManageRefreshParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageRefreshParser.set_defaults(func=self.challengesRefreshCmd)
 
         self.challengesManageGetstatsParser = self.challengesManageSubParser.add_parser('getstats', help='retrieve challenges statistics')
-        self.challengesManageGetstatsParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.challengesManageGetstatsParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.challengesManageGetstatsParser.add_argument('username', metavar='<username>', action="store",
+        self.challengesManageGetstatsParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.challengesManageGetstatsParser.add_argument('password', metavar='<password>', action="store",
+        self.challengesManageGetstatsParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageGetstatsParser.add_argument('method', metavar='<method>', action="store",
+        self.challengesManageGetstatsParser.add_argument('--method', metavar='<method>', action="store",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageGetstatsParser.set_defaults(func=self.challengesGetstatsCmd)
 
         self.challengesManageCreateParser = self.challengesManageSubParser.add_parser('create', help='create challenge users as specified in config file')
         self.challengesManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.challengesManageCreateParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.challengesManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Challenge server resides')
-        self.challengesManageCreateParser.add_argument('username', metavar='<username>', action="store",
+        self.challengesManageCreateParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.challengesManageCreateParser.add_argument('password', metavar='<password>', action="store",
+        self.challengesManageCreateParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageCreateParser.add_argument('method', metavar='<method>', action="store",
+        self.challengesManageCreateParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.challengesManageCreateParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.challengesManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.challengesManageCreateParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.challengesManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.challengesManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.challengesManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.challengesManageCreateParser.set_defaults(func=self.challengesUsersCreateCmd)
         
         self.challengesManageRemoveParser = self.challengesManageSubParser.add_parser('remove', help='remove challenges as specified in config file')
         self.challengesManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.challengesManageRemoveParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.challengesManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.challengesManageRemoveParser.add_argument('username', metavar='<username>', action="store",
+        self.challengesManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.challengesManageRemoveParser.add_argument('password', metavar='<password>', action="store",
+        self.challengesManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageRemoveParser.add_argument('method', metavar='<method>', action="store",
+        self.challengesManageRemoveParser.add_argument('--method', metavar='<method>', action="store",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
-        self.challengesManageRemoveParser.add_argument('creds_file', metavar='<creds_file>', action="store",
+        self.challengesManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.challengesManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.challengesManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store",
                                           help='set, template, or vm')
-        self.challengesManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.challengesManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.challengesManageRemoveParser.set_defaults(func=self.challengesUsersRemoveCmd)
 
         self.challengesManageClearAllParser = self.challengesManageSubParser.add_parser('clear', help='Clear all users on challenge server')
-        self.challengesManageClearAllParser.add_argument('hostname', metavar='<host address>', action="store",
+        self.challengesManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
-        self.challengesManageClearAllParser.add_argument('username', metavar='<username>', action="store",
+        self.challengesManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.challengesManageClearAllParser.add_argument('password', metavar='<password>', action="store",
+        self.challengesManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageClearAllParser.add_argument('method', metavar='<method>', action="store",
+        self.challengesManageClearAllParser.add_argument('--method', metavar='<method>', action="store",
                                           help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageClearAllParser.set_defaults(func=self.challengesClearAllUsersCmd)
 
         self.challengesManageOpenParser = self.challengesManageSubParser.add_parser('open', help='open user stats page for specified experiment instance as specified in config file')
         self.challengesManageOpenParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.challengesManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
+        self.challengesManageOpenParser.add_argument('--hostname', metavar='<hostname>', action="store",
+            help='name or IP address where VM host resides')
+        self.challengesManageOpenParser.add_argument('--experimentid', metavar='<experiment id>', action="store",
                                           help='experiment instance number')
-        self.challengesManageOpenParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.challengesManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.challengesManageOpenParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.challengesManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.challengesManageOpenParser.set_defaults(func=self.challengesOpenUsersCmd)
 
@@ -751,10 +776,10 @@ class Engine:
         self.experimentManageCreateParser = self.experimentManageSubParser.add_parser('create', help='create clones aka instances of experiment')
         self.experimentManageCreateParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageCreateParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageCreateParser.add_argument('name', metavar='<instance-name>', action="store",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')                                   
+        self.experimentManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageCreateParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
         self.experimentManageCreateParser.add_argument('--password', metavar='<password>', action="store",
@@ -764,9 +789,9 @@ class Engine:
         self.experimentManageStartParser = self.experimentManageSubParser.add_parser('start', help='start (headless) clones aka instances of experiment')
         self.experimentManageStartParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageStartParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageStartParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageStartParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageStartParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageStartParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -777,9 +802,9 @@ class Engine:
         self.experimentManageStopParser = self.experimentManageSubParser.add_parser('stop', help='stop clones aka instances of experiment')
         self.experimentManageStopParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageStopParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageStopParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageStopParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageStopParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageStopParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -790,9 +815,9 @@ class Engine:
         self.experimentManageSuspendParser = self.experimentManageSubParser.add_parser('suspend', help='save state for clones aka instances of experiment')
         self.experimentManageSuspendParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageSuspendParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageSuspendParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageSuspendParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageSuspendParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageSuspendParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -803,9 +828,9 @@ class Engine:
         self.experimentManagePauseParser = self.experimentManageSubParser.add_parser('pause', help='pause clones aka instances of experiment')
         self.experimentManagePauseParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManagePauseParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManagePauseParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManagePauseParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManagePauseParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManagePauseParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -816,9 +841,9 @@ class Engine:
         self.experimentManageSnapshotParser = self.experimentManageSubParser.add_parser('snapshot', help='snapshot clones aka instances of experiment')
         self.experimentManageSnapshotParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageSnapshotParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageSnapshotParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageSnapshotParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageSnapshotParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')                                              
         self.experimentManageSnapshotParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -829,9 +854,9 @@ class Engine:
         self.experimentManageRestoreParser = self.experimentManageSubParser.add_parser('restore', help='restore experiment to latest snapshot')
         self.experimentManageRestoreParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageRestoreParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageRestoreParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageRestoreParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageRestoreParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageRestoreParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -842,9 +867,9 @@ class Engine:
         self.experimentManageRemoveParser = self.experimentManageSubParser.add_parser('remove', help='remove clones aka instances of experiment')
         self.experimentManageRemoveParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageRemoveParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageRemoveParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -855,9 +880,9 @@ class Engine:
         self.experimentManageGuestCmdStartupParser = self.experimentManageSubParser.add_parser('guestcmd', help='runs VM guest startup commands for experiment clones')
         self.experimentManageGuestCmdStartupParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageGuestCmdStartupParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageGuestCmdStartupParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageGuestCmdStartupParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageGuestCmdStartupParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageGuestCmdStartupParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
@@ -868,9 +893,9 @@ class Engine:
         self.experimentManageGuestCmdStoredParser = self.experimentManageSubParser.add_parser('gueststored', help='runs VM guest stored commands for experiment clones')
         self.experimentManageGuestCmdStoredParser.add_argument('configname', metavar='<config name>', action="store",
                                           help='config name as it appears in the experiment')
-        self.experimentManageGuestCmdStoredParser.add_argument('itype', metavar='<instance-type>', action="store",
+        self.experimentManageGuestCmdStoredParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.experimentManageGuestCmdStoredParser.add_argument('name', metavar='<instance-name>', action="store",
+        self.experimentManageGuestCmdStoredParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
         self.experimentManageGuestCmdStoredParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')

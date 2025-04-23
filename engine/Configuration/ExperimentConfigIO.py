@@ -26,8 +26,19 @@ class ExperimentConfigIO:
         self.s = SystemConfigIO()
         self.rolledoutjson = {}
         self.config_jsondata = {}
+        self.config_experimentexec_userpass = {}
         self.config_rdp_userpass = {}
         self.config_challengesys_userpass = {}
+
+    def storeConfigExperimentExecCreds(self, configname, username, password, url, method):
+        logging.debug("ExperimentConfigIO: storeConfigExperimentExecCreds(): instantiated")
+        self.config_experimentexec_userpass[configname] = (username, password, url, method)
+
+    def getConfigExperimentExecCreds(self, configname):
+        logging.debug("ExperimentConfigIO: getConfigExperimentExecCreds(): instantiated")
+        if configname in self.config_experimentexec_userpass:
+            return self.config_experimentexec_userpass[configname]
+        return None
 
     def storeConfigRDPBrokerCreds(self, configname, username, password, url, method):
         logging.debug("ExperimentConfigIO: storeConfigRDPBrokerCreds(): instantiated")

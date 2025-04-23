@@ -79,3 +79,6 @@ class VMManage:
 
     def removeVM(self, vmName, username=None, password=None):
         raise NotImplementedError()
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        pass

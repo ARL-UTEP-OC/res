@@ -46,6 +46,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
                 return -1
             user_dict = guacConn.get_users()
+            created_users = []
             try:
                 for (username, password) in usersConns:
                     for conn in usersConns[(username, password)]:
@@ -55,12 +56,15 @@ class ConnectionManageGuacRDP(ConnectionManage):
                         #only if this is a specific connection to create; based on itype and name
                         if cloneVMName in validconnsnames:
                             #if user doesn't exist, create it
-                            if username not in user_dict:
+                            if username not in user_dict and username not in created_users:
                                 logging.debug( "Creating User: " + username)
                                 try:
                                     result = self.createUser(guacConn, username, password)
                                     if result == "already_exists":
                                         logging.debug("User already exists; skipping...")
+                                    else:
+                                        created_users.append(username)
+                                        logging.debug("User Created: " + str(result))
                                 except Exception:
                                     logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to add user.")
                                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -242,7 +246,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
             connCreatePayload = {"name":connName,
             "parentIdentifier":"ROOT",
             "protocol":protocol,
-            "attributes":{"max-connections":maxConnectionsPerUser, "max-connections-per-user":maxConnectionsPerUser},
+            "attributes":{"max-connections":maxConnections, "max-connections-per-user":maxConnectionsPerUser},
             "activeConnections":0,
             "parameters":{
                 "port":port,
