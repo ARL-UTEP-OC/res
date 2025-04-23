@@ -28,8 +28,8 @@ class ExperimentManage:
         POSIX = True
       
     def __init__(self):
-        self.readStatus = ExperimentManage.EXPERIMENT_MANAGE_UNKNOWN
-        self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_UNKNOWN
+        self.readStatus = ExperimentManage.EXPERIMENT_MANAGE_IDLE
+        self.writeStatus = ExperimentManage.EXPERIMENT_MANAGE_IDLE
 
     #abstractmethod
     def createExperiment(self, configname, username, password):

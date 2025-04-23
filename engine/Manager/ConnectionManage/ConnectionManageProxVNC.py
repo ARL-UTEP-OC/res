@@ -608,6 +608,7 @@ class ConnectionManageProxVNC(ConnectionManage):
     #abstractmethod
     def getConnectionManageStatus(self):
         logging.debug("getConnectionManageStatus(): instantiated")
+        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : self.usersConnsStatus}
     
     def getConnectionManageRefresh(self, proxHostname, username, password):
         logging.debug("getConnectionManageStatus(): instantiated")

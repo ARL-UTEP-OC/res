@@ -22,8 +22,8 @@ class ChallengesManage:
         POSIX = True
       
     def __init__(self):
-        self.readStatus = ChallengesManage.CHALLENGES_MANAGE_UNKNOWN
-        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_UNKNOWN
+        self.readStatus = ChallengesManage.CHALLENGES_MANAGE_IDLE
+        self.writeStatus = ChallengesManage.CHALLENGES_MANAGE_IDLE
 
     #abstractmethod
     def createChallengess(self, configname):

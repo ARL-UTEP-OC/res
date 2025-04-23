@@ -272,6 +272,7 @@ class ChallengesManageCTFd(ChallengesManage):
     #abstractmethod
     def getChallengesManageStatus(self):
         logging.debug("getChallengesManageStatus(): instantiated")
+        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : self.challengeUsersStatus}
     
     def getChallengesManageRefresh(self, ctfdHostname, username, password):
         logging.debug("getChallengesManageStatus(): instantiated")
@@ -323,7 +324,6 @@ class ChallengesManageCTFd(ChallengesManage):
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
             self.lock.release()
-
 
     def getChallengesManageGetstats(self, ctfdHostname, username, password):
         logging.debug("getChallengesManageGetstats(): instantiated")

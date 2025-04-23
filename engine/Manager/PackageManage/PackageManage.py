@@ -20,8 +20,8 @@ class PackageManage:
         POSIX = True
       
     def __init__(self):
-        self.readStatus = PackageManage.PACKAGE_MANAGE_UNKNOWN
-        self.writeStatus = PackageManage.PACKAGE_MANAGE_UNKNOWN
+        self.readStatus = PackageManage.PACKAGE_MANAGE_IDLE
+        self.writeStatus = PackageManage.PACKAGE_MANAGE_IDLE
 
     #abstractmethod
     def importPackage(self, resfilename, runVagrantProvisionScript):
