@@ -95,14 +95,14 @@ class ConnectionManageProxVNC(ConnectionManage):
         Tasks.blocking_status(proxmox_api, task_id)
 
     #abstractmethod
-    def createConnections(self, configname, proxHostname, username, password, url_path, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
+    def createConnections(self, configname, proxHostname, username, password, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
         logging.debug("createConnections(): instantiated")
-        t = threading.Thread(target=self.runCreateConnections, args=(configname, proxHostname, username, password, url_path, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
+        t = threading.Thread(target=self.runCreateConnections, args=(configname, proxHostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runCreateConnections(self, configname, proxHostname, musername, mpassword, url_path, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
+    def runCreateConnections(self, configname, proxHostname, musername, mpassword, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
         logging.debug("runCreateConnections(): instantiated")
         #call guac backend API to make connections as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
@@ -112,7 +112,7 @@ class ConnectionManageProxVNC(ConnectionManage):
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
-            logging.debug("runCreateConnection(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " url_path: " + url_path + " creds_file: " + creds_file)
+            logging.debug("runCreateConnection(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " creds_file: " + creds_file)
             
             #get accessors to the proxmox api and ssh
             try:
@@ -286,17 +286,17 @@ class ConnectionManageProxVNC(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllConnections(self, proxHostname, username, password, url_path, exceptions=[]):
+    def clearAllConnections(self, proxHostname, username, password, exceptions=[]):
         logging.debug("clearAllConnections(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(proxHostname, username, password, url_path, exceptions))
+        t = threading.Thread(target=self.runClearAllConnections, args=(proxHostname, username, password, exceptions))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runClearAllConnections(self, proxHostname, musername, mpassword, url_path, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
+    def runClearAllConnections(self, proxHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
         logging.debug("runClearAllConnections(): instantiated")
         try:
-            logging.debug("runClearAllConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " url_path: " + url_path)
+            logging.debug("runClearAllConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
             
             #get accessors to the proxmox api and ssh
             try:
@@ -437,17 +437,17 @@ class ConnectionManageProxVNC(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def removeConnections(self, configname, proxHostname, username, password, url_path, creds_file="", itype="", name=""):
+    def removeConnections(self, configname, proxHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("removeConnections(): instantiated")
-        t = threading.Thread(target=self.runRemoveConnections, args=(configname,proxHostname, username, password, url_path, creds_file, itype, name))
+        t = threading.Thread(target=self.runRemoveConnections, args=(configname,proxHostname, username, password, creds_file, itype, name))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runRemoveConnections(self, configname, proxHostname, musername, mpassword, url_path, creds_file, itype, name):
+    def runRemoveConnections(self, configname, proxHostname, musername, mpassword, creds_file, itype, name):
         logging.debug("runRemoveConnections(): instantiated")
         try:
-            logging.debug("runRemoveConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " url_path: " + url_path)
+            logging.debug("runRemoveConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
 
@@ -609,7 +609,7 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getConnectionManageStatus(self):
         logging.debug("getConnectionManageStatus(): instantiated")
     
-    def getConnectionManageRefresh(self, proxHostname, username, password, url_path):
+    def getConnectionManageRefresh(self, proxHostname, username, password):
         logging.debug("getConnectionManageStatus(): instantiated")
         try:
             self.lock.acquire()

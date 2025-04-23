@@ -31,7 +31,7 @@ class WatchRetrieveThread(QThread):
                 self.status = -1
                 return None
             #format: "challenges refresh <url> <user> <pass>"
-            cmd = "challenges " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2])
+            cmd = "challenges " + " refresh --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1

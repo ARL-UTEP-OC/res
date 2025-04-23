@@ -31,7 +31,7 @@ class WatchRetrieveThread(QThread):
                 self.status = -1
                 return None
             #format: "conns refresh <ip> <user> <pass> <path>"
-            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2]) + " " + str(self.args[3])
+            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
