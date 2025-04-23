@@ -272,7 +272,7 @@ class ChallengesManageCTFd(ChallengesManage):
     #abstractmethod
     def getChallengesManageStatus(self):
         logging.debug("getChallengesManageStatus(): instantiated")
-        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : self.challengeUsersStatus}
+        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : self.challengeUsersStatus, "challengesStats" : self.challengesStats}
     
     def getChallengesManageRefresh(self, ctfdHostname, username, password):
         logging.debug("getChallengesManageStatus(): instantiated")
@@ -335,7 +335,7 @@ class ChallengesManageCTFd(ChallengesManage):
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
-                logging.error("runRemoveChallengesConnections(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
+                logging.error("getChallengesManageGetstats(): Error with ctfd connection... quitting: " + str(ctfdHostname) + " " + str(username))
                 return -1
 
             all_challenges_data = api_session.challenges_get()

@@ -25,7 +25,7 @@ class WatchRetrieveThread(QThread):
             e = Engine.getInstance()
             logging.debug("watchRetrieveStatus(): running: vm-manage refresh")
 
-            if len(self.args) != 4:
+            if len(self.args) != 3:
                 logging.error("WatchActioningThread(): invalid number of args for create challenges. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create challenges. Skipping...", self.status, True)
                 self.status = -1

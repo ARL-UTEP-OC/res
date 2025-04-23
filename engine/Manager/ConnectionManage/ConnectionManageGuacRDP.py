@@ -46,9 +46,14 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
-            if len(guacHostname.split("://") > 1):
+            if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
-                url_path = tmp_path.split("/")[1:]
+                url_path = "".join(tmp_path.split("/")[1:])
+                if url_path.startswith("/") == False:
+                    url_path = "/" + url_path
+                if url_path.endswith("/") == False:
+                    url_path = url_path + "/"
+            guacHostname = guacHostname.split("://")[1].split('/')[0]
             logging.debug("runCreateConnection(): guacHostname: " + str(guacHostname) + " username/pass: " + musername + " url_path: " + url_path + " creds_file: " + creds_file)
             guacConn = Guacamole(guacHostname,username=musername,password=mpassword,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
@@ -113,10 +118,14 @@ class ConnectionManageGuacRDP(ConnectionManage):
             guacConnMethod = 'http'
         elif guacHostname.startswith("https://"):
             guacConnMethod = 'https'
-        if len(guacHostname.split("://") > 1):
+        if len(guacHostname.split("://")) > 1:
             tmp_path = guacHostname.split("://")[1]
-            url_path = tmp_path.split("/")[1:]
-
+            url_path = "".join(tmp_path.split("/")[1:])
+            if url_path.startswith("/") == False:
+                url_path = "/" + url_path
+            if url_path.endswith("/") == False:
+                url_path = url_path + "/"            
+        guacHostname = guacHostname.split("://")[1].split('/')[0]
         logging.debug("runClearAllConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path)
         guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
         if guacConn == None:
@@ -171,10 +180,14 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
-            if len(guacHostname.split("://") > 1):
+            if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
-                url_path = tmp_path.split("/")[1:]
-
+                url_path = "".join(tmp_path.split("/")[1:])
+                if url_path.startswith("/") == False:
+                    url_path = "/" + url_path
+                if url_path.endswith("/") == False:
+                    url_path = url_path + "/"
+            guacHostname = guacHostname.split("://")[1].split('/')[0]
             logging.debug("runRemoveConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path + " creds_file: " + creds_file)
             guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
@@ -357,10 +370,15 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
-            if len(guacHostname.split("://") > 1):
+            if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
-                url_path = tmp_path.split("/")[1:]
+                url_path = "".join(tmp_path.split("/")[1:])
+                if url_path.startswith("/") == False:
+                    url_path = "/" + url_path
+                if url_path.endswith("/") == False:
+                    url_path = url_path + "/"
 
+            guacHostname = guacHostname.split("://")[1].split('/')[0]
             self.lock.acquire()
             self.usersConnsStatus.clear()
             guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
@@ -394,10 +412,10 @@ class ConnectionManageGuacRDP(ConnectionManage):
                     self.usersConnsStatus[(user, connIDsNames[connID])] = {"user_status": user_perm, "connStatus": active}
             
         except Exception as e:
-            logging.error("Error in getConnectionManageStatus(). Did not remove connection or relation!")
+            logging.error("Error in getConnectionManageStatus().")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             trace_back = traceback.extract_tb(exc_traceback)
-            #traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
         finally:
             self.lock.release()

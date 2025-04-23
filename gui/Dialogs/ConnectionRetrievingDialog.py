@@ -25,13 +25,13 @@ class WatchRetrieveThread(QThread):
             e = Engine.getInstance()
             logging.debug("watchRetrieveStatus(): running: conns refresh")
             #e.execute("conns refresh")
-            if len(self.args) != 4:
+            if len(self.args) != 3:
                 logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                 self.status = -1
                 return None
             #format: "conns refresh <ip> <user> <pass> <path>"
-            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2])
+            cmd = "conns " + " refresh --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
@@ -58,9 +58,8 @@ class WatchRetrieveThread(QThread):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.watchsignal.emit("Error retrieving Conns.", None, True)
-            self.status = -1
-            return None
         finally:
+            self.status = -1
             return None
 
 class ConnectionRetrievingDialog(QDialog):

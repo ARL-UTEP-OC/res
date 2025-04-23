@@ -65,6 +65,7 @@ class ConnectionActionDialog(QDialog):
         if cachedCreds != None:
             mgmusername = cachedCreds[0]
             mgmpassword = cachedCreds[1]
+            
         self.usernameLineEdit = QLineEdit(mgmusername)
         self.passwordLineEdit = QLineEdit(mgmpassword)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
@@ -144,7 +145,7 @@ class ConnectionActionDialog(QDialog):
                 self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 pathToBrowser = self.s.getConfig()["BROWSER"]["BROWSER_PATH"]
                 browserArgs = self.s.getConfig()["BROWSER"]["ARGS"]
-                url = self.rdpBrokerHostname+self.urlPathLineEdit.text()
+                url = self.rdpBrokerHostname
                 cod = ConnectionOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url).exec_()
                 return cod
             else:
