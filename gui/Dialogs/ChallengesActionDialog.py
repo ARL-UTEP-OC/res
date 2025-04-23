@@ -58,28 +58,17 @@ class ChallengesActionDialog(QDialog):
         self.layout.addRow(QLabel("Challenge Server Hostname/IP:"), self.hostnameLineEdit)
         mgmusername = ""
         mgmpassword = ""
-        method = "HTTPS"
         cachedCreds = self.eco.getConfigChallengeSysCreds(self.configname)
         if cachedCreds != None:
             mgmusername = cachedCreds[0]
             mgmpassword = cachedCreds[1]
-            method = cachedCreds[2]
         self.usernameLineEdit = QLineEdit(mgmusername)
         self.passwordLineEdit = QLineEdit(mgmpassword)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
         if self.actionname != "Open":
             self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
             self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
-
-        self.methodComboBox = QComboBox()
-        self.methodComboBox.addItem("HTTP")
-        self.methodComboBox.addItem("HTTPS")
-        if method == "HTTP":
-            self.methodComboBox.setCurrentIndex(0)
-        else:
-            self.methodComboBox.setCurrentIndex(1)
-        self.layout.addRow(QLabel("Method:"), self.methodComboBox)
-        
+     
         self.usersFileLabel = QLineEdit(self.usersFile)
         self.usersFileLabel.setEnabled(False)
         if self.actionname == "Add":
@@ -95,13 +84,13 @@ class ChallengesActionDialog(QDialog):
         if str(result) == str(1):
             logging.debug("dialog_response(): OK was pressed")
             if self.actionname == "Add":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText(), self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Remove":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText(), self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Clear":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText()]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Refresh":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText()]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "OpenUsers":
                 #get all of the challenges from the currently selected item
                 userpool = UserPool()
@@ -120,25 +109,25 @@ class ChallengesActionDialog(QDialog):
                         usersToOpen[vmuser_mapping[vm]] = True
                 logging.debug(str(usersToOpen))
             elif self.actionname == "ViewChallStats":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText()]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             else:
                 pass
             if self.actionname == "Refresh":
-                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 crd = ChallengesRetrievingDialog(self.parent, self.args).exec_()
                 return crd
             elif self.actionname == "OpenUsers":
-                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 pathToBrowser = self.s.getConfig()["BROWSER"]["BROWSER_PATH"]
                 browserArgs = self.s.getConfig()["BROWSER"]["ARGS"]
                 url = self.challengesServerHostname + "/admin/users/"+str(username)
-                cod = ChallengesOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url, self.methodComboBox.currentText()).exec_()
+                cod = ChallengesOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url).exec_()
                 return cod
             elif self.actionname == "ViewChallStats":
-                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 csr = ChallengesStatsRetrieveDialog(self.parent, self.args).exec_()
             else:
-                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigChallengeSysCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 cad = ChallengesActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
                 return (QMessageBox.Ok)
         return (QMessageBox.Cancel)

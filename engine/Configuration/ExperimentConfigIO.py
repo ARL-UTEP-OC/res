@@ -30,9 +30,9 @@ class ExperimentConfigIO:
         self.config_rdp_userpass = {}
         self.config_challengesys_userpass = {}
 
-    def storeConfigExperimentExecCreds(self, configname, username, password, url, method):
+    def storeConfigExperimentExecCreds(self, configname, username, password):
         logging.debug("ExperimentConfigIO: storeConfigExperimentExecCreds(): instantiated")
-        self.config_experimentexec_userpass[configname] = (username, password, url, method)
+        self.config_experimentexec_userpass[configname] = (username, password)
 
     def getConfigExperimentExecCreds(self, configname):
         logging.debug("ExperimentConfigIO: getConfigExperimentExecCreds(): instantiated")
@@ -40,9 +40,9 @@ class ExperimentConfigIO:
             return self.config_experimentexec_userpass[configname]
         return None
 
-    def storeConfigRDPBrokerCreds(self, configname, username, password, url, method):
+    def storeConfigRDPBrokerCreds(self, configname, username, password):
         logging.debug("ExperimentConfigIO: storeConfigRDPBrokerCreds(): instantiated")
-        self.config_rdp_userpass[configname] = (username, password, url, method)
+        self.config_rdp_userpass[configname] = (username, password)
 
     def getConfigRDPBrokerCreds(self, configname):
         logging.debug("ExperimentConfigIO: getConfigRDPBrokerCreds(): instantiated")
@@ -50,9 +50,9 @@ class ExperimentConfigIO:
             return self.config_rdp_userpass[configname]
         return None
 
-    def storeConfigChallengeSysCreds(self, configname, username, password, method):
+    def storeConfigChallengeSysCreds(self, configname, username, password):
         logging.debug("ExperimentConfigIO: storeConfigChallengeSysCreds(): instantiated")
-        self.config_challengesys_userpass[configname] = (username, password, method)
+        self.config_challengesys_userpass[configname] = (username, password)
 
     def getConfigChallengeSysCreds(self, configname):
         logging.debug("ExperimentConfigIO: getConfigChallengeSysCreds(): instantiated")

@@ -12,14 +12,13 @@ import shlex
 class ChallengesOpeningThread(QThread):
     watchsignal = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject')
 
-    def __init__(self, pathToBrowser, browserArgs, userpasses, url, method):
+    def __init__(self, pathToBrowser, browserArgs, userpasses, url):
         QThread.__init__(self)
         logging.debug("ChallengesOpeningThread(): instantiated")
         self.pathToBrowser = pathToBrowser
         self.browserArgs = browserArgs
         self.userpasses = userpasses
         self.url = url
-        self.method = method
 
     # run method gets called when we start the thread
     def run(self):
@@ -31,7 +30,7 @@ class ChallengesOpeningThread(QThread):
             logging.debug("ChallengesOpeningThread(): Starting Connection: " + str(self.pathToBrowser))
             for (username, password) in self.userpasses:
                 #cmd = PATH_TO_FIREFOX + " -private-window" + " \"" + baseURL + "/#/?username=" + username + "&password=" + username + "\""
-                cmd = "\""+self.pathToBrowser + "\" " + self.browserArgs + " " + self.method + "://" + self.url
+                cmd = "\""+self.pathToBrowser + "\" " + self.browserArgs + " " + self.url
                 logging.debug("Opening Conn: " + str(cmd))
                 stringExec = "Opening Conn: " + str(cmd)
                 self.watchsignal.emit(stringExec, None, None)
@@ -56,7 +55,7 @@ class ChallengesOpeningThread(QThread):
             return None
 
 class ChallengesOpeningDialog(QDialog):
-    def __init__(self, parent, pathToBrowser, browserArgs, userpasses, url, method):
+    def __init__(self, parent, pathToBrowser, browserArgs, userpasses, url):
         logging.debug("ChallengesOpeningDialog(): instantiated")
         super(ChallengesOpeningDialog, self).__init__(parent)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
@@ -64,7 +63,6 @@ class ChallengesOpeningDialog(QDialog):
         self.pathToBrowser = pathToBrowser
         self.browserArgs = browserArgs
         self.url = url
-        self.method = method
         self.buttons = QDialogButtonBox()
         self.ok_button = self.buttons.addButton( self.buttons.Ok )
         self.ok_button.setEnabled(False)
@@ -87,7 +85,7 @@ class ChallengesOpeningDialog(QDialog):
         self.status = -1
 
     def exec_(self):
-        t = ChallengesOpeningThread(self.pathToBrowser, self.browserArgs, self.userpasses, self.url, self.method)
+        t = ChallengesOpeningThread(self.pathToBrowser, self.browserArgs, self.userpasses, self.url)
         t.watchsignal.connect(self.setStatus)
         t.start()
         result = super(ChallengesOpeningDialog, self).exec_()

@@ -25,13 +25,13 @@ class WatchRetrieveThread(QThread):
             e = Engine.getInstance()
             logging.debug("watchRetrieveStatus(): running: conns refresh")
             #e.execute("conns refresh")
-            if len(self.args) != 5:
+            if len(self.args) != 4:
                 logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                 self.status = -1
                 return None
-            #format: "conns refresh <ip> <user> <pass> <path> <method>"
-            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2]) + " " + str(self.args[3]) + " " + str(self.args[4])
+            #format: "conns refresh <ip> <user> <pass> <path>"
+            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2]) + " " + str(self.args[3])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1

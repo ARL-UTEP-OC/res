@@ -61,30 +61,16 @@ class ConnectionActionDialog(QDialog):
         self.layout.addRow(QLabel("RDP Broker Hostname/IP:"), self.hostnameLineEdit)
         mgmusername = ""
         mgmpassword = ""
-        url = "/guacamole"
-        method = "HTTP"
         cachedCreds = self.eco.getConfigRDPBrokerCreds(self.configname)
         if cachedCreds != None:
             mgmusername = cachedCreds[0]
             mgmpassword = cachedCreds[1]
-            url = cachedCreds[2]
-            method = cachedCreds[3]
         self.usernameLineEdit = QLineEdit(mgmusername)
         self.passwordLineEdit = QLineEdit(mgmpassword)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
         if self.actionname != "Open":
             self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
             self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
-        self.urlPathLineEdit = QLineEdit(url)
-        self.layout.addRow(QLabel("URL Path:"), self.urlPathLineEdit)
-        self.methodComboBox = QComboBox()
-        self.methodComboBox.addItem("HTTP")
-        self.methodComboBox.addItem("HTTPS")
-        if method == "HTTP":
-            self.methodComboBox.setCurrentIndex(0)
-        else:
-            self.methodComboBox.setCurrentIndex(1)
-        self.layout.addRow(QLabel("Method:"), self.methodComboBox)
         
         self.maxConnectionsLineEdit = QLineEdit("10")
         self.heightLineEdit = QLineEdit("1400")
@@ -124,13 +110,13 @@ class ConnectionActionDialog(QDialog):
                     bitDepth = "24"
                 elif bitDepth == "True color (32-bit)":
                     bitDepth = "32"
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Remove":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText(), self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Clear":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText()]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Refresh":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText()]
+                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Open":
                 #get all of the connections from the currently selected item
                 userpool = UserPool()
@@ -151,18 +137,18 @@ class ConnectionActionDialog(QDialog):
             else:
                 pass
             if self.actionname == "Refresh":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 crd = ConnectionRetrievingDialog(self.parent, self.args).exec_()
                 return crd
             elif self.actionname == "Open":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 pathToBrowser = self.s.getConfig()["BROWSER"]["BROWSER_PATH"]
                 browserArgs = self.s.getConfig()["BROWSER"]["ARGS"]
                 url = self.rdpBrokerHostname+self.urlPathLineEdit.text()
-                cod = ConnectionOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url, self.methodComboBox.currentText()).exec_()
+                cod = ConnectionOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url).exec_()
                 return cod
             else:
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.urlPathLineEdit.text(), self.methodComboBox.currentText())
+                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
                 cad = ConnectionActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
                 return (QMessageBox.Ok)
         return (QMessageBox.Cancel)

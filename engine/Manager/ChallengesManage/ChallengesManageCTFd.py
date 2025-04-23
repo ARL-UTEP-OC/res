@@ -91,14 +91,14 @@ class ChallengesManageCTFd(ChallengesManage):
         return teams_members_list
 
     #abstractmethod
-    def createChallengesUsers(self, configname, ctfdHostname, username, password, method, creds_file="", itype="", name=""):
+    def createChallengesUsers(self, configname, ctfdHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("createChallengesUsers(): instantiated")
-        t = threading.Thread(target=self.runCreateChallengesUsers, args=(configname, ctfdHostname, username, password, method, creds_file, itype, name))
+        t = threading.Thread(target=self.runCreateChallengesUsers, args=(configname, ctfdHostname, username, password, creds_file, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runCreateChallengesUsers(self, configname, ctfdHostname, musername, mpassword, method, creds_file, itype, name):
+    def runCreateChallengesUsers(self, configname, ctfdHostname, musername, mpassword, creds_file, itype, name):
         logging.debug("runCreateChallengesUsers(): instantiated")
         #call ctfd backend API to make challenges as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
@@ -109,8 +109,7 @@ class ChallengesManageCTFd(ChallengesManage):
 
         try:
 
-            logging.debug("runCreateChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + musername + " method: " + str(method) + " creds_file: " + creds_file)
-            ctfdHostname = method + "://" + ctfdHostname
+            logging.debug("runCreateChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + musername + " creds_file: " + creds_file)
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(musername,mpassword)
 
@@ -159,18 +158,18 @@ class ChallengesManageCTFd(ChallengesManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllChallengesUsers(self, ctfdHostname, username, password, method):
+    def clearAllChallengesUsers(self, ctfdHostname, username, password):
         logging.debug("clearAllChallengesUsers(): instantiated")
         self.writeStatus+=1
-        t = threading.Thread(target=self.runClearAllChallengesUsers, args=(ctfdHostname, username, password, method))
+        t = threading.Thread(target=self.runClearAllChallengesUsers, args=(ctfdHostname, username, password))
         t.start()
         t.join()
         return 0
 
-    def runClearAllChallengesUsers(self, ctfdHostname, username, password, method):
+    def runClearAllChallengesUsers(self, ctfdHostname, username, password):
         try:
-            logging.debug("runClearAllChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " method: " + str(method))
-            ctfdHostname = method + "://" + ctfdHostname
+            logging.debug("runClearAllChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username)
+            
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -201,21 +200,21 @@ class ChallengesManageCTFd(ChallengesManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def removeChallengesUsers(self, configname, ctfdHostname, username, password, method, creds_file="", itype="", name=""):
+    def removeChallengesUsers(self, configname, ctfdHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("removeChallengesUsers(): instantiated")
-        t = threading.Thread(target=self.runRemoveChallengesUsers, args=(configname,ctfdHostname, username, password, method, creds_file, itype, name))
+        t = threading.Thread(target=self.runRemoveChallengesUsers, args=(configname,ctfdHostname, username, password, creds_file, itype, name))
         t.start()
         t.join()
         return 0
 
-    def runRemoveChallengesUsers(self, configname, ctfdHostname, username, password, method, creds_file, itype, name):
+    def runRemoveChallengesUsers(self, configname, ctfdHostname, username, password, creds_file, itype, name):
         logging.debug("runRemoveChallengesUsers(): instantiated")
         #call ctfd backend API to make challenges as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
         validnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
         userpool = UserPool()
         try:
-            ctfdHostname = method + "://" + ctfdHostname
+            
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -228,7 +227,7 @@ class ChallengesManageCTFd(ChallengesManage):
                 user_id[item['name']] = item['id']
 
             usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-            logging.debug("runRemoveChallengesConnections(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " method: " + str(method) + " creds_file: " + creds_file)
+            logging.debug("runRemoveChallengesConnections(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username + " creds_file: " + creds_file)
             removed_users = []
             for (username, password) in usersConns:
                 logging.debug( "Removing User: " + username)
@@ -274,13 +273,13 @@ class ChallengesManageCTFd(ChallengesManage):
     def getChallengesManageStatus(self):
         logging.debug("getChallengesManageStatus(): instantiated")
     
-    def getChallengesManageRefresh(self, ctfdHostname, username, password, method):
+    def getChallengesManageRefresh(self, ctfdHostname, username, password):
         logging.debug("getChallengesManageStatus(): instantiated")
         try:
             self.lock.acquire()
             self.challengeUsersStatus.clear()
             #get users, teams, scores
-            ctfdHostname = method + "://" + ctfdHostname
+            
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:
@@ -326,13 +325,13 @@ class ChallengesManageCTFd(ChallengesManage):
             self.lock.release()
 
 
-    def getChallengesManageGetstats(self, ctfdHostname, username, password, method):
+    def getChallengesManageGetstats(self, ctfdHostname, username, password):
         logging.debug("getChallengesManageGetstats(): instantiated")
         try:
             self.lock.acquire()
             self.challengesStats.clear()
             #get users, teams, scores
-            ctfdHostname = method + "://" + ctfdHostname
+            
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
             if api_session == None:

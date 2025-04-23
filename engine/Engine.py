@@ -163,9 +163,8 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method.lower()
         #query connection manager status and then return it here
-        return self.connectionManage.getConnectionManageRefresh(hostname, username, password, url_path, method)
+        return self.connectionManage.getConnectionManageRefresh(hostname, username, password, url_path)
         
     def connectionCreateCmd(self, args):
         logging.debug("connectionCreateCmd(): instantiated")
@@ -175,7 +174,6 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method.lower()
         maxConnections = args.maxConnections
         maxConnectionsPerUser = args.maxConnectionsPerUser
         width = args.width
@@ -187,8 +185,8 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.connectionManage.createConnections(configname, hostname, username, password, url_path, method, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
-        return self.connectionManage.createConnections(configname, hostname, username, password, url_path, method, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
+                return self.connectionManage.createConnections(configname, hostname, username, password, url_path, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
+        return self.connectionManage.createConnections(configname, hostname, username, password, url_path, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
 
     def connectionRemoveCmd(self, args):
         logging.debug("connectionRemoveCmd(): instantiated")
@@ -199,15 +197,14 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method.lower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.connectionManage.removeConnections(configname, hostname, username, password, url_path, method, full_creds_file, itype, name)
-        return self.connectionManage.removeConnections(configname, hostname, username, password, url_path, method, itype=itype, name=name)
+                return self.connectionManage.removeConnections(configname, hostname, username, password, url_path, full_creds_file, itype, name)
+        return self.connectionManage.removeConnections(configname, hostname, username, password, url_path, itype=itype, name=name)
 
     def connectionClearAllCmd(self, args):
         logging.debug("connectionClearAllCmd(): instantiated")
@@ -216,9 +213,8 @@ class Engine:
         username = args.username
         password = args.password
         url_path = args.url_path
-        method = args.method.lower()
         
-        return self.connectionManage.clearAllConnections(hostname, username, password, url_path, method)
+        return self.connectionManage.clearAllConnections(hostname, username, password, url_path)
 
     def connectionOpenCmd(self, args):
         logging.debug("connectionOpenCmd(): instantiated")
@@ -229,11 +225,10 @@ class Engine:
         password = args.password
         hostname = args.hostname
         url_path = args.url_path
-        method = args.method.lower()
         itype = args.itype
         name = args.itype
 
-        return self.connectionManage.openConnection(configname, hostname, experimentid, itype, name, username, password, url_path, method)
+        return self.connectionManage.openConnection(configname, hostname, experimentid, itype, name, username, password, url_path)
 
     def challengesStatusCmd(self, args):
         #query challenge manager status and then return it here
@@ -243,17 +238,15 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method.lower()
         #query challenge manager status and then return it here
-        return self.challengesManage.getChallengesManageRefresh(hostname, username, password, method)
+        return self.challengesManage.getChallengesManageRefresh(hostname, username, password)
 
     def challengesGetstatsCmd(self, args):
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method.lower()
         #query challenge manager status and then return it here
-        return self.challengesManage.getChallengesManageGetstats(hostname, username, password, method)
+        return self.challengesManage.getChallengesManageGetstats(hostname, username, password)
 
     def challengesUsersCreateCmd(self, args):
         logging.debug("challengesUsersCreateCmd(): instantiated")
@@ -262,7 +255,6 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method.lower()
         creds_file = args.creds_file
         itype = args.itype
         name = args.name
@@ -270,8 +262,8 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.challengesManage.createChallengesUsers(configname, hostname, username, password, method, full_creds_file, itype, name)
-        return self.challengesManage.createChallengesUsers(configname, hostname, username, password, method, itype=itype, name=name)
+                return self.challengesManage.createChallengesUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.challengesManage.createChallengesUsers(configname, hostname, username, password, itype=itype, name=name)
 
     def challengesUsersRemoveCmd(self, args):
         logging.debug("challengesUsersRemoveCmd(): instantiated")
@@ -280,15 +272,14 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method.lower()
         itype = args.itype
         name = args.name
         creds_file = args.creds_file
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.challengesManage.removeChallengesUsers(configname, hostname, username, password, method, full_creds_file, itype, name)
-        return self.challengesManage.removeChallengesUsers(configname, hostname, username, password, method, itype=itype, name=name)
+                return self.challengesManage.removeChallengesUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.challengesManage.removeChallengesUsers(configname, hostname, username, password, itype=itype, name=name)
 
     def challengesClearAllUsersCmd(self, args):
         logging.debug("challengesClearAllUsersCmd(): instantiated")
@@ -296,9 +287,8 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        method = args.method.lower()
         
-        return self.challengesManage.clearAllChallengesUsers(hostname, username, password, method)
+        return self.challengesManage.clearAllChallengesUsers(hostname, username, password)
 
     def challengesOpenUsersCmd(self, args):
         logging.debug("challengesOpenUsersCmd(): instantiated")
@@ -576,8 +566,6 @@ class Engine:
                                           help='Password for connecting to host')
         self.connectionManageRefreshParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRefreshParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageRefreshParser.set_defaults(func=self.connectionRefreshCmd)
 
         self.connectionManageCreateParser = self.connectionManageSubParser.add_parser('create', help='create conns as specified in config file')
@@ -591,8 +579,6 @@ class Engine:
                                           help='Password for connecting to host')
         self.connectionManageCreateParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageCreateParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
                                           help='Max number of connections allowed per remote conn')
         self.connectionManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
@@ -622,8 +608,6 @@ class Engine:
                                           help='Password for connecting to host')
         self.connectionManageRemoveParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageRemoveParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
         self.connectionManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
@@ -641,8 +625,6 @@ class Engine:
                                           help='Password for connecting to host')
         self.connectionManageClearAllParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageClearAllParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageClearAllParser.set_defaults(func=self.connectionClearAllCmd)
 
         self.connectionManageOpenParser = self.connectionManageSubParser.add_parser('open', help='start connection to specified experiment instance and vrdp-enabled vm as specified in config file')
@@ -662,8 +644,6 @@ class Engine:
                                           help='Password for connecting to host')
         self.connectionManageOpenParser.add_argument('--url_path', metavar='<url_path>', action="store", default="/",
                                           help='URL path to broker service')
-        self.connectionManageOpenParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                            help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.connectionManageOpenParser.set_defaults(func=self.connectionOpenCmd)
 
 #-----------Challenges
@@ -680,8 +660,6 @@ class Engine:
                                           help='Username for connecting to host')
         self.challengesManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageRefreshParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageRefreshParser.set_defaults(func=self.challengesRefreshCmd)
 
         self.challengesManageGetstatsParser = self.challengesManageSubParser.add_parser('getstats', help='retrieve challenges statistics')
@@ -691,8 +669,6 @@ class Engine:
                                           help='Username for connecting to host')
         self.challengesManageGetstatsParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageGetstatsParser.add_argument('--method', metavar='<method>', action="store",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageGetstatsParser.set_defaults(func=self.challengesGetstatsCmd)
 
         self.challengesManageCreateParser = self.challengesManageSubParser.add_parser('create', help='create challenge users as specified in config file')
@@ -704,8 +680,6 @@ class Engine:
                                           help='Username for connecting to host')
         self.challengesManageCreateParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageCreateParser.add_argument('--method', metavar='<method>', action="store", default="HTTPS",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
         self.challengesManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
@@ -723,8 +697,6 @@ class Engine:
                                           help='Username for connecting to host')
         self.challengesManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageRemoveParser.add_argument('--method', metavar='<method>', action="store",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
         self.challengesManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store",
@@ -740,8 +712,6 @@ class Engine:
                                           help='Username for connecting to host')
         self.challengesManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.challengesManageClearAllParser.add_argument('--method', metavar='<method>', action="store",
-                                          help='Either HTTP or HTTPS, depending on the server\'s configuration')
         self.challengesManageClearAllParser.set_defaults(func=self.challengesClearAllUsersCmd)
 
         self.challengesManageOpenParser = self.challengesManageSubParser.add_parser('open', help='open user stats page for specified experiment instance as specified in config file')

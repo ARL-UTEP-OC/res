@@ -30,8 +30,8 @@ class WatchRetrieveThread(QThread):
                 self.watchsignal.emit("Invalid number of args for create challenges. Skipping...", self.status, True)
                 self.status = -1
                 return None
-            #format: "challenges refresh <ip> <user> <pass> <method>"
-            cmd = "challenges " + " getstats " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2]) + " " + str(self.args[3])
+            #format: "challenges refresh <ip> <user> <pass>"
+            cmd = "challenges " + " getstats " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2])
 
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected

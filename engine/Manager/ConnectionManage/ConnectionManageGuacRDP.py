@@ -22,25 +22,27 @@ class ConnectionManageGuacRDP(ConnectionManage):
         self.lock = RLock()
 
     #abstractmethod
-    def createConnections(self, configname, guacHostname, username, password, url_path, method, maxConnections="", maxConnectionsPerUser="", width="1400", height="1050", bitdepth="16", creds_file="", itype="", name=""):
+    def createConnections(self, configname, guacHostname, username, password, url_path, maxConnections="", maxConnectionsPerUser="", width="1400", height="1050", bitdepth="16", creds_file="", itype="", name=""):
         logging.debug("createConnections(): instantiated")
-        t = threading.Thread(target=self.runCreateConnections, args=(configname, guacHostname, username, password, url_path, method, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
+        t = threading.Thread(target=self.runCreateConnections, args=(configname, guacHostname, username, password, url_path, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
         t.start()
         return 0
 
-    def runCreateConnections(self, configname, guacHostname, musername, mpassword,url_path, method, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name):
+    def runCreateConnections(self, configname, guacHostname, musername, mpassword,url_path, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name):
         logging.debug("runCreateConnections(): instantiated")
         #call guac backend API to make connections as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
         validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+        # if creds_file == None or creds_file == "":
+        #     creds_file = self.eco.getExperimentConfigFile(configname)
 
         userpool = UserPool()
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_CREATING
-            logging.debug("runCreateConnection(): guacHostname: " + str(guacHostname) + " username/pass: " + musername + " url_path: " + url_path + " method: " + str(method) + " creds_file: " + creds_file)
-            guacConn = Guacamole(guacHostname,username=musername,password=mpassword,url_path=url_path,method=method)
+            logging.debug("runCreateConnection(): guacHostname: " + str(guacHostname) + " username/pass: " + musername + " url_path: " + url_path + " creds_file: " + creds_file)
+            guacConn = Guacamole(guacHostname,username=musername,password=mpassword,url_path=url_path)
             if guacConn == None:
                 logging.error("runCreateConnection(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(musername))
                 self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
@@ -89,17 +91,16 @@ class ConnectionManageGuacRDP(ConnectionManage):
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
 
     #abstractmethod
-    def clearAllConnections(self, guacHostname, username, password, url_path, method):
+    def clearAllConnections(self, guacHostname, username, password, url_path):
         logging.debug("clearAllConnections(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(guacHostname, username, password, url_path, method))
+        t = threading.Thread(target=self.runClearAllConnections, args=(guacHostname, username, password, url_path))
         t.start()
         return 0
 
-    def runClearAllConnections(self, guacHostname, username, password, url_path, method):
+    def runClearAllConnections(self, guacHostname, username, password, url_path):
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REMOVING
-        #sample guacConn = Guacamole(192.168.99.102',username='guacadmin',password='guacadmin',url_path='/guacamole',method='http')
-        logging.debug("runClearAllConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path + " method: " + str(method))
-        guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path,method=method)
+        logging.debug("runClearAllConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path)
+        guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path)
         if guacConn == None:
             logging.error("Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
@@ -130,13 +131,13 @@ class ConnectionManageGuacRDP(ConnectionManage):
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
 
     #abstractmethod
-    def removeConnections(self, configname, guacHostname, username, password, url_path, method, creds_file="", itype="", name=""):
+    def removeConnections(self, configname, guacHostname, username, password, url_path, creds_file="", itype="", name=""):
         logging.debug("removeConnections(): instantiated")
-        t = threading.Thread(target=self.runRemoveConnections, args=(configname,guacHostname, username, password, url_path, method, creds_file, itype, name))
+        t = threading.Thread(target=self.runRemoveConnections, args=(configname,guacHostname, username, password, url_path, creds_file, itype, name))
         t.start()
         return 0
 
-    def runRemoveConnections(self, configname, guacHostname, username, password, url_path, method, creds_file, itype, name):
+    def runRemoveConnections(self, configname, guacHostname, username, password, url_path, creds_file, itype, name):
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REMOVING
         logging.debug("runRemoveConnections(): instantiated")
         #call guac backend API to remove connections as specified in config file and then set the complete status
@@ -147,8 +148,8 @@ class ConnectionManageGuacRDP(ConnectionManage):
         try:
             usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_CREATING
-            logging.debug("runRemoveConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path + " method: " + str(method) + " creds_file: " + creds_file)
-            guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path,method=method)
+            logging.debug("runRemoveConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path + " creds_file: " + creds_file)
+            guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path)
             if guacConn == None:
                 logging.error("runRemoveConnections(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))
                 self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
@@ -319,13 +320,13 @@ class ConnectionManageGuacRDP(ConnectionManage):
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : self.usersConnsStatus}
     
-    def getConnectionManageRefresh(self, guacHostname, username, password, url_path, method):
+    def getConnectionManageRefresh(self, guacHostname, username, password, url_path):
         logging.debug("getConnectionManageStatus(): instantiated")
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REFRESHING
         try:
             self.lock.acquire()
             self.usersConnsStatus.clear()
-            guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path,method=method)
+            guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path)
             #username, connName/VMName, userStatus (admin/etc.), connStatus (connected/not)
             users = guacConn.get_users()
             
