@@ -75,7 +75,7 @@ class UserPool():
             rolledout_json = self.eco.getExperimentVMRolledOut(configname)
         clonevmjson, numclones = rolledout_json
 
-        if creds_file == "":
+        if creds_file == None or creds_file == "":
             #try reading from the config file
             config_creds_file = self.eco.getExperimentXMLFileData(configname)['xml']["testbed-setup"]['vm-set']['users-filename']
             #if it's still blank, then generate users
