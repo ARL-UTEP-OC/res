@@ -64,7 +64,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 if url_path.endswith("/") == False:
                     url_path = url_path + "/"
             guacHostname = guacHostname.split("://")[1].split('/')[0]
-            logging.debug("runCreateConnection(): guacHostname: " + str(guacHostname) + " username/pass: " + musername + " url_path: " + url_path + " creds_file: " + creds_file)
+            logging.debug("runCreateConnection(): guacHostname: " + str(guacHostname) + " username/pass: " + musername + " url_path: " + url_path)
             guacConn = Guacamole(guacHostname,username=musername,password=mpassword,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
                 logging.error("runCreateConnection(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(musername))
@@ -208,7 +208,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 if url_path.endswith("/") == False:
                     url_path = url_path + "/"
             guacHostname = guacHostname.split("://")[1].split('/')[0]
-            logging.debug("runRemoveConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path + " creds_file: " + creds_file)
+            logging.debug("runRemoveConnections(): guacHostname: " + str(guacHostname) + " username/pass: " + username + " url_path: " + url_path)
             guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
                 logging.error("runRemoveConnections(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))

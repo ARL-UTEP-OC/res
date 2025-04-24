@@ -112,7 +112,7 @@ class ConnectionManageProxVNC(ConnectionManage):
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
-            logging.debug("runCreateConnection(): proxHostname: " + str(proxHostname) + " username/pass: " + musername + " creds_file: " + creds_file)
+            logging.debug("runCreateConnection(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
             
             #get accessors to the proxmox api and ssh
             try:
@@ -362,7 +362,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                     for member in members_ds['members']:
                         members.append(str(member['vmid']))
                 except ResourceException:
-                    logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
+                    logging.warning("runClearAllConnections(): Pool " + pool + " does not exist, skipping.")
                     # exc_type, exc_value, exc_traceback = sys.exc_info()
                     # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
                 except Exception:
@@ -433,6 +433,10 @@ class ConnectionManageProxVNC(ConnectionManage):
                     logging.error("runClearAllConnections(): error when trying to remove user: " + user)
                     # exc_type, exc_value, exc_traceback = sys.exc_info()
                     # traceback.print_exception(exc_type, exc_value, exc_traceback)
+        except Exception:
+            logging.error("Error in runClearAllConnections: An error occured.")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:
             self.writeStatus-=1
 
@@ -456,7 +460,6 @@ class ConnectionManageProxVNC(ConnectionManage):
 
             #get accessors to the proxmox api and ssh
             try:
-                nodename = self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
                 proxapi = self.getProxAPI(musername, mpassword)
                 if proxapi == None:
                     return None
@@ -473,19 +476,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
-            #get the list of all users and pools
-            try:
-                res = proxapi.access.users.get()
-                users = []
-                for user_info in res:
-                    user = user_info['userid']
-                    if len(user.strip()) > 4 and user[-4:] == "@pam":
-                        users.append(user_info['userid'][:-4])
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
+            #get the list of all pools
             try:
                 res = proxapi.pools.get()
                 pools = []
@@ -496,99 +487,105 @@ class ConnectionManageProxVNC(ConnectionManage):
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-            #get the list of all VMs
-            try:
-                allinfo = proxapi.cluster.resources.get(type='vm')
-            except Exception:
-                logging.error("Error in runClearAllConnections: An error occured when trying to get cluster info")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
             users_removed_lin = []
             users_removed = []
             pools_removed = []
 
-            #for each pool, remove all users from the pool and then the pool itself
-            for pool in pools:
-                if pool not in validconnsnames and pool == "nathanvms" or pool == "ana" or pool in pools_removed:
-                    continue
+            for (username, password) in usersConns:
+                logging.debug( "Removing Pool and User: " + username)
                 try:
-                    members_ds = proxapi.pools(pool).get()
-                    members = []
-                    for member in members_ds['members']:
-                        members.append(str(member['vmid']))
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove pool: " + pool)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                    for conn in usersConns[(username, password)]:
+                        cloneVMName = conn[0]
+                        if cloneVMName in validconnsnames:
+                            #get vms in pool
+                            
+                            if username not in pools or cloneVMName not in validconnsnames or username == "nathanvms" or username == "ana" or username in pools_removed:
+                                continue
+                            try:
+                                members_ds = proxapi.pools(username).get()
+                                members = []
+                                #get vms in pool
+                                for member in members_ds['members']:
+                                    members.append(str(member['vmid']))
+                            except ResourceException:
+                                logging.warning("runClearAllConnections(): Pool " + username + " already exists, skipping.")
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            except Exception:
+                                logging.error("runClearAllConnections(): error when trying to remove pool: " + username)
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-                try:
-                    logging.debug( "Removing VMs: " + str(members))
-                    result = proxapi.pools(pool).put(delete=1,vms=",".join(members))
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): members do not exist" + str(members) + ", skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove member: " + member)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                            #remove vms from pool
+                            try:
+                                logging.debug( "Removing VMs: " + str(members))
+                                result = proxapi.pools(username).put(delete=1,vms=",".join(members))
+                            except ResourceException:
+                                logging.warning("runRemoveConnections(): members do not exist" + str(members) + ", skipping.")
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            except Exception:
+                                logging.error("runRemoveConnections(): error when trying to remove member: " + member)
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-                logging.debug( "Removing Pool: " + pool)
-                try:
-                    result = proxapi.pools.delete(poolid=pool)
-                    if result == None:
-                        pools_removed.append(pool)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove pool: " + pool)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                            #remove the pool
+                            logging.debug( "Removing Pool: " + username)
+                            try:
+                                result = proxapi.pools.delete(poolid=username)
+                                if result == None:
+                                    pools_removed.append(username)
+                            except ResourceException:
+                                logging.warning("runRemoveConnections(): Pool " + username + " does not exists, skipping.")
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            except Exception:
+                                logging.error("runRemoveConnections(): error when trying to remove pool: " + username)
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-            #remove users 
-            for user in users:
-                if user or user in users_removed_lin:
-                    continue
-                logging.debug( "Removing User: " + user)
-                try:
-                    # result = proxssh._exec(shlex.split("userdel " + user))
-                    result = self.executeSSH("userdel " + user)
-                    if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
-                        logging.debug("User" + user + " does not exist; skipping...")
-                    else:
-                        users_removed_lin.append(user)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): User " + user + " does not exist, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove user: " + user)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                            #remove user
+                            if username in users_removed_lin:
+                                continue
+                            logging.debug( "Removing User: " + username)
+                            try:
+                                # result = proxssh._exec(shlex.split("userdel " + user))
+                                result = self.executeSSH("userdel " + username)
+                                if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
+                                    logging.debug("User" + username + " does not exist; skipping...")
+                                else:
+                                    users_removed_lin.append(username)
+                            except ResourceException:
+                                logging.warning("runRemoveConnections(): User " + username + " does not exist, skipping.")
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            except Exception:
+                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-                if user in users_removed:
-                    continue
-                try:
-                    result = proxapi.access.users(user+"@pam").delete()
-                    if result != None and  len(result) > 1 and "does not exist" in result[1]:
-                        logging.debug("User" + user + " does not exist; skipping...")
-                    else:
-                        users_removed.append(user)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): User " + user + " does not exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            if username in users_removed:
+                                continue
+                            try:
+                                result = proxapi.access.users(username+"@pam").delete()
+                                if result != None and  len(result) > 1 and "does not exist" in result[1]:
+                                    logging.debug("User" + username + " does not exist; skipping...")
+                                else:
+                                    users_removed.append(username)
+                            except ResourceException:
+                                logging.warning("runRemoveConnections(): User " + username + " does not exists, skipping.")
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                            except Exception:
+                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
+                                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
+
                 except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove user: " + user)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                        logging.error("runRemoveConnections(): Error in runRemoveConnections(): when trying to remove connection.")
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                        traceback.print_exception(exc_type, exc_value, exc_traceback)
+            logging.debug("runRemoveConnections(): Complete...")
         finally:
             self.writeStatus-=1
 
