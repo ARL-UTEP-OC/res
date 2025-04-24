@@ -17,7 +17,7 @@ from engine.Configuration.UserPool import UserPool
 
 class ConnectionActionDialog(QDialog):
 
-    def __init__(self, parent, configname, actionname, experimentHostname, rdpBrokerHostname="<unspecified>", users_file="", itype="", name=""):
+    def __init__(self, parent, configname, actionname, experimentHostname, rdpBrokerHostname="", users_file="", itype="", name=""):
         logging.debug("ConnectionActionDialog(): instantiated")
         super(ConnectionActionDialog, self).__init__(parent)
         self.parent = parent
@@ -30,7 +30,7 @@ class ConnectionActionDialog(QDialog):
         self.itype = itype
         self.name = name
         if rdpBrokerHostname.strip() == "":
-            self.rdpBrokerHostname = "<unspecified>"
+            self.rdpBrokerHostname = ""
             self.setEnabled(False)
         else:
             self.rdpBrokerHostname = rdpBrokerHostname
@@ -55,10 +55,10 @@ class ConnectionActionDialog(QDialog):
         self.layout = QFormLayout()
         self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
         self.experimentHostnameLineEdit.setEnabled(False)
-        self.layout.addRow(QLabel("VM Server IP:"), self.experimentHostnameLineEdit)
+        self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
         self.hostnameLineEdit = QLineEdit(self.rdpBrokerHostname)
         self.hostnameLineEdit.setEnabled(False)
-        self.layout.addRow(QLabel("RDP Broker Hostname/IP:"), self.hostnameLineEdit)
+        self.layout.addRow(QLabel("rDisplay Server URL:"), self.hostnameLineEdit)
         mgmusername = ""
         mgmpassword = ""
         cachedCreds = self.eco.getConfigRDPBrokerCreds(self.configname)

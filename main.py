@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, 
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QMessageBox, QTableWidget, QTabWidget, QTextEdit, QPlainTextEdit,
-        QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar)
+        QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar, QInputDialog)
 from gui.Handlers.ConsoleHandler import ConsoleHandler
 
 from gui.Dialogs.ExperimentDuplicateDialog import ExperimentDuplicateDialog
@@ -131,7 +131,7 @@ class MainApp(QWidget):
         self.consoleLayout.addWidget(self.console_text_box)
         logging.getLogger().addHandler(handler)
         logging.getLogger().setLevel(logging.INFO)
-        handler.new_record.connect(self.console_text_box.appendPlainText) # <---- connect QPlainTextEdit.appendPlainText slot
+        handler.new_record.connect(self.console_text_box.appendPlainText)
         
         self.populateUi()
         self.setupContextMenus()
@@ -144,13 +144,9 @@ class MainApp(QWidget):
         self.mainLayout.addLayout(self.consoleLayout)
         
         self.setLayout(self.mainLayout)
-        #self.setCentralWidget(self.outerBox)
         self.tabWidget.setCurrentIndex(0)
 
-        #self.statusBar.showMessage("Finished Loading GUI Components")
-
-        # Plugin Section
-        #self.tabWidget.addTab(CTFi2GUI(), "CTFi2")
+        self.statusBar.showMessage("Finished Loading GUI Components")
 
     def readSystemConfig(self):
         logging.debug("MainApp:readSystemConfig() instantiated")
@@ -172,7 +168,9 @@ class MainApp(QWidget):
         self.addVMContextSubMenu = QtWidgets.QMenu()
         self.experimentContextMenu.addMenu(self.addVMContextSubMenu)
         self.addVMContextSubMenu.setTitle("Add")
-        self.addVM = self.addVMContextSubMenu.addAction("Virtual Machines")
+        self.addVM = self.addVMContextSubMenu.addAction("VMs (System)")
+        self.addVM.triggered.connect(self.addVMSystemActionEvent)
+        self.addVM = self.addVMContextSubMenu.addAction("VM (Manual)")
         self.addVM.triggered.connect(self.addVMActionEvent)
         self.addMaterial = self.addVMContextSubMenu.addAction("Material Files")
         self.addMaterial.triggered.connect(self.addMaterialActionEvent)
@@ -363,11 +361,11 @@ class MainApp(QWidget):
         #Add the items to the tree
         self.statusBar.showMessage("Imported " + firstConfignameChosen)
 
-    def addVMActionEvent(self):
-        logging.debug("MainApp:addVMActionEvent() instantiated")
+    def addVMSystemActionEvent(self):
+        logging.debug("MainApp:addVMSystemActionEvent() instantiated")
         selectedItem = self.experimentTree.currentItem()
         if selectedItem == None:
-            logging.debug("MainApp:addVMActionEvent no configurations left")
+            logging.debug("MainApp:addVMSystemActionEvent no configurations left")
             self.statusBar.showMessage("Could not add VM. No configuration items selected or available.")
             return
         selectedItemName = selectedItem.text(0)
@@ -385,7 +383,7 @@ class MainApp(QWidget):
             return
 
         for vmChosen in vmsChosen:
-            logging.debug("MainApp: addVMActionEvent(): File choosen: " + str(vmChosen))
+            logging.debug("MainApp: addVMSystemActionEvent(): File choosen: " + str(vmChosen))
             #Add the item to the tree
             vmItem = QtWidgets.QTreeWidgetItem(selectedItem)
             vmlabel = "V: " + vmChosen
@@ -407,6 +405,44 @@ class MainApp(QWidget):
         self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.statusBar.showMessage("Added " + str(len(vmsChosen)) + " VM files to experiment: " + str(selectedItemName))
+
+    def addVMActionEvent(self):
+        logging.debug("MainApp:addVMActionEvent() instantiated")
+        selectedItem = self.experimentTree.currentItem()
+        if selectedItem == None:
+            logging.debug("MainApp:addVMActionEvent no configurations left")
+            self.statusBar.showMessage("Could not add VM. No configuration items selected or available.")
+            return
+        selectedItemName = selectedItem.text(0)
+        #Now allow the user to enter the VM name:
+        vmChosen, ok = QInputDialog.getText(self, 'Manual VM Entry', 'Enter Virtual Machine Name:')
+        if ok and vmChosen.strip() != '':
+            logging.debug("configureVM(): OK pressed and VMs selected " + str(vmChosen))
+        else:
+            logging.debug("configureVM(): Cancel pressed or no VM selected")
+            return
+
+        #Add the item to the tree
+        vmItem = QtWidgets.QTreeWidgetItem(selectedItem)
+        vmlabel = "V: " + vmChosen
+        vmItem.setText(0,vmlabel)
+        # VM Config Widget
+        #Now add the item to the stack and list of baseWidgets
+        vmjsondata = {"name": vmChosen}
+        vmWidget = VMWidget(self, selectedItemName, vmChosen, vmjsondata)
+        self.baseWidgets[selectedItemName]["VMWidgets"][vmlabel] = vmWidget
+        self.basedataStackedWidget.addWidget(vmWidget)
+        #Now add data to the experimentActionWidget associated with the current config
+        #Check if it's the case that an experiment name was selected
+        parentSelectedItem = selectedItem.parent()
+        if parentSelectedItem != None:
+            selectedItem = parentSelectedItem
+        configname = selectedItem.text(0)
+        config_jsondata = self.getWritableData(configname)
+        self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        self.statusBar.showMessage("Added VM to experiment: " + str(selectedItemName))
 
     def startHypervisorActionEvent(self):
         logging.debug("MainApp:startHypervisorActionEvent() instantiated")
@@ -649,8 +685,9 @@ class MainApp(QWidget):
         
         self.ec.writeExperimentXMLFileData(jsondata, configname)
         self.ec.writeExperimentJSONFileData(jsondata, configname)
-        self.ec.getExperimentVMRolledOut(configname, jsondata, force_refresh=True)
-        res = self.ec.getExperimentServerInfo(configname)
+        ##self.ec.getExperimentVMRolledOut(configname, jsondata, force_refresh=True)
+        ##res = self.ec.getExperimentServerInfo(configname)
+        
         #Now reset the experimentActions view
         self.experimentActionsWidget.resetExperiment(configname, jsondata)
         self.connectionWidget.resetExperiment(configname, jsondata)

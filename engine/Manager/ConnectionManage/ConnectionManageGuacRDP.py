@@ -40,12 +40,22 @@ class ConnectionManageGuacRDP(ConnectionManage):
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
+            if guacHostname == None or guacHostname == "":
+                guacHostname, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+                if guacHostname == None or guacHostname == "":
+                    logging.error("runCreateConnections(): Guacamole Hostname not found; returning")
+                    return -1
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_CREATING
             url_path = "/"
             if guacHostname.startswith("http://"):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
+            else:
+                #if guacHostname doesn't start with http(s), then we need to add it
+                guacHostname = "https://" + guacHostname
+                guacConnMethod = 'https'
+
             if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
                 url_path = "".join(tmp_path.split("/")[1:])
@@ -118,6 +128,11 @@ class ConnectionManageGuacRDP(ConnectionManage):
             guacConnMethod = 'http'
         elif guacHostname.startswith("https://"):
             guacConnMethod = 'https'
+        else:
+            #if guacHostname doesn't start with http(s), then we need to add it
+            guacHostname = "https://" + guacHostname
+            guacConnMethod = 'https'
+
         if len(guacHostname.split("://")) > 1:
             tmp_path = guacHostname.split("://")[1]
             url_path = "".join(tmp_path.split("/")[1:])
@@ -180,6 +195,11 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
+            else:
+                #if guacHostname doesn't start with http(s), then we need to add it
+                guacHostname = "https://" + guacHostname
+                guacConnMethod = 'https'
+
             if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
                 url_path = "".join(tmp_path.split("/")[1:])
@@ -370,6 +390,11 @@ class ConnectionManageGuacRDP(ConnectionManage):
                 guacConnMethod = 'http'
             elif guacHostname.startswith("https://"):
                 guacConnMethod = 'https'
+            else:
+                #if guacHostname doesn't start with http(s), then we need to add it
+                guacHostname = "https://" + guacHostname
+                guacConnMethod = 'https'
+
             if len(guacHostname.split("://")) > 1:
                 tmp_path = guacHostname.split("://")[1]
                 url_path = "".join(tmp_path.split("/")[1:])

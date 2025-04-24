@@ -259,7 +259,7 @@ class ExperimentConfigIO:
         #get VMs or sets that we need to start
         validvms = []
         validvmnames = []
-        if name == "all":
+        if name == "all" or name == "" or itype == "" or itype == "all":
             #if none was specified, just add all vms to the list
             validvms = self.getExperimentVMListsFromRolledOut(configname, rolledoutjson)
             for vm in validvms:
@@ -276,11 +276,6 @@ class ExperimentConfigIO:
                 validvmnames.append(vm)
         elif itype == "vm":
             validvmnames.append(name)
-        elif itype == "":
-            #if none was specified, just add all vms to the list
-            validvms = self.getExperimentVMListsFromRolledOut(configname, rolledoutjson)
-            for vm in validvms:
-                validvmnames.append(vm["name"])
         return validvmnames
 
     def getExperimentVMsInSetFromRolledOut(self, configname, set_num, rolledout_jsondata=None):
