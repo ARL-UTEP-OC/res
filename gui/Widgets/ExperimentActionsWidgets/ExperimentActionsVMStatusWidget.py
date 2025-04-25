@@ -135,7 +135,7 @@ class ExperimentActionsVMStatusWidget(QtWidgets.QWidget):
             return
         vmName = self.vmStatusTable.item(vmRow,0).text()
         actionlabelname = self.sender().text()
-        ExperimentActions().experimentActionEvent(self.configname, actionlabelname, "vm", vmName)
+        ExperimentActions().experimentActionEvent(self, self.configname, actionlabelname, "vm", vmName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)
 
     def updateVMStatus(self, vmStatus):

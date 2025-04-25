@@ -330,7 +330,7 @@ class ExperimentActionsWidget(QtWidgets.QWidget):
         logging.debug("menuItemSelected(): instantiated")
         actionlabelname = self.sender().text()
         configname, itype, name = self.getTypeNameFromSelection()
-        ExperimentActions().experimentActionEvent(configname, actionlabelname, itype, name)
+        s = ExperimentActions().experimentActionEvent(self, configname, actionlabelname, itype, name)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + configname)
 
     def refreshVMStatus(self):

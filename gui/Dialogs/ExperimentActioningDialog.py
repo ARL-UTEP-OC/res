@@ -16,14 +16,16 @@ import time
 class ExperimentActionThread(QThread):
     watchsignal = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject')
 
-    def __init__(self, configname, actionname, itype, name):
-        QThread.__init__(self)
+    def __init__(self, configname, actionname, itype, name, username, password):
         logging.debug("ExperimentActionThread(): instantiated")
+        QThread.__init__(self)
 
         self.configname = configname
         self.actionname = actionname
         self.itype = itype
         self.name = name
+        self.username = username
+        self.password = password
         self.outputstr = []
         self.status = -1
 
@@ -34,25 +36,25 @@ class ExperimentActionThread(QThread):
         try:
             e = Engine.getInstance()
             if self.actionname == "Create Experiment":
-                e.execute("experiment create " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment create " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Start Experiment":
-                e.execute("experiment start " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment start " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Stop Experiment":
-                e.execute("experiment stop " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment stop " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Suspend Experiment":
-                e.execute("experiment suspend " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment suspend " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Pause Experiment":
-                e.execute("experiment pause " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment pause " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Snapshot Experiment":
-                e.execute("experiment snapshot " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment snapshot " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Restore Experiment":
-                e.execute("experiment restore " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment restore " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Remove Experiment":
-                e.execute("experiment remove " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment remove " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Run GuestCmds":
-                e.execute("experiment guestcmd " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment guestcmd " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Run GuestStored":
-                e.execute("experiment gueststored " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name))
+                e.execute("experiment gueststored " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
@@ -86,13 +88,15 @@ class ExperimentActionThread(QThread):
             return None
 
 class ExperimentActioningDialog(QDialog):
-    def __init__(self, parent, configname, actionname, itype, name):
+    def __init__(self, parent, configname, actionname, itype, name, username="", password=""):
         logging.debug("ExperimentActioningDialog(): instantiated")
         super(ExperimentActioningDialog, self).__init__(parent)
         self.configname = configname
         self.actionname = actionname
         self.itype = itype
         self.name = name
+        self.username = username
+        self.password = password
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
 
         self.buttons = QDialogButtonBox()
@@ -117,7 +121,7 @@ class ExperimentActioningDialog(QDialog):
         self.status = -1
         
     def exec_(self):
-        t = ExperimentActionThread(self.configname, self.actionname, self.itype, self.name)
+        t = ExperimentActionThread(self.configname, self.actionname, self.itype, self.name, self.username, self.password)
         t.watchsignal.connect(self.setStatus)
         t.start()
         result = super(ExperimentActioningDialog, self).exec_()

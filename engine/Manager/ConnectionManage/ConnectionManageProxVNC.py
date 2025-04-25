@@ -43,8 +43,19 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getProxAPI(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
-            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            #instead get this from experiment config file
+            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
             port = self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT']
+            
+            server = vmHostname
+
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                if len(rsplit.split(":")) > 1:
+                    port = rsplit.split(":")[1].split("/")[0]
+                server = rsplit.split("/")[0]
+
             if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             elif self.proxapi != None and username != None and password != None and username.strip() != "" and password.strip() != "":
@@ -74,15 +85,21 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getProxSSH(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
-            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            server = vmHostname
             port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+            
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                server = rsplit.split("/")[0]
+
             if self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = None
             self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
             self.sshusername = username
             self.sshpassword = password
             return self.proxssh
-        
         except Exception:
             logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
             exc_type, exc_value, exc_traceback = sys.exc_info()

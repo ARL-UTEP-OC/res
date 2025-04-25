@@ -190,7 +190,6 @@ class Engine:
         logging.debug("connectionRemoveCmd(): instantiated")
         #will remove connections as specified in configfile
         configname = args.configname
-        configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password
