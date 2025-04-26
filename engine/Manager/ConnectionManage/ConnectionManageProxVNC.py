@@ -44,17 +44,17 @@ class ConnectionManageProxVNC(ConnectionManage):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
             #instead get this from experiment config file
-            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
             port = self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT']
-            
-            server = vmHostname
+            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            # server = vmHostname
 
-            splithostname = vmHostname.split("://")
-            if len(splithostname) > 1:
-                rsplit = splithostname[1]
-                if len(rsplit.split(":")) > 1:
-                    port = rsplit.split(":")[1].split("/")[0]
-                server = rsplit.split("/")[0]
+            # splithostname = vmHostname.split("://")
+            # if len(splithostname) > 1:
+            #     rsplit = splithostname[1]
+            #     if len(rsplit.split(":")) > 1:
+            #         port = rsplit.split(":")[1].split("/")[0]
+            #     server = rsplit.split("/")[0]
 
             if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
@@ -85,20 +85,25 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getProxSSH(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
-            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
-            server = vmHostname
             port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
             
-            splithostname = vmHostname.split("://")
-            if len(splithostname) > 1:
-                rsplit = splithostname[1]
-                server = rsplit.split("/")[0]
+            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            # server = vmHostname            
+            # splithostname = vmHostname.split("://")
+            # if len(splithostname) > 1:
+            #     rsplit = splithostname[1]
+            #     server = rsplit.split("/")[0]
 
-            if self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+            if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+                self.sshusername = username
+                self.sshpassword = password
+            elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = None
-            self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
-            self.sshusername = username
-            self.sshpassword = password
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+                self.sshusername = username
+                self.sshpassword = password
             return self.proxssh
         except Exception:
             logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
@@ -129,8 +134,6 @@ class ConnectionManageProxVNC(ConnectionManage):
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
 
         try:
-            logging.debug("runCreateConnection(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
-            
             #get accessors to the proxmox api and ssh
             try:
                 nodename = self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
@@ -313,8 +316,6 @@ class ConnectionManageProxVNC(ConnectionManage):
     def runClearAllConnections(self, proxHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
         logging.debug("runClearAllConnections(): instantiated")
         try:
-            logging.debug("runClearAllConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
-            
             #get accessors to the proxmox api and ssh
             try:
                 nodename = self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
@@ -468,7 +469,6 @@ class ConnectionManageProxVNC(ConnectionManage):
     def runRemoveConnections(self, configname, proxHostname, musername, mpassword, creds_file, itype, name):
         logging.debug("runRemoveConnections(): instantiated")
         try:
-            logging.debug("runRemoveConnections(): proxHostname: " + str(proxHostname) + " username/pass: " + musername)
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
 

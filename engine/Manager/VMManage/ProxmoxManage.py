@@ -12,6 +12,7 @@ from engine.Manager.VMManage.VM import VM
 import re
 import os
 from engine.Configuration.SystemConfigIO import SystemConfigIO
+from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from threading import RLock
 from proxmoxer import ProxmoxAPI
 from proxmoxer.core import ResourceException
@@ -24,6 +25,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage.__init__(): instantiated")
         VMManage.__init__(self)
         self.cf = SystemConfigIO()
+        self.eco = ExperimentConfigIO.getInstance()
         # A lock for acces/updates to self.vms
         self.lock = RLock()
         self.vms = {}
@@ -32,7 +34,13 @@ class ProxmoxManage(VMManage):
         self.proxssh = None
         self.sshusername = None
         self.sshpassword = None
-        self.setRemoteCreds(initializeVMManage, username, password)
+        self.initialized = False
+        if username != None and password != None and username.strip() != "" and password.strip() != "":
+            self.setRemoteCreds(initializeVMManage, username, password)
+            
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
 
     def setRemoteCreds(self, refresh=False, username=None, password=None):
         logging.info("ProxmoxManage.setRemoteCreds(): Initializing ProxmoxManage; collecting VM information...")
@@ -47,23 +55,24 @@ class ProxmoxManage(VMManage):
                 #waiting for manager to finish query...
                     result = self.getManagerStatus()["writeStatus"]
                     time.sleep(.1)
+                self.initialized = True
         logging.info("ProxmoxManage.setRemoteCreds(): Done...")
 
     def getProxAPI(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
             #instead get this from experiment config file
-            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
-            port = self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT']
-            
-            server = vmHostname
+            port = self.cf.getConfig()['PROXMOX']['VMANAGE_APIPORT']
+            server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
+            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            # server = vmHostname
 
-            splithostname = vmHostname.split("://")
-            if len(splithostname) > 1:
-                rsplit = splithostname[1]
-                if len(rsplit.split(":")) > 1:
-                    port = rsplit.split(":")[1].split("/")[0]
-                server = rsplit.split("/")[0]
+            # splithostname = vmHostname.split("://")
+            # if len(splithostname) > 1:
+            #     rsplit = splithostname[1]
+            #     if len(rsplit.split(":")) > 1:
+            #         port = rsplit.split(":")[1].split("/")[0]
+            #     server = rsplit.split("/")[0]
 
             if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
@@ -94,20 +103,24 @@ class ProxmoxManage(VMManage):
     def getProxSSH(self, username=None, password=None):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
-            vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
-            server = vmHostname
-            port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+            port = self.cf.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
+            server = self.cf.getConfig()['PROXMOX']['VMANAGE_SERVER']
             
-            splithostname = vmHostname.split("://")
-            if len(splithostname) > 1:
-                rsplit = splithostname[1]
-                server = rsplit.split("/")[0]
-
-            if self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            # server = vmHostname            
+            # splithostname = vmHostname.split("://")
+            # if len(splithostname) > 1:
+            #     rsplit = splithostname[1]
+            #     server = rsplit.split("/")[0]
+            if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+                self.sshusername = username
+                self.sshpassword = password
+            elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxssh = None
-            self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
-            self.sshusername = username
-            self.sshpassword = password
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
+                self.sshusername = username
+                self.sshpassword = password
             return self.proxssh
         except Exception:
             logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
@@ -290,7 +303,7 @@ class ProxmoxManage(VMManage):
         else:
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            t = threading.Thread(target=self.runVMInfo, args=(vmName,username, password))
+            t = threading.Thread(target=self.runVMInfo, args=(vmName, username, password))
             t.start()
         return 0
     

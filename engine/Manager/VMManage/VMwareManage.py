@@ -29,11 +29,20 @@ class VMwareManage(VMManage):
         self.vmcli = self.cf.getConfig()['VMWARE']['VMANAGE_CLI_PATH']
         self.vmrun = self.cf.getConfig()['VMWARE']['VMANAGE_RUN_PATH']
         self.vmovf = self.cf.getConfig()['VMWARE']['VMANAGE_OVF_PATH']
+        self.initialized = False
             
         # A lock for acces/updates to self.vms
         self.lock = RLock()
         self.vms = {}
         self.tempVMs = {}
+
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        logging.debug("ProxmoxManage: setRemoteCreds(): instantiated")
+        self.initialized = True
 
     # helper function to perform sort
     def num_sort(self, istring):

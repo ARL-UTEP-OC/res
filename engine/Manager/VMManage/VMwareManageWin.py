@@ -35,6 +35,14 @@ class VMwareManageWin(VMManage):
         self.vms = {}
         self.tempVMs = {}
 
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        logging.debug("ProxmoxManage: setRemoteCreds(): instantiated")
+        self.initialized = True
+
     # helper function to perform sort
     def num_sort(self, istring):
         return list(map(int, re.findall(r'\d+', istring)))[0]

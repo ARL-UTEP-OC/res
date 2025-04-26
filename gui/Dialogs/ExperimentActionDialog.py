@@ -56,7 +56,7 @@ class ExperimentActionDialog(QDialog):
         mainLayout.addWidget(buttonBox)
         self.setLayout(mainLayout)
         
-        self.setWindowTitle(str(actionname) + " Experiment")
+        self.setWindowTitle(str(actionname))
         
     def createFormGroupBox(self):
         self.formGroupBox = QGroupBox("Experiment Information")

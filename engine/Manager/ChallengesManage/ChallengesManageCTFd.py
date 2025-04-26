@@ -109,7 +109,6 @@ class ChallengesManageCTFd(ChallengesManage):
 
         try:
 
-            logging.debug("runCreateChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + musername)
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(musername,mpassword)
 
@@ -168,7 +167,6 @@ class ChallengesManageCTFd(ChallengesManage):
 
     def runClearAllChallengesUsers(self, ctfdHostname, username, password):
         try:
-            logging.debug("runClearAllChallengesUsers(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username)
             
             api_session = API(prefix_url=ctfdHostname)
             api_session.login(username,password)
@@ -227,7 +225,6 @@ class ChallengesManageCTFd(ChallengesManage):
                 user_id[item['name']] = item['id']
 
             usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-            logging.debug("runRemoveChallengesConnections(): ctfdHostname: " + str(ctfdHostname) + " username/pass: " + username)
             removed_users = []
             for (username, password) in usersConns:
                 logging.debug( "Removing User: " + username)

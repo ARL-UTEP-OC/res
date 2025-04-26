@@ -64,6 +64,7 @@ class Engine:
                 if username != None and password != None:
                     self.vmManage = ProxmoxManage(True, username, password)
                 else:
+                    #if this is the case, then the manager will have to be initialized later
                     self.vmManage = ProxmoxManage(False)
         #Create the ConnectionManage
         if c.getConfig()['CONNECTIONS']['HANDLER'] == 'PROXMOX':
@@ -868,6 +869,10 @@ class Engine:
                 cmd = shlex.split(cmd, posix=False)
             r = self.parser.parse_args(cmd)
             logging.debug("execute(): returning result: " + str(r))
+            #on any engine command, see if we can initialize the vmmanager (if username/pass is provided) because it's so critical
+            if self.vmManage.isInitialized() == False:
+                if r.username and r.password:
+                    self.setRemoteCreds(True, r.username, r.password)
             return r.func(r)
         except argparse.ArgumentError as err:
             logging.error(err.message, '\n', err.argument_name)	
