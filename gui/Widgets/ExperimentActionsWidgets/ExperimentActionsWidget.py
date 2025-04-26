@@ -347,7 +347,11 @@ class ExperimentActionsWidget(QtWidgets.QWidget):
         while selectedItem.parent() != None:
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
-        s = VMRetrievingDialog(self, configname).exec_()
+        s = ExperimentActionDialog(self, configname, "Refresh", "", "").exec_()
+        if s == None or s == QMessageBox.Cancel:
+            logging.debug("ExperimentActionsWidget: refreshVMStatus(): Cancel was pressed")
+            return
+
         self.vms = s["vmstatus"]
 
         #Update all vm status in the subtrees

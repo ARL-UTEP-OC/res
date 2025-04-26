@@ -55,6 +55,8 @@ class ExperimentActionThread(QThread):
                 e.execute("experiment guestcmd " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
             elif self.actionname == "Run GuestStored":
                 e.execute("experiment gueststored " + str(self.configname) + " --itype " + str(self.itype) + " --name " + str(self.name) + " --username " + str(self.username) + " --password " + str(self.password))
+            elif self.actionname == "Refresh":
+                e.execute("experiment refresh " + str(self.configname) + " --username " + str(self.username) + " --password " + str(self.password))
             
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1

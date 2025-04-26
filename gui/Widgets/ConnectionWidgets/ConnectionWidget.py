@@ -60,7 +60,7 @@ class ConnectionWidget(QtWidgets.QWidget):
         self.refreshConnsButton.clicked.connect(self.refreshConnsStatus)
         self.refreshConnsButton.setEnabled(False)
         self.windowBoxVLayout.addWidget(self.refreshConnsButton)
-
+    
         self.windowBoxHLayout.addLayout(self.windowBoxVLayout)
         
         # Context menu

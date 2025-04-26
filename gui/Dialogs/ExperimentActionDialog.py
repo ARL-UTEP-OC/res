@@ -17,8 +17,6 @@ from gui.Dialogs.ExperimentActioningDialog import ExperimentActioningDialog
 import logging
 from engine.Configuration.UserPool import UserPool
 
-
-
 import os
 import logging
 
@@ -88,7 +86,8 @@ class ExperimentActionDialog(QDialog):
 
             self.eco.storeConfigExperimentExecCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
             cad = ExperimentActioningDialog(self.parent, self.configname, self.actionname, self.itype, self.name, self.usernameLineEdit.text(), self.passwordLineEdit.text()).exec_()
-            return (QMessageBox.Ok)
+            if cad != None and len(cad) > 0:
+                return cad[0]
         return (QMessageBox.Cancel)
 
     # def experimentActionDialog(self, configname, actionname, itype="", name=""):
