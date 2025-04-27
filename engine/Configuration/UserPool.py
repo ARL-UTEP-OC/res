@@ -102,7 +102,8 @@ class UserPool():
                     #keep track of users/connections using the groupnum
                     currGroupNum = cloneinfo["groupNum"]
                     vmServerIP = cloneinfo["vm-server-ip"]
-                    # rdpBrokerIP = cloneinfo["rdp-broker-ip"]
+                    vmServerSSHPort = cloneinfo["vm-server-ssh-port"]
+                    rdpBrokerIP = cloneinfo["rdp-broker-ip"]
                     chatServerIP = cloneinfo["chat-server-ip"]
                     challengesServerIP = cloneinfo["challenges-server-ip"]
                     cloneVMName = cloneinfo["name"]

@@ -309,7 +309,7 @@ class ConnectionWidget(QtWidgets.QWidget):
         configname, itype, name = self.getTypeNameFromSelection()
         
         ##get server info
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         if vmHostname != None and rdpBrokerHostname != None:
             if users_file == None:
                 ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype=itype, name=name)
@@ -331,7 +331,7 @@ class ConnectionWidget(QtWidgets.QWidget):
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
 
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         s = ConnectionActionDialog(self, configname, "Refresh", vmHostname, rdpBrokerHostname).exec_()
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:

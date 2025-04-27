@@ -309,7 +309,7 @@ class ChallengesWidget(QtWidgets.QWidget):
         configname, itype, name = self.getTypeNameFromSelection()
         
         ##get server info
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         if challengesServerIP != None:
             if users_file == None:
                 ChallengesActions().challengesActionEvent(self, configname, actionlabelname, challengesServerIP, users_file="", itype=itype, name=name)
@@ -331,7 +331,7 @@ class ChallengesWidget(QtWidgets.QWidget):
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
 
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         s = ChallengesActionDialog(self, configname, "Refresh", challengesServerIP).exec_()
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:

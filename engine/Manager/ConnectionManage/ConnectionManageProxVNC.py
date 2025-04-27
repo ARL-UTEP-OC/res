@@ -46,7 +46,7 @@ class ConnectionManageProxVNC(ConnectionManage):
             #instead get this from experiment config file
             port = self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT']
             server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
-            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
+            # vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
             # server = vmHostname
 
             # splithostname = vmHostname.split("://")
@@ -88,8 +88,8 @@ class ConnectionManageProxVNC(ConnectionManage):
             port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
             server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
             
-            # vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(self.configname)
-            # server = vmHostname            
+            # vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            # server = vmHostname
             # splithostname = vmHostname.split("://")
             # if len(splithostname) > 1:
             #     rsplit = splithostname[1]

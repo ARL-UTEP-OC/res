@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtGui import QIntValidator
+from engine.Configuration.SystemConfigIO import SystemConfigIO
 import logging
 
 class BaseWidget(QtWidgets.QWidget):
@@ -10,6 +11,7 @@ class BaseWidget(QtWidgets.QWidget):
             logging.error("configname cannot be empty")
             return None
         QtWidgets.QWidget.__init__(self, parent=None)
+        self.c = SystemConfigIO()
         self.widgetname = widgetname
         self.configname = configname
         
@@ -42,7 +44,11 @@ class BaseWidget(QtWidgets.QWidget):
         self.vmServerIPHorBox.setObjectName("vmServerIPHorBox")
         self.vmServerIPLabel = QtWidgets.QLabel()
         self.vmServerIPLabel.setObjectName("vmServerIPLabel")
-        self.vmServerIPLabel.setText("VM Server URL:")
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.vmServerIPLabel.setText("PROXMOX Server URL:")
+        else:
+            self.vmServerIPLabel.setText("VM Server URL:")
+        
         self.vmServerIPHorBox.addWidget(self.vmServerIPLabel)
         self.vmServerIPLineEdit = QtWidgets.QLineEdit() 
         self.vmServerIPLineEdit.setObjectName("vmServerIPLineEdit")
@@ -59,6 +65,19 @@ class BaseWidget(QtWidgets.QWidget):
         self.rdpBrokerLineEdit.setObjectName("rdpBrokerLineEdit")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLineEdit)
         self.outerVertBox.addLayout(self.rdpBrokerHorBox)
+
+        self.sshPortHorBox = QtWidgets.QHBoxLayout()
+        self.sshPortHorBox.setObjectName("sshPortHorBox")
+        self.sshPortLabel = QtWidgets.QLabel()
+        self.sshPortLabel.setObjectName("sshPortLabel")
+        self.sshPortLabel.setText("Proxmox Server SSH Port:")
+        self.sshPortHorBox.addWidget(self.sshPortLabel)
+        self.vmServerSSHPortLineEdit = QtWidgets.QLineEdit()
+        self.vmServerSSHPortLineEdit.setObjectName("sshPortLineEdit")
+        self.sshPortHorBox.addWidget(self.vmServerSSHPortLineEdit)
+
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.outerVertBox.addLayout(self.sshPortHorBox)
 
         self.chatServerHorBox = QtWidgets.QHBoxLayout()
         self.chatServerHorBox.setObjectName("chatServerHorBox")
@@ -210,6 +229,10 @@ class BaseWidget(QtWidgets.QWidget):
             basejsondata["testbed-setup"]["network-config"]["vm-server-ip"] = "https://localhost:8006/"
         self.vmServerIPLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vm-server-ip"])
         ###
+        if "vm-server-ssh-port" not in basejsondata["testbed-setup"]["network-config"]:
+            basejsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"] = "22"
+        self.vmServerSSHPortLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"])
+        ###
         if "rdp-broker-ip" not in basejsondata["testbed-setup"]["network-config"]:
             basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = "https://localhost:443/"
         self.rdpBrokerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"])
@@ -257,6 +280,7 @@ class BaseWidget(QtWidgets.QWidget):
         jsondata["testbed-setup"] = {}
         jsondata["testbed-setup"]["network-config"] = {}
         jsondata["testbed-setup"]["network-config"]["vm-server-ip"] = self.vmServerIPLineEdit.text()
+        jsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"] = self.vmServerSSHPortLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = self.rdpBrokerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["chat-server-ip"] = self.chatServerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = self.challengesServerLineEdit.text()

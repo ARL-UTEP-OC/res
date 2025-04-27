@@ -685,8 +685,6 @@ class MainApp(QWidget):
         
         self.ec.writeExperimentXMLFileData(jsondata, configname)
         self.ec.writeExperimentJSONFileData(jsondata, configname)
-        ##self.ec.getExperimentVMRolledOut(configname, jsondata, force_refresh=True)
-        ##res = self.ec.getExperimentServerInfo(configname)
         
         #Now reset the experimentActions view
         self.experimentActionsWidget.resetExperiment(configname, jsondata)

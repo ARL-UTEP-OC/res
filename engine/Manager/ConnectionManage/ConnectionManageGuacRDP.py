@@ -41,7 +41,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
 
         try:
             if guacHostname == None or guacHostname == "":
-                guacHostname, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+                vmserver, vmserversshport, guacHostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
                 if guacHostname == None or guacHostname == "":
                     logging.error("runCreateConnections(): Guacamole Hostname not found; returning")
                     return -1

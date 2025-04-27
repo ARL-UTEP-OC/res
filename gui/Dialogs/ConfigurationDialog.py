@@ -32,7 +32,7 @@ class ConfigurationDialog(QDialog):
         self.setWindowTitle("RES Configuration")
         
     def createFormGroupBox(self):
-        self.formGroupBox = QGroupBox("Configuration Paths (don't change unless you really know what you're doing)")
+        self.formGroupBox = QGroupBox("Configuration Paths (Changes take effect after restart)")
         self.layout = QFormLayout()
         #VirtualBox stuff
         self.virtualboxPathLineEdit = QLineEdit(self.s.getConfig()["VBOX"]["VBOX_PATH"])
@@ -102,8 +102,22 @@ class ConfigurationDialog(QDialog):
         self.layout.addRow(QLabel("Experiments Data Path:"), self.experimentPathLineEdit)
         self.temporaryPathLineEdit = QLineEdit(self.s.getConfig()["EXPERIMENTS"]["TEMP_DATA_PATH"])
         self.layout.addRow(QLabel("Temporary Data Path:"), self.temporaryPathLineEdit)
-        self.connectionshPathLineEdit = QLineEdit(self.s.getConfig()["CONNECTIONS"]["HANDLER"])
-        self.layout.addRow(QLabel("Connections Handler:"), self.connectionshPathLineEdit)
+
+        self.connHandlerGroupLayout = QHBoxLayout()
+        self.guacHandlerRadio = QRadioButton("Guacamole")
+        self.proxmoxHandlerRadio = QRadioButton("Proxmox")
+        self.connhandlerbuttonGroup = QButtonGroup()
+        self.connhandlerbuttonGroup.addButton(self.guacHandlerRadio)
+        self.connhandlerbuttonGroup.addButton(self.proxmoxHandlerRadio)
+        self.connHandlerGroupLayout.addWidget(self.guacHandlerRadio)
+        self.connHandlerGroupLayout.addWidget(self.proxmoxHandlerRadio)
+        if self.s.getConfig()["CONNECTIONS"]["HANDLER"] == "GUAC":
+            self.guacHandlerRadio.setChecked(True)
+        elif self.s.getConfig()["CONNECTIONS"]["HANDLER"] == "PROXMOX":
+            self.proxmoxHandlerRadio.setChecked(True)
+        else:
+            self.guacHandlerRadio.setChecked(True)
+        self.layout.addRow(QLabel("Connection Handler"), self.connHandlerGroupLayout)
 
         self.groupLayout = QHBoxLayout()
         self.vboxRadio = QRadioButton("VirtualBox")
@@ -122,7 +136,9 @@ class ConfigurationDialog(QDialog):
             self.vmwareRadio.setChecked(True)
         elif self.s.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
             self.proxmoxRadio.setChecked(True)
-        self.layout.addRow(QLabel("Active Hypervisor (change requires restart):"), self.groupLayout)
+        else:
+            self.vmwareRadio.setChecked(True)
+        self.layout.addRow(QLabel("Active Hypervisor"), self.groupLayout)
 
         self.formGroupBox.setLayout(self.layout)
 
@@ -159,7 +175,11 @@ class ConfigurationDialog(QDialog):
             
             self.s.writeConfig("EXPERIMENTS", "EXPERIMENTS_PATH", self.experimentPathLineEdit.text())
             self.s.writeConfig("EXPERIMENTS", "TEMP_DATA_PATH", self.temporaryPathLineEdit.text())
-            self.s.writeConfig("CONNECTIONS", "HANDLER", self.connectionshPathLineEdit.text())
+
+            if self.guacHandlerRadio.isChecked():
+                self.s.writeConfig("CONNECTIONS", "HANDLER", "GUAC")
+            elif self.proxmoxHandlerRadio.isChecked():
+                self.s.writeConfig("CONNECTIONS", "HANDLER", "PROXMOX")
 
             if self.vboxRadio.isChecked():
                 self.s.writeConfig("HYPERVISOR", "ACTIVE", "VBOX")

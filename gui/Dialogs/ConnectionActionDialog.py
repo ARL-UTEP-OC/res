@@ -55,7 +55,10 @@ class ConnectionActionDialog(QDialog):
         self.layout = QFormLayout()
         self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
         self.experimentHostnameLineEdit.setEnabled(False)
-        self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.layout.addRow(QLabel("PROXMOX Server URL:"), self.experimentHostnameLineEdit)
+        else:
+            self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
         self.hostnameLineEdit = QLineEdit(self.rdpBrokerHostname)
         self.hostnameLineEdit.setEnabled(False)
         self.layout.addRow(QLabel("rDisplay Server URL:"), self.hostnameLineEdit)
