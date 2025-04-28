@@ -88,9 +88,9 @@ class Engine:
         #build the parser
         self.buildParser()
     
-    def setRemoteCreds(self, refresh, username, password):
+    def setRemoteCreds(self, configname, refresh, username, password):
         logging.debug("setRemoteCreds(): instantiated")
-        self.vmManage.setRemoteCreds(refresh, username, password)
+        self.experimentManage.setRemoteCreds(configname, refresh, username, password)
 
     def engineStatusCmd(self, args):
         logging.debug("engineStatusCmd(): instantiated")
@@ -842,6 +842,12 @@ class Engine:
                 cmd = shlex.split(cmd, posix=False)
             r = self.parser.parse_args(cmd)
             logging.debug("execute(): returning result: " + str(r))
+
+            #on any engine command, see if we can initialize the vmmanager (if username/pass is provided) because it's so critical
+            if self.experimentManage.isInitialized() == False:
+                if r.configname and r.username and r.password:
+                    self.setRemoteCreds(r.configname, True, r.username, r.password)
+
             return r.func(r)
         except argparse.ArgumentError as err:
             logging.error(err.message, '\n', err.argument_name)	

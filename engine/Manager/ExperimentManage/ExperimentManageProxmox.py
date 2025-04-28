@@ -40,8 +40,7 @@ class ExperimentManageProxmox(ExperimentManage):
         logging.info("ProxmoxManage.setRemoteCreds(): Initializing ProxmoxManage; collecting VM information...")
         if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
             self.proxapi, self.nodename = self.getProxAPI(configname, username, password)
-            sshuser = username[:-4]
-            self.proxssh = self.getProxSSH(configname, username=sshuser, password=password)
+            self.proxssh = self.getProxSSH(configname, username=username, password=password)
             if refresh:
                 self.vmManage.refreshAllVMInfo(self.proxapi, self.nodename)
                 result = self.vmManage.getManagerStatus()["writeStatus"]
