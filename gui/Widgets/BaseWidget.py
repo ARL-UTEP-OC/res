@@ -105,7 +105,10 @@ class BaseWidget(QtWidgets.QWidget):
         self.baseGroupNameHorBox.setObjectName("baseGroupNameHorBox")
         self.baseGroupNameLabel = QtWidgets.QLabel()
         self.baseGroupNameLabel.setObjectName("baseGroupNameLabel")
-        self.baseGroupNameLabel.setText("Base Group Name:")
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.baseGroupNameLabel.setText("Proxmox Nodename:")
+        else:
+            self.baseGroupNameLabel.setText("Base Group Name:")
 
         self.baseGroupNameHorBox.addWidget(self.baseGroupNameLabel)
         self.baseGroupNameLineEdit = QtWidgets.QLineEdit()

@@ -3,12 +3,15 @@ import time
 import sys, traceback
 import threading
 import json
-import os
 from engine.Manager.ExperimentManage.ExperimentManage import ExperimentManage
 from engine.Manager.VMManage.VMManage import VMManage
 from engine.Manager.VMManage.ProxmoxManage import ProxmoxManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from engine.Configuration.SystemConfigIO import SystemConfigIO
+from proxmoxer import ProxmoxAPI
+from proxmoxer.core import ResourceException
+from proxmoxer.backends import ssh_paramiko
+
 
 class ExperimentManageProxmox(ExperimentManage):
     def __init__(self, vmManage):
@@ -21,6 +24,90 @@ class ExperimentManageProxmox(ExperimentManage):
         self.max_createjobs = self.cf.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS']
         self.snap_waittime = self.cf.getConfig()['PROXMOX']['VMANAGE_SNAPWAITTIME']
         self.vmstatus = {}
+
+        self.proxapi = None
+        self.nodename = None
+        self.proxssh = None
+        self.sshusername = None
+        self.sshpassword = None
+        self.initialized = False
+            
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
+
+    def setRemoteCreds(self, configname, refresh=False, username=None, password=None):
+        logging.info("ProxmoxManage.setRemoteCreds(): Initializing ProxmoxManage; collecting VM information...")
+        if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
+            self.proxapi, self.nodename = self.getProxAPI(configname, username, password)
+            sshuser = username[:-4]
+            self.proxssh = self.getProxSSH(configname, username=sshuser, password=password)
+            if refresh:
+                self.vmManage.refreshAllVMInfo(self.proxapi, self.nodename)
+                result = self.vmManage.getManagerStatus()["writeStatus"]
+                while result != self.vmManage.MANAGER_IDLE:
+                #waiting for manager to finish query...
+                    result = self.vmManage.getManagerStatus()["writeStatus"]
+                    time.sleep(.1)
+                self.initialized = True
+        logging.info("ProxmoxManage.setRemoteCreds(): Done...")
+
+    def getProxAPI(self, configname, username=None, password=None):
+        logging.debug("ProxmoxManage: getProxAPI(): instantiated")
+        try:
+            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            server = vmHostname
+            self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                if len(rsplit.split(":")) > 1:
+                    port = rsplit.split(":")[1].split("/")[0]
+                server = rsplit.split("/")[0]
+
+            if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+            elif self.proxapi != None and username != None and password != None and username.strip() != "" and password.strip() != "":
+                self.proxapi = None
+                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
+
+            return self.proxapi, self.nodename
+        except Exception:
+            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.proxapi = None
+            return None
+
+    def getProxSSH(self, configname, username=None, password=None):
+        logging.debug("ProxmoxManage: getProxSSH(): instantiated")
+        try:
+            
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            server = vmHostname
+            if len(username) > 4:
+                user = username[:-4]
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                server = rsplit.split("/")[0]
+                server = server.split(":")[0]
+            if self.proxssh == None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+                self.sshusername = user
+                self.sshpassword = password
+            elif self.proxssh != None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                self.proxssh = None
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+                self.sshusername = user
+                self.sshpassword = password
+            return self.proxssh
+        except Exception:
+            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.proxssh = None
+            return None
 
     #abstractmethod
     def createExperiment(self, configname, itype="", name="", username=None, password=None):
@@ -37,7 +124,8 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-            # status = self.vmManage.getManagerStatus()["writeStatus"]
+            proxapi, nodename = self.getProxAPI(configname, username, password)
+            proxssh = self.getProxSSH(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys():
                     vmName = vm
@@ -68,7 +156,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.debug("runCreateExperiment(): setting up vrdp for " + cloneVMName)
                                 vrdpPort = str(cloneinfo["vrdpPort"])
 
-                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, username=username, password=password)
+                            self.vmManage.cloneVMConfigAll(vmName, cloneVMName, cloneSnapshots, linkedClones, cloneGroupName, internalnets, vrdpPort, False, proxapi, nodename, proxssh, username, password)
                             logging.info("vmname: " + vmName + " cloneVMName: " + cloneVMName )
                             status = self.vmManage.getManagerStatus()["writeStatus"]
                             while status > int(self.max_createjobs):
@@ -87,7 +175,7 @@ class ExperimentManageProxmox(ExperimentManage):
             logging.debug("runCreateExperiment(): finished setting up " + str(numclones) + " clones")
             logging.debug("runCreateExperiment(): applying network configuration")
             print("runCreateExperiment(): applying network configuration")
-            self.vmManage.refreshNetwork(username=username, password=password)
+            self.vmManage.refreshNetwork(proxapi, nodename)
             logging.debug("runCreateExperiment(): Complete...")
             print("runCreateExperiment(): Complete...")
         except Exception:
@@ -111,17 +199,18 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, "", "", rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
 
             for vm in clonevmjson.keys():
                 logging.debug("refreshExperimentVMInfo(): working with vm: " + str(vm))
-                self.vmManage.refreshVMInfo(vm, username=username, password=password)
+                self.vmManage.refreshVMInfo(vm, None, proxapi, nodename)
                 #get names for clones
                 for cloneinfo in clonevmjson[vm]:
                         cloneVMName = cloneinfo["name"]
                         if cloneVMName not in validvmnames:
                             continue
                         logging.debug("refreshExperimentVMInfo(): Refreshing: " + str(cloneVMName))
-                        self.vmManage.refreshVMInfo(cloneVMName, username=username, password=password)
+                        self.vmManage.refreshVMInfo(cloneVMName, None, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager refresh vm to finish reading/writing...
                 time.sleep(.1)
@@ -150,6 +239,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys(): 
                     vmName = vm
@@ -165,7 +255,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.error("runStartExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runStartExperiment(): Starting: " + str(vmName))
-                            self.vmManage.startVM(cloneVMName, username=username, password=password)
+                            self.vmManage.startVM(cloneVMName, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
             #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
@@ -200,7 +290,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStartupCmds.append(mcmd[1])
                                 logging.debug("runStartExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStartupCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, username=username, password=password)
+                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, proxapi, nodename)
             logging.debug("runStartExperiment(): Complete...")
         except Exception:
             logging.error("runStartExperiment(): Error in runStartExperiment(): An error occured ")
@@ -223,6 +313,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys():
                     vmName = vm
@@ -253,7 +344,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStartupCmds.append(mcmd[1])
                                 logging.debug("runGuestCmdsExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStartupCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, username=username, password=password)
+                                self.vmManage.guestCommands(cloneVMName, orderedStartupCmds, startupDelay, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager start vm to finish reading/writing...
                 time.sleep(.1)
@@ -279,6 +370,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys():
                     vmName = vm
@@ -309,7 +401,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                         mcmd = (mcmd[0],mcmd[1].replace("{{RES_CloneNumber}}",str(i)))
                                         orderedStoredCmds.append(mcmd[1])
                                 logging.debug("runGuestStoredCmdsExperiment(): sending command(s) for " + str(cloneVMName) + str(orderedStoredCmds))
-                                self.vmManage.guestCommands(cloneVMName, orderedStoredCmds, storedDelay, username=username, password=password)
+                                self.vmManage.guestCommands(cloneVMName, orderedStoredCmds, storedDelay, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager to finish reading/writing...
                 time.sleep(.1)
@@ -337,6 +429,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys(): 
                     vmName = vm
@@ -352,7 +445,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.error("runSuspendExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSuspendExperiment(): Suspending: " + str(vmName))
-                            self.vmManage.suspendVM(cloneVMName, username=username, password=password)
+                            self.vmManage.suspendVM(cloneVMName, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager suspend vm to finish reading/writing...
                 time.sleep(.1)
@@ -380,6 +473,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys(): 
                     vmName = vm
@@ -395,7 +489,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.error("runPauseExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runPauseExperiment(): Pausing: " + str(vmName))
-                            self.vmManage.pauseVM(cloneVMName, username=username, password=password)
+                            self.vmManage.pauseVM(cloneVMName, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager pause vm to finish reading/writing...
                 time.sleep(.1)
@@ -423,6 +517,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for i in range(1, numclones + 1):
                 for vm in clonevmjson.keys(): 
                     vmName = vm
@@ -438,7 +533,7 @@ class ExperimentManageProxmox(ExperimentManage):
                                 logging.error("runSnapshotExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                                 continue
                             logging.debug("runSnapshotExperiment(): Snapshotting: " + str(vmName))
-                            self.vmManage.snapshotVM(cloneVMName, username=username, password=password)
+                            self.vmManage.snapshotVM(cloneVMName, proxapi, nodename)
                             status = self.vmManage.getManagerStatus()["writeStatus"]
                             #if snaps are taken too fast, the lock on /etc/pve/ will cause an error... need a wait time in-between
                             time.sleep(float(self.snap_waittime))
@@ -469,6 +564,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for vm in clonevmjson.keys(): 
                 vmName = vm
                 logging.debug("runStopExperiment(): working with vm: " + str(vmName))
@@ -482,7 +578,7 @@ class ExperimentManageProxmox(ExperimentManage):
                         logging.error("runStopExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runStopExperiment(): Stopping: " + str(vmName))
-                    self.vmManage.stopVM(cloneVMName, username=username, password=password)
+                    self.vmManage.stopVM(cloneVMName, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
@@ -510,6 +606,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             #if itype and name are "" (remove all), then also remove the network adaptors
             removeAdaptors = False
             removeUnusedLVM = False
@@ -530,9 +627,9 @@ class ExperimentManageProxmox(ExperimentManage):
                         logging.error("runRemoveExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRemoveExperiment(): Removing: " + str(cloneVMName))
-                    self.vmManage.removeVM(cloneVMName, username=username, password=password)
+                    self.vmManage.removeVM(cloneVMName, proxapi, nodename)
                     if removeAdaptors:
-                        self.vmManage.removeNetworks(networks)
+                        self.vmManage.removeNetworks(networks, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager stop vm to finish reading/writing...
                 time.sleep(.1)
@@ -543,7 +640,7 @@ class ExperimentManageProxmox(ExperimentManage):
                 # self.vmManage.runRemoteCmds(["lvscan  | grep inactive | awk -F \"'\" '{print $2}' | xargs lvremove"])
                 pass
             #now update the network configurations
-            self.vmManage.refreshNetwork()
+            self.vmManage.refreshNetwork(proxapi, nodename)
         except Exception:
             logging.error("runRemoveExperiment(): Error in runRemoveExperiment(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -567,6 +664,7 @@ class ExperimentManageProxmox(ExperimentManage):
             rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
             clonevmjson, numclones = rolledoutjson
             validvmnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            proxapi, nodename = self.getProxAPI(configname, username, password)
             for vm in clonevmjson.keys(): 
                 vmName = vm
                 logging.debug("runRestoreExperiment(): working with vm: " + str(vmName))
@@ -580,7 +678,7 @@ class ExperimentManageProxmox(ExperimentManage):
                         logging.error("runRestoreExperiment(): VM Name: " + str(vmName) + " does not exist; skipping...")
                         continue
                     logging.debug("runRestoreExperiment(): Restoring latest for : " + str(cloneVMName))
-                    self.vmManage.restoreLatestSnapVM(cloneVMName, username=username, password=password)
+                    self.vmManage.restoreLatestSnapVM(cloneVMName, proxapi, nodename)
                     while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                         #waiting for vmmanager stop vm to finish reading/writing...
                         time.sleep(.1)

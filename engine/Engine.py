@@ -51,21 +51,15 @@ class Engine:
             elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManage()
             else: 
-                if username != None and password != None:
-                    self.vmManage = ProxmoxManage(True, username, password)
-                else:
-                    self.vmManage = ProxmoxManage(False)
+                self.vmManage = ProxmoxManage()
         else:
             if c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
                 self.vmManage = VBoxManageWin(True)
             elif c.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
                 self.vmManage = VMwareManageWin()
             else:
-                if username != None and password != None:
-                    self.vmManage = ProxmoxManage(True, username, password)
-                else:
-                    #if this is the case, then the manager will have to be initialized later
-                    self.vmManage = ProxmoxManage(False)
+                self.vmManage = ProxmoxManage()
+
         #Create the ConnectionManage
         if c.getConfig()['CONNECTIONS']['HANDLER'] == 'PROXMOX':
             self.connectionManage = ConnectionManageProxVNC()
@@ -493,27 +487,6 @@ class Engine:
         self.engineParser.add_argument('status', help='retrieve engine status')
         self.engineParser.set_defaults(func=self.engineStatusCmd)
 
-#-----------VM Manage
-        self.vmManageParser = self.subParsers.add_parser('vm-manage')
-        self.vmManageSubParsers = self.vmManageParser.add_subparsers(help='manage vm')
-
-        self.vmStatusParser = self.vmManageSubParsers.add_parser('vmstatus', help='retrieve vm status')
-        self.vmStatusParser.add_argument('vmName', metavar='<vm name>', action="store",
-                                           help='name of vm to retrieve status')
-        self.vmStatusParser.set_defaults(func=self.vmManageVMStatusCmd)
-
-        self.vmMgrStatusParser = self.vmManageSubParsers.add_parser('mgrstatus', help='retrieve manager status')
-        self.vmMgrStatusParser.set_defaults(func=self.vmManageMgrStatusCmd)
-
-        self.vmRefreshParser = self.vmManageSubParsers.add_parser('refresh', help='retreive vm information')
-        self.vmRefreshParser.add_argument('vmName', metavar='<vm name>', action="store", default="all",
-                                           help='name of vm to retrieve status')
-        self.vmRefreshParser.add_argument('--username', metavar='<username>', action="store",
-                                          help='Username for connecting to host')
-        self.vmRefreshParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')                                  
-        self.vmRefreshParser.set_defaults(func=self.vmManageRefreshCmd)
-
 # -----------Packager
         self.packageManageParser = self.subParsers.add_parser('packager')
         self.packageManageSubParsers = self.packageManageParser.add_subparsers(help='manage packaging of experiments')
@@ -869,10 +842,6 @@ class Engine:
                 cmd = shlex.split(cmd, posix=False)
             r = self.parser.parse_args(cmd)
             logging.debug("execute(): returning result: " + str(r))
-            #on any engine command, see if we can initialize the vmmanager (if username/pass is provided) because it's so critical
-            if self.vmManage.isInitialized() == False:
-                if r.username and r.password:
-                    self.setRemoteCreds(True, r.username, r.password)
             return r.func(r)
         except argparse.ArgumentError as err:
             logging.error(err.message, '\n', err.argument_name)	
