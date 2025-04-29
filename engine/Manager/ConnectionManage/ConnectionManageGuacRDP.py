@@ -113,9 +113,9 @@ class ConnectionManageGuacRDP(ConnectionManage):
             self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
 
     #abstractmethod
-    def clearAllConnections(self, guacHostname, username, password):
+    def clearAllConnections(self, configname, guacHostname, username, password):
         logging.debug("clearAllConnections(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(guacHostname, username, password))
+        t = threading.Thread(target=self.runClearAllConnections, args=(configname, guacHostname, username, password))
         t.start()
         return 0
 
@@ -381,7 +381,6 @@ class ConnectionManageGuacRDP(ConnectionManage):
         logging.debug("getConnectionManageStatus(): instantiated")
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REFRESHING
         try:
-
             url_path = "/"
             if guacHostname.startswith("http://"):
                 guacConnMethod = 'http'

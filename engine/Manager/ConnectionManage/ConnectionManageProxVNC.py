@@ -1,10 +1,10 @@
 import logging
 import sys, traceback
 import threading
-import shlex
 import os
 import csv
 import time
+import datetime
 from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
 from proxmoxer import ProxmoxAPI
 from proxmoxer.core import ResourceException
@@ -28,45 +28,62 @@ class ConnectionManageProxVNC(ConnectionManage):
         self.sshusername = None
         self.sshpassword = None
 
-        if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
-            self.setRemoteCreds(username, password)
-        self.setRemoteCreds(username, password)
-
-    def setRemoteCreds(self, username=None, password=None):
-        logging.info("ProxmoxManage.setRemoteCreds(): Initializing ProxmoxManage; collecting VM information...")
-        if username != None and password != None and username.strip() != "" and password.strip() != "" and len(username) > 4:
-            self.proxapi = self.getProxAPI(username=username, password=password)
-            sshuser = username[:-4]
-            self.proxssh = self.getProxSSH(username=sshuser, password=password)
-        logging.info("ProxmoxManage.setRemoteCreds(): Done...")
-
-    def getProxAPI(self, username=None, password=None):
+    def getProxAPI(self, configname, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
-            #instead get this from experiment config file
-            port = self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT']
-            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
-            # vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
-            # server = vmHostname
-
-            # splithostname = vmHostname.split("://")
-            # if len(splithostname) > 1:
-            #     rsplit = splithostname[1]
-            #     if len(rsplit.split(":")) > 1:
-            #         port = rsplit.split(":")[1].split("/")[0]
-            #     server = rsplit.split("/")[0]
+            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            server = vmHostname
+            self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                if len(rsplit.split(":")) > 1:
+                    port = rsplit.split(":")[1].split("/")[0]
+                server = rsplit.split("/")[0]
 
             if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
             elif self.proxapi != None and username != None and password != None and username.strip() != "" and password.strip() != "":
                 self.proxapi = None
                 self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
-            return self.proxapi
+
+            return self.proxapi, self.nodename
         except Exception:
             logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxapi = None
+            return None
+
+    def getProxSSH(self, configname, username=None, password=None):
+        logging.debug("ProxmoxManage: getProxSSH(): instantiated")
+        try:
+            
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            server = vmHostname
+            user = None
+            if len(username) > 4:
+                user = username[:-4]
+            splithostname = vmHostname.split("://")
+            if len(splithostname) > 1:
+                rsplit = splithostname[1]
+                server = rsplit.split("/")[0]
+                server = server.split(":")[0]
+            if self.proxssh == None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+                self.sshusername = user
+                self.sshpassword = password
+            elif self.proxssh != None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                self.proxssh = None
+                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+                self.sshusername = user
+                self.sshpassword = password
+            return self.proxssh
+        except Exception:
+            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.proxssh = None
             return None
 
     def executeSSH(self, command, sudo=True):
@@ -81,36 +98,6 @@ class ConnectionManageProxVNC(ConnectionManage):
         return {'out': stdout.readlines(), 
                 'err': stderr.readlines(),
                 'retval': stdout.channel.recv_exit_status()}        
-
-    def getProxSSH(self, username=None, password=None):
-        logging.debug("ProxmoxManage: getProxSSH(): instantiated")
-        try:
-            port = self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT']
-            server = self.s.getConfig()['PROXMOX']['VMANAGE_SERVER']
-            
-            # vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
-            # server = vmHostname
-            # splithostname = vmHostname.split("://")
-            # if len(splithostname) > 1:
-            #     rsplit = splithostname[1]
-            #     server = rsplit.split("/")[0]
-
-            if self.proxssh == None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
-                self.sshusername = username
-                self.sshpassword = password
-            elif self.proxssh != None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxssh = None
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=port, user=username,password=password)
-                self.sshusername = username
-                self.sshpassword = password
-            return self.proxssh
-        except Exception:
-            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.proxssh = None
-            return None
 
     def basic_blocking_task_status(self, proxmox_api, task_id, caller=""):
         logging.debug("ProxmoxManage: basic_blocking_task_status(): instantiated by " + str(caller))
@@ -136,16 +123,11 @@ class ConnectionManageProxVNC(ConnectionManage):
         try:
             #get accessors to the proxmox api and ssh
             try:
-                nodename = self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = self.getProxAPI(musername, mpassword)
+                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
                 if proxapi == None:
                     return None
 
-                if musername != None and len(musername) > 4 and mpassword != None and musername.strip() != "" and mpassword.strip() != "":
-                    sshuser = musername[:-4]
-                    proxssh = self.getProxSSH(username=sshuser,password=mpassword)
-                else:
-                    proxssh = self.getProxSSH(musername, mpassword)
+                proxssh = self.getProxSSH(configname, username=musername,password=mpassword)
                 if proxssh == None:
                     return None
             except Exception:
@@ -306,28 +288,23 @@ class ConnectionManageProxVNC(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllConnections(self, proxHostname, username, password, exceptions=[]):
+    def clearAllConnections(self, configname, proxHostname, username, password, exceptions=[]):
         logging.debug("clearAllConnections(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(proxHostname, username, password, exceptions))
+        t = threading.Thread(target=self.runClearAllConnections, args=(configname, proxHostname, username, password, exceptions))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runClearAllConnections(self, proxHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
+    def runClearAllConnections(self, configname, proxHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
         logging.debug("runClearAllConnections(): instantiated")
         try:
             #get accessors to the proxmox api and ssh
             try:
-                nodename = self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME']
-                proxapi = self.getProxAPI(musername, mpassword)
+                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
                 if proxapi == None:
                     return None
 
-                if musername != None and len(musername) > 4 and mpassword != None and musername.strip() != "" and mpassword.strip() != "":
-                    sshuser = musername[:-4]
-                    proxssh = self.getProxSSH(username=sshuser,password=mpassword)
-                else:
-                    proxssh = self.getProxSSH(musername, mpassword)
+                proxssh = self.getProxSSH(configname, musername, mpassword)
                 if proxssh == None:
                     return None
             except Exception:
@@ -477,15 +454,11 @@ class ConnectionManageProxVNC(ConnectionManage):
 
             #get accessors to the proxmox api and ssh
             try:
-                proxapi = self.getProxAPI(musername, mpassword)
+                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
                 if proxapi == None:
                     return None
 
-                if musername != None and len(musername) > 4 and mpassword != None and musername.strip() != "" and mpassword.strip() != "":
-                    sshuser = musername[:-4]
-                    proxssh = self.getProxSSH(username=sshuser,password=mpassword)
-                else:
-                    proxssh = self.getProxSSH(musername, mpassword)
+                proxssh = self.getProxSSH(configname, musername, mpassword)
                 if proxssh == None:
                     return None
             except Exception:
@@ -624,17 +597,121 @@ class ConnectionManageProxVNC(ConnectionManage):
         logging.debug("getConnectionManageStatus(): instantiated")
         return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : self.usersConnsStatus}
     
-    def getConnectionManageRefresh(self, proxHostname, username, password):
+    def getConnectionManageRefresh(self, configname, proxHostname, musername, mpassword):
         logging.debug("getConnectionManageStatus(): instantiated")
         try:
             self.lock.acquire()
             self.usersConnsStatus.clear()
+
+            # if pool name with username exists, then "connection exists"
+            # check tasks and look for those without end time; if type is vnxproxy, get username; that user is connected
+            try:
+                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
+                if proxapi == None:
+                    return None
+
+                proxssh = self.getProxSSH(configname, musername, mpassword)
+                if proxssh == None:
+                    return None
+            except Exception:
+                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to connect to proxmox")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            
+            #get vmid -> vmname mapping
+            vmid_name = {}
+            try:
+                allinfo = proxapi.cluster.resources.get(type='vm')
+            except Exception:
+                logging.error("Error in getConnectionManageRefresh: An error occured when trying to get cluster info")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            for vmiter in allinfo:
+                #GET UUID
+                vmname = vmiter['name']
+                vmid = vmiter['vmid']
+                vmid_name[str(vmid)] = vmname
+
+            #get the list of all pools
+            try:
+                res = proxapi.pools.get()
+                pools = {}
+                for pool_info in res:
+                    pool_id = pool_info['poolid']
+                    pools[pool_id] = []
+                    try:
+                        members_ds = proxapi.pools(pool_id).get()
+                        for member in members_ds['members']:
+                            pools[pool_id].append(vmid_name[str(member['vmid'])])
+                    except ResourceException:
+                        logging.warning("runClearAllConnections(): Pool " + pool_id + " does not exist, skipping.")
+                        # exc_type, exc_value, exc_traceback = sys.exc_info()
+                        # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
+                    except Exception:
+                        logging.error("runClearAllConnections(): error when trying to remove pool: " + pool_id)
+                        # exc_type, exc_value, exc_traceback = sys.exc_info()
+                        # traceback.print_exception(exc_type, exc_value, exc_traceback)
+            except Exception:
+                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+            #get task list
+            try:
+                #res = proxapi.nodes(nodename).tasks.get()
+                res = proxapi.cluster.tasks.get()
+                connected = {}
+                for task in res:
+                    if task['type'] != "vncproxy" or task['node'] != nodename:
+                        continue
+                    taskvmid = None
+                    taskvmname = None
+                    if 'id' in task:
+                        taskvmid = task['id']
+                        taskvmname = vmid_name[taskvmid]
+                    else:
+                        continue
+                    taskuser = task['user']
+                    taskstarttime = None
+                    if 'starttime' in task:
+                        taskstarttime = task['starttime']
+                    taskendtime = 'Active'
+                    if 'endtime' in task:
+                        taskendtime = task['endtime']
+                    if len(taskuser) > 4 and taskuser[-4:] == "@pam":
+                        taskuser = task['user'][:-4]
+                    if (taskuser, taskvmname) in connected:
+                        #since these come from logs, there may be more than one connection. Take the later one.
+                        if taskstarttime != None and (connected[(taskuser,taskvmname)]['taskendtime'] != "Active" and taskstarttime > connected[(taskuser,taskvmname)]['taskendtime']) or taskendtime == "Running":
+                            connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
+                        #else, do nothing, leave the previous
+                    else:
+                        connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
+                            
+            except Exception:
+                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+            for username in pools.keys():
+                for vmname in pools[username]:
+                    #if user/vmname is in connected, then user is connected
+                    user_perm = "Found"
+                    active = "No Record"
+                    if (username, vmname) in connected:
+                        if connected[(username, vmname)]['taskendtime'] != 'Active':
+                            active = datetime.datetime.fromtimestamp(connected[(username, vmname)]['taskendtime']).strftime("%Y-%m-%d %H:%M:%S")
+                        else:
+                            active = 'Active'
+                        
+                    self.usersConnsStatus[(username,vmname)] = {"user_status": user_perm, "connStatus": active}
             
         except Exception as e:
-            logging.error("Error in getConnectionManageStatus(). Did not remove connection or relation!")
+            logging.error("Error in getConnectionManageRefresh(). Could not refresh connections!")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             trace_back = traceback.extract_tb(exc_traceback)
-            #traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
             return None
         finally:
             self.lock.release()

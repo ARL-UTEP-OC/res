@@ -13,8 +13,9 @@ import logging
 class WatchRetrieveThread(QThread):
     watchsignal = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject')
 
-    def __init__(self, args):
+    def __init__(self, configname, args):
         QThread.__init__(self)
+        self.configname = configname
         self.args = args
 
     # run method gets called when we start the thread
@@ -31,7 +32,7 @@ class WatchRetrieveThread(QThread):
                 self.status = -1
                 return None
             #format: "conns refresh <ip> <user> <pass> <path>"
-            cmd = "conns " + " refresh --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+            cmd = "conns " + " refresh " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
@@ -63,9 +64,10 @@ class WatchRetrieveThread(QThread):
             return None
 
 class ConnectionRetrievingDialog(QDialog):
-    def __init__(self, parent, args):
+    def __init__(self, parent, configname, args):
         logging.debug("ConnectionRetrievingDialog(): instantiated")
         super(ConnectionRetrievingDialog, self).__init__(parent)     
+        self.configname = configname
         self.args = args
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         
@@ -91,7 +93,7 @@ class ConnectionRetrievingDialog(QDialog):
         self.status = -1
             
     def exec_(self):
-        t = WatchRetrieveThread(self.args)
+        t = WatchRetrieveThread(self.configname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
         result = super(ConnectionRetrievingDialog, self).exec_()

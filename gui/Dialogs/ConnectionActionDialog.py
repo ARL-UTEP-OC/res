@@ -142,7 +142,7 @@ class ConnectionActionDialog(QDialog):
                 pass
             if self.actionname == "Refresh":
                 self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                crd = ConnectionRetrievingDialog(self.parent, self.args).exec_()
+                crd = ConnectionRetrievingDialog(self.parent, self.configname, self.args).exec_()
                 return crd
             elif self.actionname == "Open":
                 self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())

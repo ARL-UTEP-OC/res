@@ -55,7 +55,7 @@ class MainApp(QWidget):
         self.ec = ExperimentConfigIO.getInstance()
         self.statusBar = QStatusBar()
         
-        self.setMinimumSize(670,565)
+        self.setMinimumSize(930,565)
         quit = QAction("Quit", self)
         quit.triggered.connect(self.closeEvent)
         if self.cf.getConfig()['HYPERVISOR']['ACTIVE'] == 'VBOX':
@@ -63,7 +63,7 @@ class MainApp(QWidget):
         elif self.cf.getConfig()['HYPERVISOR']['ACTIVE'] == 'VMWARE':
             self.setWindowTitle("ARL South RES v0.9 (VMware Workstation Active)")
         elif self.cf.getConfig()['HYPERVISOR']['ACTIVE'] == 'PROXMOX':
-            self.setWindowTitle("ARL South RES v0.9 (PROXMOX (remote) Active)")
+            self.setWindowTitle("ARL South RES v0.9 (PROXMOX Active)")
 
         self.tabWidget = QtWidgets.QTabWidget()
         self.tabWidget.setGeometry(QtCore.QRect(0, 15, 668, 565))

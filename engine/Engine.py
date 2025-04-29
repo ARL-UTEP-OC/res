@@ -88,7 +88,7 @@ class Engine:
         #build the parser
         self.buildParser()
     
-    def setRemoteCreds(self, configname, refresh, username, password):
+    def setRemoteCredsExperimentManage(self, configname, refresh, username, password):
         logging.debug("setRemoteCreds(): instantiated")
         self.experimentManage.setRemoteCreds(configname, refresh, username, password)
 
@@ -155,10 +155,11 @@ class Engine:
 
     def connectionRefreshCmd(self, args):
         hostname = args.hostname
+        configname = args.configname
         username = args.username
         password = args.password
         #query connection manager status and then return it here
-        return self.connectionManage.getConnectionManageRefresh(hostname, username, password)
+        return self.connectionManage.getConnectionManageRefresh(configname, hostname, username, password)
         
     def connectionCreateCmd(self, args):
         logging.debug("connectionCreateCmd(): instantiated")
@@ -200,11 +201,12 @@ class Engine:
     def connectionClearAllCmd(self, args):
         logging.debug("connectionClearAllCmd(): instantiated")
         #will remove connections as specified in configfile
+        configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password
         
-        return self.connectionManage.clearAllConnections(hostname, username, password)
+        return self.connectionManage.clearAllConnections(configname, hostname, username, password)
 
     def connectionOpenCmd(self, args):
         logging.debug("connectionOpenCmd(): instantiated")
@@ -526,6 +528,8 @@ class Engine:
         self.connectionManageStatusParser.set_defaults(func=self.connectionStatusCmd)
 
         self.connectionManageRefreshParser = self.connectionManageSubParser.add_parser('refresh', help='retrieve all connection manager status')
+        self.connectionManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
+                                    help='path to config file')
         self.connectionManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
         self.connectionManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
@@ -579,6 +583,8 @@ class Engine:
         self.connectionManageRemoveParser.set_defaults(func=self.connectionRemoveCmd)
 
         self.connectionManageClearAllParser = self.connectionManageSubParser.add_parser('clear', help='Clear all connections in database')
+        self.connectionManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
+                                          help='path to config file')
         self.connectionManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where Connection host resides')
         self.connectionManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
@@ -844,9 +850,10 @@ class Engine:
             logging.debug("execute(): returning result: " + str(r))
 
             #on any engine command, see if we can initialize the vmmanager (if username/pass is provided) because it's so critical
-            if self.experimentManage.isInitialized() == False:
+            if cmd[0] == 'experiment' and self.experimentManage.isInitialized() == False:
+                logging.info("Initializing experiment manager -- reading vms...")
                 if r.configname and r.username and r.password:
-                    self.setRemoteCreds(r.configname, True, r.username, r.password)
+                    self.setRemoteCredsExperimentManage(r.configname, True, r.username, r.password)
 
             return r.func(r)
         except argparse.ArgumentError as err:
