@@ -864,11 +864,12 @@ class ProxmoxManage(VMManage):
             #check if vm is a template already, if not, make it one
             if self.vms[vmName].template == None:
                 istemplate = 0
-            else:
-                istemplate = self.vms[vmName].template
-            #return with an error, since vm has to be a template in order to do linked clones
+                #return with an error, since vm has to be a template in order to do linked clones
                 logging.error("runCloneVM(): attemping to do linked clone on non-template vm: " + vmName + " Convert to template first.")
                 return None
+            else:
+                istemplate = self.vms[vmName].template
+
             # if istemplate == 0:
             #     logging.error("VM: " + vmName + " is not a template.")
             #     return None
