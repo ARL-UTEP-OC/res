@@ -850,7 +850,7 @@ class Engine:
             logging.debug("execute(): returning result: " + str(r))
 
             #on any engine command, see if we can initialize the vmmanager (if username/pass is provided) because it's so critical
-            if cmd[0] == 'experiment' and self.experimentManage.isInitialized() == False:
+            if len(cmd) > 2 and cmd[0] == 'experiment' and self.experimentManage.isInitialized() == False:
                 logging.info("Initializing experiment manager -- reading vms...")
                 if r.configname and r.username and r.password:
                     self.setRemoteCredsExperimentManage(r.configname, True, r.username, r.password)

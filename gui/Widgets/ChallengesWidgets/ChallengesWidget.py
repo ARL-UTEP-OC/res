@@ -345,6 +345,14 @@ class ChallengesWidget(QtWidgets.QWidget):
                         QMessageBox.Ok)
             return
 
+        if s == None or s["usersChallengesStatus"] == {} or s["usersChallengesStatus"] == None:
+            logging.error("Could not retrieve challenges status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "No challenges found. If you think this is an error, check your credentials and connectivity",
+                        QMessageBox.Ok)
+            return None
+       
         self.usersChallengesStatus = s["usersChallengesStatus"]
         
         #Update all vm status in the subtrees

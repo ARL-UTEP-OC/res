@@ -351,7 +351,22 @@ class ExperimentActionsWidget(QtWidgets.QWidget):
         if s == None or s == QMessageBox.Cancel:
             logging.debug("ExperimentActionsWidget: refreshVMStatus(): Cancel was pressed")
             return
-
+        if (isinstance(s, dict) == False or "vmstatus" not in s):
+            logging.error("ExperimentActionsWidget: could not get status; perhaps credentials were incorrect or experiment does not exist")
+            logging.error("Could not retrieve experiment status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "Incorrect credentials or no connectivity",
+                        QMessageBox.Ok)            
+            return None
+        if s == None or s["vmstatus"] == {} or s["vmstatus"] == None:
+            logging.error("Could not retrieve experiment status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "No VMs found. If you think this is an error, check your credentials and connectivity",
+                        QMessageBox.Ok)
+            return None
+       
         self.vms = s["vmstatus"]
 
         #Update all vm status in the subtrees

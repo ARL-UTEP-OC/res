@@ -72,7 +72,7 @@ class ExperimentManageProxmox(ExperimentManage):
 
             return self.proxapi, self.nodename
         except Exception:
-            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox")
+            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxapi = None
@@ -102,7 +102,7 @@ class ExperimentManageProxmox(ExperimentManage):
                 self.sshpassword = password
             return self.proxssh
         except Exception:
-            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
+            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxssh = None
@@ -185,7 +185,7 @@ class ExperimentManageProxmox(ExperimentManage):
             self.writeStatus-=1
 
     def refreshExperimentVMInfo(self, configName, username=None, password=None):
-        logging.debug("refreshExperimentVMInfo: refreshAllVMInfo(): instantiated")      
+        logging.debug("refreshExperimentVMInfo: refreshExperimentVMInfo(): instantiated")      
         self.writeStatus+=1
         t = threading.Thread(target=self.runRefreshExperimentVMInfo, args=(configName,username, password))
         t.start()
@@ -193,29 +193,30 @@ class ExperimentManageProxmox(ExperimentManage):
         self.vmstatus = self.vmManage.getManagerStatus()["vmstatus"]
 
     def runRefreshExperimentVMInfo(self, configname, username=None, password=None):
-        logging.debug("refreshExperimentVMInfo(): instantiated")
+        logging.debug("runRefreshExperimentVMInfo(): instantiated")
         try:
-            rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-            clonevmjson, numclones = rolledoutjson
-            validvmnames = self.eco.getValidVMsFromTypeName(configname, "", "", rolledoutjson)
+            # rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
+            # clonevmjson, numclones = rolledoutjson
+            # validvmnames = self.eco.getValidVMsFromTypeName(configname, "", "", rolledoutjson)
             proxapi, nodename = self.getProxAPI(configname, username, password)
+            self.vmManage.refreshAllVMInfo(proxapi, nodename)
 
-            for vm in clonevmjson.keys():
-                logging.debug("refreshExperimentVMInfo(): working with vm: " + str(vm))
-                self.vmManage.refreshVMInfo(vm, None, proxapi, nodename)
-                #get names for clones
-                for cloneinfo in clonevmjson[vm]:
-                        cloneVMName = cloneinfo["name"]
-                        if cloneVMName not in validvmnames:
-                            continue
-                        logging.debug("refreshExperimentVMInfo(): Refreshing: " + str(cloneVMName))
-                        self.vmManage.refreshVMInfo(cloneVMName, None, proxapi, nodename)
+            # for vm in clonevmjson.keys():
+            #     logging.debug("runRefreshExperimentVMInfo(): working with vm: " + str(vm))
+            #     self.vmManage.refreshVMInfo(vm, None, proxapi, nodename)
+            #     #get names for clones
+            #     for cloneinfo in clonevmjson[vm]:
+            #             cloneVMName = cloneinfo["name"]
+            #             if cloneVMName not in validvmnames:
+            #                 continue
+            #             logging.debug("runRefreshExperimentVMInfo(): Refreshing: " + str(cloneVMName))
+            #             self.vmManage.refreshVMInfo(cloneVMName, None, proxapi, nodename)
             while self.vmManage.getManagerStatus()["writeStatus"] != VMManage.MANAGER_IDLE:
                 #waiting for vmmanager refresh vm to finish reading/writing...
                 time.sleep(.1)
-            logging.debug("refreshExperimentVMInfo(): Complete...")
+            logging.debug("runRefreshExperimentVMInfo(): Complete...")
         except Exception:
-            logging.error("refreshExperimentVMInfo(): Error in refreshExperimentVMInfo(): An error occured ")
+            logging.error("runRefreshExperimentVMInfo(): Error in runRefreshExperimentVMInfo(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
         finally:

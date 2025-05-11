@@ -345,7 +345,16 @@ class ConnectionWidget(QtWidgets.QWidget):
                         QMessageBox.Ok)
             return
 
+        if s == None or s["usersConnsStatus"] == {} or s["usersConnsStatus"] == None:
+            logging.error("Could not retrieve conns status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "No connections found. If you think this is an error, check your credentials and connectivity",
+                        QMessageBox.Ok)
+            return None
+
         self.usersConnsStatus = s["usersConnsStatus"]
+       
         
         #Update all vm status in the subtrees
         #First the "all" view

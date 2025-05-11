@@ -294,9 +294,8 @@ class ProxmoxManage(VMManage):
         print("Refreshing VM: " + vmName)
         try:
             self.readStatus = VMManage.MANAGER_READING
-            
             try:
-                ##TODO: instead, noly get the specific node data
+                ##TODO: instead, only get the specific vm data: id, template, nic, snapshot
                 allinfo = proxapi.cluster.resources.get(type='vm')
             except Exception:
                 logging.error("Error in runVMInfo(): An error occured when trying to get cluster info")
@@ -786,8 +785,7 @@ class ProxmoxManage(VMManage):
         if refreshVMInfo == True:
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            #runVMInfo obtains it's own lock
-            self.runVMInfo(vmName, proxapi, nodename)
+            self.runVMSInfo(proxapi, nodename)
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
         t = threading.Thread(target=self.runCloneVMConfigAll, args=(vmName, cloneName, cloneSnapshots, linkedClones, groupName, internalNets, vrdpPort, proxapi, nodename, proxssh, username, password))
@@ -842,7 +840,7 @@ class ProxmoxManage(VMManage):
         if refreshVMInfo == True:
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
-            self.runVMInfo(vmName, proxapi, nodename)
+            self.runVMSInfo(proxapi, nodename)
 
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
@@ -868,18 +866,22 @@ class ProxmoxManage(VMManage):
                 istemplate = 0
             else:
                 istemplate = self.vms[vmName].template
-            #convert to template (to allow linked clones)
-            if istemplate == 0:
-                try:
-                    res = proxapi.nodes(nodename)('qemu')(vmUUID)('template').post()
-                    self.basic_blocking_task_status(proxapi, res)
-                    self.vms[vmName].template = 1
-                    logging.info("runCloneVM(): Completed setting vm to template: " + str(res))
-                except Exception:
-                    print("Error in <>(): An error occured when trying set vm to template")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_exception(exc_type, exc_value, exc_traceback)
-                    exit -1
+            #return with an error, since vm has to be a template in order to do linked clones
+                logging.error("runCloneVM(): attemping to do linked clone on non-template vm: " + vmName + " Convert to template first.")
+                return None
+            # if istemplate == 0:
+            #     logging.error("VM: " + vmName + " is not a template.")
+            #     return None
+            #     try:
+            #         res = proxapi.nodes(nodename)('qemu')(vmUUID)('template').post()
+            #         self.basic_blocking_task_status(proxapi, res)
+            #         self.vms[vmName].template = 1
+            #         logging.info("runCloneVM(): Completed setting vm to template: " + str(res))
+            #     except Exception:
+            #         print("Error in <>(): An error occured when trying set vm to template")
+            #         exc_type, exc_value, exc_traceback = sys.exc_info()
+            #         traceback.print_exception(exc_type, exc_value, exc_traceback)
+            #         exit -1
 
             #get next free vmid
             try:

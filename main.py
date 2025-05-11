@@ -103,10 +103,10 @@ class MainApp(QWidget):
         self.experimentActionsWidget.setObjectName("experimentActionsWidget")
         self.tabWidget.addTab(self.experimentActionsWidget, "Experiment Actions")      
 
-        # Remote Connections Tab
+        # Remote Display Tab
         self.connectionWidget = ConnectionWidget(statusBar=self.statusBar)
         self.connectionWidget.setObjectName("connectionsWidget")
-        self.tabWidget.addTab(self.connectionWidget, "Remote Connections")
+        self.tabWidget.addTab(self.connectionWidget, "Remote Display")
         
         # Challenges Tab
         self.challengesWidget = ChallengesWidget(statusBar=self.statusBar)

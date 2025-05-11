@@ -7,12 +7,12 @@ import sys, traceback
 import csv
 import os
 
-def get_connection(server_url, username, password, realm_name, verify=True):
+def get_connection(server_url, username, password, realm_name="master"):
     keycloak_connection = KeycloakAdmin(server_url=server_url,
                         username=username,
                         password=password,
                         realm_name=realm_name,
-                        verify=verify)
+                        verify=True)
     return keycloak_connection
 
 def create_user(api_session, username, password, email="", email_ext="@fake.com"):
@@ -111,7 +111,7 @@ def get_users_fromfile(filename):
         #traceback.print_exception(exc_type, exc_value, exc_traceback)
         return None
 #URL, username, password, realm_name, client_id, verify
-api_session = get_connection(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], verify=True)
+api_session = get_connection(sys.argv[1], sys.argv[2], sys.argv[3])
 
 #print("calling get_users_fromfile()")
 path = "myfile.txt"

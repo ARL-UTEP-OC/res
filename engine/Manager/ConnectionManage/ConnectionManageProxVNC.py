@@ -49,7 +49,7 @@ class ConnectionManageProxVNC(ConnectionManage):
 
             return self.proxapi, self.nodename
         except Exception:
-            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox")
+            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxapi = None
@@ -80,7 +80,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                 self.sshpassword = password
             return self.proxssh
         except Exception:
-            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh")
+            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.proxssh = None
