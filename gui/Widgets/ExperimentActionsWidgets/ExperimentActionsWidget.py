@@ -330,7 +330,7 @@ class ExperimentActionsWidget(QtWidgets.QWidget):
         logging.debug("menuItemSelected(): instantiated")
         actionlabelname = self.sender().text()
         configname, itype, name = self.getTypeNameFromSelection()
-        ExperimentActions().experimentActionEvent(configname, actionlabelname, itype, name)
+        s = ExperimentActions().experimentActionEvent(self, configname, actionlabelname, itype, name)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + configname)
 
     def refreshVMStatus(self):
@@ -347,7 +347,26 @@ class ExperimentActionsWidget(QtWidgets.QWidget):
         while selectedItem.parent() != None:
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
-        s = VMRetrievingDialog(self, configname).exec_()
+        s = ExperimentActionDialog(self, configname, "Refresh", "", "").exec_()
+        if s == None or s == QMessageBox.Cancel:
+            logging.debug("ExperimentActionsWidget: refreshVMStatus(): Cancel was pressed")
+            return
+        if (isinstance(s, dict) == False or "vmstatus" not in s):
+            logging.error("ExperimentActionsWidget: could not get status; perhaps credentials were incorrect or experiment does not exist")
+            logging.error("Could not retrieve experiment status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "Incorrect credentials or no connectivity",
+                        QMessageBox.Ok)            
+            return None
+        if s == None or s["vmstatus"] == {} or s["vmstatus"] == None:
+            logging.error("Could not retrieve experiment status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "No VMs found. If you think this is an error, check your credentials and connectivity",
+                        QMessageBox.Ok)
+            return None
+       
         self.vms = s["vmstatus"]
 
         #Update all vm status in the subtrees

@@ -112,8 +112,8 @@ class ExperimentManageVBox(ExperimentManage):
             validvmnames = self.eco.getValidVMsFromTypeName(configname, "", "", rolledoutjson)
 
             for vm in clonevmjson.keys():
-                vmName = vm
-                logging.debug("refreshExperimentVMInfo(): working with vm: " + str(vmName))
+                logging.debug("refreshExperimentVMInfo(): working with vm: " + str(vm))
+                self.vmManage.refreshVMInfo(vm, username=username, password=password)
                 #get names for clones
                 for cloneinfo in clonevmjson[vm]:
                         cloneVMName = cloneinfo["name"]

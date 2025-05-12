@@ -60,7 +60,7 @@ class ConnectionWidget(QtWidgets.QWidget):
         self.refreshConnsButton.clicked.connect(self.refreshConnsStatus)
         self.refreshConnsButton.setEnabled(False)
         self.windowBoxVLayout.addWidget(self.refreshConnsButton)
-
+    
         self.windowBoxHLayout.addLayout(self.windowBoxVLayout)
         
         # Context menu
@@ -309,7 +309,7 @@ class ConnectionWidget(QtWidgets.QWidget):
         configname, itype, name = self.getTypeNameFromSelection()
         
         ##get server info
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         if vmHostname != None and rdpBrokerHostname != None:
             if users_file == None:
                 ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype=itype, name=name)
@@ -331,7 +331,7 @@ class ConnectionWidget(QtWidgets.QWidget):
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
 
-        vmHostname, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
         s = ConnectionActionDialog(self, configname, "Refresh", vmHostname, rdpBrokerHostname).exec_()
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:
@@ -345,7 +345,16 @@ class ConnectionWidget(QtWidgets.QWidget):
                         QMessageBox.Ok)
             return
 
+        if s == None or s["usersConnsStatus"] == {} or s["usersConnsStatus"] == None:
+            logging.error("Could not retrieve conns status: " + str(s))
+            QMessageBox.warning(self,
+                        "No Results",
+                        "No connections found. If you think this is an error, check your credentials and connectivity",
+                        QMessageBox.Ok)
+            return None
+
         self.usersConnsStatus = s["usersConnsStatus"]
+       
         
         #Update all vm status in the subtrees
         #First the "all" view

@@ -13,8 +13,9 @@ import logging
 class WatchRetrieveThread(QThread):
     watchsignal = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject')
 
-    def __init__(self, args):
+    def __init__(self, configname, args):
         QThread.__init__(self)
+        self.configname = configname
         self.args = args
 
     # run method gets called when we start the thread
@@ -25,13 +26,13 @@ class WatchRetrieveThread(QThread):
             e = Engine.getInstance()
             logging.debug("watchRetrieveStatus(): running: conns refresh")
             #e.execute("conns refresh")
-            if len(self.args) != 5:
+            if len(self.args) != 3:
                 logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                 self.status = -1
                 return None
-            #format: "conns refresh <ip> <user> <pass> <path> <method>"
-            cmd = "conns " + " refresh " + str(self.args[0]) + " " + str(self.args[1]) + " " + str(self.args[2]) + " " + str(self.args[3]) + " " + str(self.args[4])
+            #format: "conns refresh <ip> <user> <pass> <path>"
+            cmd = "conns " + " refresh " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
@@ -58,15 +59,15 @@ class WatchRetrieveThread(QThread):
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.watchsignal.emit("Error retrieving Conns.", None, True)
-            self.status = -1
-            return None
         finally:
+            self.status = -1
             return None
 
 class ConnectionRetrievingDialog(QDialog):
-    def __init__(self, parent, args):
+    def __init__(self, parent, configname, args):
         logging.debug("ConnectionRetrievingDialog(): instantiated")
         super(ConnectionRetrievingDialog, self).__init__(parent)     
+        self.configname = configname
         self.args = args
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         
@@ -92,7 +93,7 @@ class ConnectionRetrievingDialog(QDialog):
         self.status = -1
             
     def exec_(self):
-        t = WatchRetrieveThread(self.args)
+        t = WatchRetrieveThread(self.configname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
         result = super(ConnectionRetrievingDialog, self).exec_()

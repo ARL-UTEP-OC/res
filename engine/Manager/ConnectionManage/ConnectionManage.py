@@ -22,8 +22,8 @@ class ConnectionManage:
         POSIX = True
       
     def __init__(self):
-        self.readStatus = ConnectionManage.CONNECTION_MANAGE_UNKNOWN
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_UNKNOWN
+        self.readStatus = ConnectionManage.CONNECTION_MANAGE_IDLE
+        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_IDLE
 
     #abstractmethod
     def createConnections(self, configname):

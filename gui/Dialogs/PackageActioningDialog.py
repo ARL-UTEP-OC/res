@@ -56,7 +56,6 @@ class PackageActioningThread(QThread):
             self.successfilenames.append(self.filenames)
             logging.debug("PackageActioningThread(): thread ending")
             self.watchsignal.emit("Action " + str(self.actionname) + " Complete", self.status, True)
-            return
         except:
             logging.error("Error in PackageActioningThread(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()

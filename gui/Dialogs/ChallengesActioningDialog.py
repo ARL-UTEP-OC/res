@@ -29,35 +29,29 @@ class WatchActioningThread(QThread):
             e = Engine.getInstance()
             creds_file = " None "
             if self.actionname == "Add":
-                if len(self.args) != 7:
+                if len(self.args) != 6:
                     logging.error("WatchActioningThread(): invalid number of args for create challenges: " + str(len(self.args)) + ". Skipping...")
                     self.watchsignal.emit("Invalid number of args for create challenges. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                # 0 - hostname, 1 - username, 2 - password, 3 - method, 4 - usersfile, 5 - type, 6 - name
-                #4 is the users_file 
-                if str(self.args[4]).strip() != "":
-                    creds_file = " " + str(self.args[4])
-                cmd = "challenges " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --method " + str(self.args[3]) + " --creds_file " + str(self.args[4]) + " --itype" + str(self.args[5]) + " --name " + str(self.args[6])
+                # 0 - hostname, 1 - username, 2 - password, 3 - usersfile, 4 - type, 5 - name
+                cmd = "challenges " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + str(self.args[3]) + " --itype" + str(self.args[4]) + " --name " + str(self.args[5])
             if self.actionname == "Remove":
-                if len(self.args) != 7:
+                if len(self.args) != 6:
                     logging.error("WatchActioningThread(): invalid number of args for remove challenges. Skipping...")
                     self.watchsignal.emit("Invalid number of args for remove challenges. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                # 0 - hostname, 1 - username, 2 - password, 3 - method, 4 - usersfile, 5 - type, 6 - name
-                #4 is the users_file 
-                if str(self.args[4]).strip() != "":
-                    creds_file = " " + str(self.args[4])
-                cmd = "challenges " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --method " + str(self.args[3]) + " --creds_file " + str(self.args[4]) + " --type " + str(self.args[5]) + " --name " + str(self.args[6])
+                # 0 - hostname, 1 - username, 2 - password, 3 - usersfile, 4 - type, 5 - name
+                cmd = "challenges " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + str(self.args[3]) + " --type " + str(self.args[4]) + " --name " + str(self.args[5])
             if self.actionname == "Clear":
-                # 0 - hostname, 1 - username, 2 - password, 3 - method
-                if len(self.args) != 4:
+                # 0 - hostname, 1 - username, 2 - password
+                if len(self.args) != 3:
                     logging.error("WatchActioningThread(): invalid number of args for clear challenges. Skipping...")
                     self.watchsignal.emit("Invalid number of args for clear challenges. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                cmd = "challenges " + " clear --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --method " + str(self.args[3])
+                cmd = "challenges " + " clear --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             if cmd != "":
                 logging.debug("WatchActioningThread(): running: " + cmd)
                 e.execute(cmd)

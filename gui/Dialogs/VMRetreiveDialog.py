@@ -31,7 +31,7 @@ class VMRetrieveDialog(QDialog):
         self.buttons.accepted.connect( self.accept )
         self.buttons.rejected.connect( self.reject )
 
-        self.setWindowTitle("Add Virtual Machines")
+        self.setWindowTitle("Add VMs From System")
         #self.setFixedSize(550, 300)
 
         self.box_main_layout = QGridLayout()

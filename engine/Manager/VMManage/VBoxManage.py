@@ -25,13 +25,23 @@ class VBoxManage(VMManage):
         self.lock = RLock()
         self.vms = {}
         self.tempVMs = {}
+        self.initialized = False
         if initializeVMManage:
-            self.refreshAllVMInfo()
+            self.setRemoteCreds()
+
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        logging.debug("ProxmoxManage: setRemoteCreds(): instantiated")
+        self.refreshAllVMInfo()
+        result = self.getManagerStatus()["writeStatus"]
+        while result != self.MANAGER_IDLE:
+        #waiting for manager to finish query...
             result = self.getManagerStatus()["writeStatus"]
-            while result != self.MANAGER_IDLE:
-            #waiting for manager to finish query...
-                result = self.getManagerStatus()["writeStatus"]
-                time.sleep(.1)
+            time.sleep(.1)
+        self.initialized = True
 
     def configureVMNet(self, vmName, netNum, netName, username=None, password=None):
         logging.info("VBoxManage: configureVMNet(): instantiated")

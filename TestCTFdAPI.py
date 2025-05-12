@@ -102,10 +102,12 @@ api_session = API(prefix_url=sys.argv[3])
 api_session.login(sys.argv[1], sys.argv[2])
 
 #print("calling get_user_pass_fromfile()")
+path = "g:\\My Drive\\teaching\\2025\\cs5390\\cs5390users.txt"
 users_passes = get_user_pass_fromfile(path)
 
 #Add Users
 print("ADDING USERS")
+#result = create_users(api_session, users_passes)
 result = create_users(api_session, users_passes)
 print("ADD USER RESULT: " + str(result))
 

@@ -41,8 +41,14 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
         
         self.connStatusTable.setRowCount(0)
         self.connStatusTable.setColumnCount(5)
-        self.connStatusTable.setHorizontalHeaderLabels(("Connection Name", "Generated User", "Generated Pass", "User Status", "Conn Status"))
-
+        self.connStatusTable.setHorizontalHeaderLabels(("Connection Name", "Generated User", "Generated Pass", "User Status", "Last Recorded"))
+        self.connStatusTable.horizontalHeader().setStretchLastSection(True)
+        self.connStatusTable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.connStatusTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.connStatusTable.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.connStatusTable.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.connStatusTable.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        
         # Context menus
         self.connStatusTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connStatusTable.customContextMenuRequested.connect(self.showContextMenu)
@@ -107,7 +113,7 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
             return
         connName = self.connStatusTable.item(connRow,0).text()
         actionlabelname = self.sender().text()
-        vmserverip, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(self.configname)
+        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(self.configname)
         #parent, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype="", name=""
         ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, vmserverip, rdpbroker, users_file, "vm", connName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)
@@ -129,6 +135,7 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
                     connStatus = usersConnsStatus[(tableUserName, tableConnName)]["connStatus"]
             userStatusCellItem.setText(userStatus)
             connStatusCellItem.setText(connStatus)
+        logging.debug("updateConnStatus(): completed")
 
 if __name__ == "__main__":
     import sys

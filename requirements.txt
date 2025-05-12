@@ -9,3 +9,4 @@ rocketchat-API==1.35.0
 Pyro5==5.15
 proxmoxer==2.2.0
 paramiko==3.5.1
+python-keycloak

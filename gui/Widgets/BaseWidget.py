@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtGui import QIntValidator
+from engine.Configuration.SystemConfigIO import SystemConfigIO
 import logging
 
 class BaseWidget(QtWidgets.QWidget):
@@ -10,6 +11,7 @@ class BaseWidget(QtWidgets.QWidget):
             logging.error("configname cannot be empty")
             return None
         QtWidgets.QWidget.__init__(self, parent=None)
+        self.c = SystemConfigIO()
         self.widgetname = widgetname
         self.configname = configname
         
@@ -42,7 +44,11 @@ class BaseWidget(QtWidgets.QWidget):
         self.vmServerIPHorBox.setObjectName("vmServerIPHorBox")
         self.vmServerIPLabel = QtWidgets.QLabel()
         self.vmServerIPLabel.setObjectName("vmServerIPLabel")
-        self.vmServerIPLabel.setText("VM Server IP:")
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.vmServerIPLabel.setText("PROXMOX Server URL:")
+        else:
+            self.vmServerIPLabel.setText("VM Server URL:")
+        
         self.vmServerIPHorBox.addWidget(self.vmServerIPLabel)
         self.vmServerIPLineEdit = QtWidgets.QLineEdit() 
         self.vmServerIPLineEdit.setObjectName("vmServerIPLineEdit")
@@ -53,18 +59,31 @@ class BaseWidget(QtWidgets.QWidget):
         self.rdpBrokerHorBox.setObjectName("rdpBrokerHorBox")
         self.rdpBrokerLabel = QtWidgets.QLabel()
         self.rdpBrokerLabel.setObjectName("rdpBrokerLabel")
-        self.rdpBrokerLabel.setText("RDP Broker Address:")
+        self.rdpBrokerLabel.setText("rDisplay Server URL:")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLabel)
         self.rdpBrokerLineEdit = QtWidgets.QLineEdit()
         self.rdpBrokerLineEdit.setObjectName("rdpBrokerLineEdit")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLineEdit)
         self.outerVertBox.addLayout(self.rdpBrokerHorBox)
 
+        self.sshPortHorBox = QtWidgets.QHBoxLayout()
+        self.sshPortHorBox.setObjectName("sshPortHorBox")
+        self.sshPortLabel = QtWidgets.QLabel()
+        self.sshPortLabel.setObjectName("sshPortLabel")
+        self.sshPortLabel.setText("Proxmox Server SSH Port:")
+        self.sshPortHorBox.addWidget(self.sshPortLabel)
+        self.vmServerSSHPortLineEdit = QtWidgets.QLineEdit()
+        self.vmServerSSHPortLineEdit.setObjectName("sshPortLineEdit")
+        self.sshPortHorBox.addWidget(self.vmServerSSHPortLineEdit)
+
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.outerVertBox.addLayout(self.sshPortHorBox)
+
         self.chatServerHorBox = QtWidgets.QHBoxLayout()
         self.chatServerHorBox.setObjectName("chatServerHorBox")
         self.chatServerLabel = QtWidgets.QLabel()
         self.chatServerLabel.setObjectName("chatServerLabel")
-        self.chatServerLabel.setText("Chat Server Address:")
+        self.chatServerLabel.setText("Chat Server URL:")
         self.chatServerHorBox.addWidget(self.chatServerLabel)
         self.chatServerLineEdit = QtWidgets.QLineEdit() 
         self.chatServerLineEdit.setObjectName("chatServerLineEdit")
@@ -75,7 +94,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.challengesServerHorBox.setObjectName("challengesServerHorBox")
         self.challengesServerLabel = QtWidgets.QLabel()
         self.challengesServerLabel.setObjectName("challengesServerLabel")
-        self.challengesServerLabel.setText("Challenges Server Address:")
+        self.challengesServerLabel.setText("Challenges Server URL:")
         self.challengesServerHorBox.addWidget(self.challengesServerLabel)
         self.challengesServerLineEdit = QtWidgets.QLineEdit() 
         self.challengesServerLineEdit.setObjectName("challengesServerLineEdit")
@@ -86,7 +105,10 @@ class BaseWidget(QtWidgets.QWidget):
         self.baseGroupNameHorBox.setObjectName("baseGroupNameHorBox")
         self.baseGroupNameLabel = QtWidgets.QLabel()
         self.baseGroupNameLabel.setObjectName("baseGroupNameLabel")
-        self.baseGroupNameLabel.setText("Base Group Name:")
+        if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
+            self.baseGroupNameLabel.setText("Proxmox Nodename:")
+        else:
+            self.baseGroupNameLabel.setText("Base Group Name:")
 
         self.baseGroupNameHorBox.addWidget(self.baseGroupNameLabel)
         self.baseGroupNameLineEdit = QtWidgets.QLineEdit()
@@ -207,19 +229,23 @@ class BaseWidget(QtWidgets.QWidget):
             basejsondata["testbed-setup"]["vm-set"] = {}
 
         if "vm-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["vm-server-ip"] = "11.0.0.1"
+            basejsondata["testbed-setup"]["network-config"]["vm-server-ip"] = "https://localhost:8006/"
         self.vmServerIPLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vm-server-ip"])
         ###
+        if "vm-server-ssh-port" not in basejsondata["testbed-setup"]["network-config"]:
+            basejsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"] = "22"
+        self.vmServerSSHPortLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"])
+        ###
         if "rdp-broker-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = "11.0.0.1:8080"
+            basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = "https://localhost:443/"
         self.rdpBrokerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"])
         ###
         if "chat-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["chat-server-ip"] = ""
+            basejsondata["testbed-setup"]["network-config"]["chat-server-ip"] = "https://localhost:6006/"
         self.chatServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["chat-server-ip"])
         ###
         if "challenges-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = ""
+            basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = "https://localhost:443/remote/"
         self.challengesServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"])
         ###
         if "base-groupname" not in basejsondata["testbed-setup"]["vm-set"]:
@@ -247,7 +273,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.vrdpBaseportLineEdit.setText(basejsondata["testbed-setup"]["vm-set"]["vrdp-baseport"])
         ###
         if "users-filename" not in basejsondata["testbed-setup"]["vm-set"]:
-            basejsondata["testbed-setup"]["vm-set"]["users-filename"] = "<unspecified>"
+            basejsondata["testbed-setup"]["vm-set"]["users-filename"] = ""
         self.usersFilenameLineEdit.setText(basejsondata["testbed-setup"]["vm-set"]["users-filename"])
 
     def getWritableData(self):
@@ -257,6 +283,7 @@ class BaseWidget(QtWidgets.QWidget):
         jsondata["testbed-setup"] = {}
         jsondata["testbed-setup"]["network-config"] = {}
         jsondata["testbed-setup"]["network-config"]["vm-server-ip"] = self.vmServerIPLineEdit.text()
+        jsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"] = self.vmServerSSHPortLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = self.rdpBrokerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["chat-server-ip"] = self.chatServerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = self.challengesServerLineEdit.text()

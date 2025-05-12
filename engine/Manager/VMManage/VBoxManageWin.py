@@ -23,15 +23,25 @@ class VBoxManageWin(VMManage):
         self.vmanage_path = self.cf.getConfig()['VBOX']['VMANAGE_PATH']
         # A lock for acces/updates to self.vms
         self.lock = RLock()
+        self.initialized = False
         self.vms = {}
         self.tempVMs = {}
         if initializeVMManage:
-            self.refreshAllVMInfo()
+            self.setRemoteCreds()
+
+    def isInitialized(self):
+        logging.debug("ProxmoxManage: isInitialized(): instantiated")
+        return self.initialized
+
+    def setRemoteCreds(self, refresh=False, username=None, password=None):
+        logging.debug("ProxmoxManage: setRemoteCreds(): instantiated")
+        self.refreshAllVMInfo()
+        result = self.getManagerStatus()["writeStatus"]
+        while result != self.MANAGER_IDLE:
+        #waiting for manager to finish query...
             result = self.getManagerStatus()["writeStatus"]
-            while result != self.MANAGER_IDLE:
-            #waiting for manager to finish query...
-                result = self.getManagerStatus()["writeStatus"]
-                time.sleep(.1)
+            time.sleep(.1)
+        self.initialized = True
 
     def configureVMNet(self, vmName, netNum, netName, username=None, password=None):
         logging.debug("VBoxManageWin: configureVMNet(): instantiated")

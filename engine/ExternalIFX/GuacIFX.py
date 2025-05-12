@@ -76,12 +76,15 @@ class GuacIFX:
             logging.error("Error during guacamole connection creation: " + str(e))
             #exit()
 
-    def createGuacEntries(self, inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, guacConnMethod, inputFileBasename):
+    def createGuacEntries(self, inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, inputFileBasename):
         logging.info("createGuacEntry(): instantiated")
         inputFileBasename = os.path.splitext(os.path.basename(inputFilename))[0]
 
         #######Guac connection##########
-        #guacConn = Guacamole('192.168.99.102',username='guacadmin',password='guacadmin',url_path='/guacamole',method='http')
+        if guacHostname.startswith("http://"):
+            guacConnMethod = 'http'
+        elif guacHostname.startswith("https://"):
+            guacConnMethod = 'https'
         guacConn = Guacamole(guacHostname,username=guacUsername,password=guacPass,url_path=guacURLPath, method=guacConnMethod)
         if guacConn == None:
             logging.error("Error with guac connection")
@@ -166,10 +169,13 @@ class GuacIFX:
         except Exception as e:
             logging.error("Error during guacamole connection removal: " + str(e))
 
-    def removeGuacEntries(self, inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, guacConnMethod, inputFileBasename):
+    def removeGuacEntries(self, inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, inputFileBasename):
         logging.info("removeGuacEntry(): instantiated")
         #######Guac connection##########
-        #guacConn = Guacamole('192.168.99.102',username='guacadmin',password='guacadmin',url_path='/guacamole',method='http')
+        if guacHostname.startswith("http://"):
+            guacConnMethod = 'http'
+        elif guacHostname.startswith("https://"):
+            guacConnMethod = 'https'
         guacConn = Guacamole(guacHostname,username=guacUsername,password=guacPass,url_path=guacURLPath, method=guacConnMethod)
         if guacConn == None:
             logging.error("Error with guac connection")
@@ -233,9 +239,8 @@ if __name__ == "__main__":
     guacUsername = sys.argv[3]
     guacPass = sys.argv[4]
     guacURLPath = sys.argv[5]
-    guacConnMethod = sys.argv[6]
     
     g = GuacIFX()
-    g.createGuacEntries(inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, guacConnMethod)
-    g.removeGuacEntries(inputFilename, guacHostname, guacUsername, guacPass, guacURLPath, guacConnMethod)
+    g.createGuacEntries(inputFilename, guacHostname, guacUsername, guacPass, guacURLPath)
+    g.removeGuacEntries(inputFilename, guacHostname, guacUsername, guacPass, guacURLPath)
     
