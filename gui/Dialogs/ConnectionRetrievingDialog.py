@@ -24,21 +24,21 @@ class WatchRetrieveThread(QThread):
         self.watchsignal.emit("Querying Broker Service...", None, None)
         try:
             e = Engine.getInstance()
-            logging.debug("watchRetrieveStatus(): running: conns refresh")
-            #e.execute("conns refresh")
+            logging.debug("watchRetrieveStatus(): running: proxpools refresh")
+            #e.execute("proxpools refresh")
             if len(self.args) != 3:
                 logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                 self.status = -1
                 return None
-            #format: "conns refresh <ip> <user> <pass> <path>"
-            cmd = "conns " + " refresh " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+            #format: "proxpools refresh <ip> <user> <pass> <path>"
+            cmd = "proxpools " + " refresh " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
             while(True):
-                logging.debug("watchRetrieveStatus(): running: conns refresh")
-                self.status = e.execute("conns status")
+                logging.debug("watchRetrieveStatus(): running: proxpools refresh")
+                self.status = e.execute("proxpools status")
                 logging.debug("watchRetrieveStatus(): result: " + str(self.status))
                 if self.status["writeStatus"] != ConnectionManage.CONNECTION_MANAGE_IDLE:
                     dotstring = ""
