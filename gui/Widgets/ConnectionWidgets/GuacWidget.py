@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, 
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QMessageBox, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar)
-from gui.Helpers.ProxpoolsActions import ConnectionActions
+from gui.Helpers.GuacActions import ConnectionActions
 import os
 
 class GuacWidget(QtWidgets.QWidget):
