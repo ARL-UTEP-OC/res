@@ -63,10 +63,10 @@ class WatchRetrieveThread(QThread):
             self.status = -1
             return None
 
-class ConnectionRetrievingDialog(QDialog):
+class ProxpoolsRetrievingDialog(QDialog):
     def __init__(self, parent, configname, args):
-        logging.debug("ConnectionRetrievingDialog(): instantiated")
-        super(ConnectionRetrievingDialog, self).__init__(parent)     
+        logging.debug("ProxpoolsRetrievingDialog(): instantiated")
+        super(ProxpoolsRetrievingDialog, self).__init__(parent)     
         self.configname = configname
         self.args = args
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
@@ -96,7 +96,7 @@ class ConnectionRetrievingDialog(QDialog):
         t = WatchRetrieveThread(self.configname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ConnectionRetrievingDialog, self).exec_()
+        result = super(ProxpoolsRetrievingDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status

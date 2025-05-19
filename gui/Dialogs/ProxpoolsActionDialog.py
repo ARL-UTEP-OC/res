@@ -1,6 +1,6 @@
 from engine.Configuration.SystemConfigIO import SystemConfigIO
-from gui.Dialogs.ConnectionOpeningDialog import ConnectionOpeningDialog
-from gui.Dialogs.ConnectionRetrievingDialog import ConnectionRetrievingDialog
+from gui.Dialogs.ProxpoolsOpeningDialog import ProxpoolsOpeningDialog
+from gui.Dialogs.ProxpoolsRetrievingDialog import ProxpoolsRetrievingDialog
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QThread, pyqtSignal, QObject
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -11,15 +11,15 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
 from engine.Engine import Engine
 from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
-from gui.Dialogs.ConnectionActioningDialog import ConnectionActioningDialog
+from gui.Dialogs.ProxpoolsActioningDialog import ProxpoolsActioningDialog
 import logging
 from engine.Configuration.UserPool import UserPool
 
-class ConnectionActionDialog(QDialog):
+class ProxpoolsActionDialog(QDialog):
 
-    def __init__(self, parent, configname, actionname, experimentHostname, rdpBrokerHostname="", users_file="", itype="", name=""):
-        logging.debug("ConnectionActionDialog(): instantiated")
-        super(ConnectionActionDialog, self).__init__(parent)
+    def __init__(self, parent, configname, actionname, experimentHostname, users_file="", itype="", name=""):
+        logging.debug("ProxpoolsActionDialog(): instantiated")
+        super(ProxpoolsActionDialog, self).__init__(parent)
         self.parent = parent
         self.eco = ExperimentConfigIO.getInstance()
         self.s = SystemConfigIO()
@@ -29,11 +29,6 @@ class ConnectionActionDialog(QDialog):
         self.usersFile = users_file
         self.itype = itype
         self.name = name
-        if rdpBrokerHostname.strip() == "":
-            self.rdpBrokerHostname = ""
-            self.setEnabled(False)
-        else:
-            self.rdpBrokerHostname = rdpBrokerHostname
         self.cm = ConnectionManage()
         self.setMinimumWidth(450)
 
@@ -55,16 +50,11 @@ class ConnectionActionDialog(QDialog):
         self.layout = QFormLayout()
         self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
         self.experimentHostnameLineEdit.setEnabled(False)
-        if self.s.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
-            self.layout.addRow(QLabel("PROXMOX Server URL:"), self.experimentHostnameLineEdit)
-        else:
-            self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
-        self.hostnameLineEdit = QLineEdit(self.rdpBrokerHostname)
-        self.hostnameLineEdit.setEnabled(False)
-        self.layout.addRow(QLabel("rDisplay Server URL:"), self.hostnameLineEdit)
+        self.layout.addRow(QLabel("Proxmox Server URL:"), self.experimentHostnameLineEdit)
+
         mgmusername = ""
         mgmpassword = ""
-        cachedCreds = self.eco.getConfigRDPBrokerCreds(self.configname)
+        cachedCreds = self.eco.getConfigProxpoolsCreds(self.configname)
         if cachedCreds != None:
             mgmusername = cachedCreds[0]
             mgmpassword = cachedCreds[1]
@@ -72,9 +62,8 @@ class ConnectionActionDialog(QDialog):
         self.usernameLineEdit = QLineEdit(mgmusername)
         self.passwordLineEdit = QLineEdit(mgmpassword)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
-        if self.actionname != "Open":
-            self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
-            self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
+        self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
+        self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
         
         self.maxConnectionsLineEdit = QLineEdit("10")
         self.heightLineEdit = QLineEdit("1400")
@@ -91,17 +80,17 @@ class ConnectionActionDialog(QDialog):
         if self.actionname == "Add":
             #Need to make a function to create more than one user to a single instance 
             self.layout.addRow(QLabel("Users File: "), self.usersFileLabel)
-            self.layout.addRow(QLabel("Max Connections Per User:"), self.maxConnectionsLineEdit)      
-            self.layout.addRow(QLabel("Display Height:"), self.heightLineEdit)
-            self.layout.addRow(QLabel("Display Width:"), self.widthLineEdit)
-            self.layout.addRow(QLabel("Bit Depth:"), self.bitdepthComboBox)
+            # self.layout.addRow(QLabel("Max Connections Per User:"), self.maxConnectionsLineEdit)      
+            # self.layout.addRow(QLabel("Display Height:"), self.heightLineEdit)
+            # self.layout.addRow(QLabel("Display Width:"), self.widthLineEdit)
+            # self.layout.addRow(QLabel("Bit Depth:"), self.bitdepthComboBox)
         if self.actionname == "Remove":
             self.layout.addRow(QLabel("Users File: "), self.usersFileLabel)
         self.formGroupBox.setLayout(self.layout)
 
     def exec_(self):
-        logging.debug("ConnectionActionDialog(): exec_() instantiated")
-        result = super(ConnectionActionDialog, self).exec_()
+        logging.debug("ProxpoolsActionDialog(): exec_() instantiated")
+        result = super(ProxpoolsActionDialog, self).exec_()
         if str(result) == str(1):
             logging.debug("dialog_response(): OK was pressed")
             if self.actionname == "Add":
@@ -114,13 +103,13 @@ class ConnectionActionDialog(QDialog):
                     bitDepth = "24"
                 elif bitDepth == "True color (32-bit)":
                     bitDepth = "32"
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.experimentHostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Remove":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.experimentHostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Clear":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
+                self.args = [self.experimentHostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Refresh":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
+                self.args = [self.experimentHostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Open":
                 #get all of the connections from the currently selected item
                 userpool = UserPool()
@@ -141,18 +130,11 @@ class ConnectionActionDialog(QDialog):
             else:
                 pass
             if self.actionname == "Refresh":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                crd = ConnectionRetrievingDialog(self.parent, self.configname, self.args).exec_()
+                self.eco.storeConfigProxpoolsCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
+                crd = ProxpoolsRetrievingDialog(self.parent, self.configname, self.args).exec_()
                 return crd
-            elif self.actionname == "Open":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                pathToBrowser = self.s.getConfig()["BROWSER"]["BROWSER_PATH"]
-                browserArgs = self.s.getConfig()["BROWSER"]["ARGS"]
-                url = self.rdpBrokerHostname
-                cod = ConnectionOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url).exec_()
-                return cod
             else:
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                cad = ConnectionActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
+                self.eco.storeConfigProxpoolsCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
+                cad = ProxpoolsActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
                 return (QMessageBox.Ok)
         return (QMessageBox.Cancel)

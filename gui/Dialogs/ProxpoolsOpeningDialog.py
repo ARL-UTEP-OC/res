@@ -53,10 +53,10 @@ class ConnectionOpeningThread(QThread):
         finally:
             return None
 
-class ConnectionOpeningDialog(QDialog):
+class ProxpoolsOpeningDialog(QDialog):
     def __init__(self, parent, pathToBrowser, browserArgs, userpasses, url):
-        logging.debug("ConnectionOpeningDialog(): instantiated")
-        super(ConnectionOpeningDialog, self).__init__(parent)
+        logging.debug("ProxpoolsOpeningDialog(): instantiated")
+        super(ProxpoolsOpeningDialog, self).__init__(parent)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         self.userpasses = userpasses
         self.pathToBrowser = pathToBrowser
@@ -87,7 +87,7 @@ class ConnectionOpeningDialog(QDialog):
         t = ConnectionOpeningThread(self.pathToBrowser, self.browserArgs, self.userpasses, self.url)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ConnectionOpeningDialog, self).exec_()
+        result = super(ProxpoolsOpeningDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return (self.status)

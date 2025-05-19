@@ -378,7 +378,7 @@ class ConnectionManageGuacRDP(ConnectionManage):
         return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : self.usersConnsStatus}
     
     def getConnectionManageRefresh(self, guacHostname, username, password):
-        logging.debug("getConnectionManageStatus(): instantiated")
+        logging.debug("getConnectionManageRefresh(): instantiated")
         self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REFRESHING
         try:
             url_path = "/"

@@ -45,7 +45,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.vmServerIPLabel = QtWidgets.QLabel()
         self.vmServerIPLabel.setObjectName("vmServerIPLabel")
         if self.c.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
-            self.vmServerIPLabel.setText("PROXMOX Server URL:")
+            self.vmServerIPLabel.setText("Proxmox Server URL:")
         else:
             self.vmServerIPLabel.setText("VM Server URL:")
         
@@ -59,7 +59,7 @@ class BaseWidget(QtWidgets.QWidget):
         self.rdpBrokerHorBox.setObjectName("rdpBrokerHorBox")
         self.rdpBrokerLabel = QtWidgets.QLabel()
         self.rdpBrokerLabel.setObjectName("rdpBrokerLabel")
-        self.rdpBrokerLabel.setText("rDisplay Server URL:")
+        self.rdpBrokerLabel.setText("Guacamole Server URL:")
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLabel)
         self.rdpBrokerLineEdit = QtWidgets.QLineEdit()
         self.rdpBrokerLineEdit.setObjectName("rdpBrokerLineEdit")

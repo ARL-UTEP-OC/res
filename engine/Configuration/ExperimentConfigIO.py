@@ -40,6 +40,16 @@ class ExperimentConfigIO:
             return self.config_experimentexec_userpass[configname]
         return None
 
+    def storeConfigProxpoolsCreds(self, configname, username, password):
+        logging.debug("ExperimentConfigIO: storeConfigRDPBrokerCreds(): instantiated")
+        self.config_rdp_userpass[configname] = (username, password)
+
+    def getConfigProxpoolsCreds(self, configname):
+        logging.debug("ExperimentConfigIO: getConfigRDPBrokerCreds(): instantiated")
+        if configname in self.config_rdp_userpass:
+            return self.config_rdp_userpass[configname]
+        return None
+
     def storeConfigRDPBrokerCreds(self, configname, username, password):
         logging.debug("ExperimentConfigIO: storeConfigRDPBrokerCreds(): instantiated")
         self.config_rdp_userpass[configname] = (username, password)

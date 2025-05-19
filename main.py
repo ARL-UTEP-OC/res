@@ -21,7 +21,7 @@ from gui.Widgets.BaseWidget import BaseWidget
 from gui.Widgets.VMWidget import VMWidget
 from gui.Widgets.MaterialWidget import MaterialWidget
 from gui.Widgets.ExperimentActionsWidgets.ExperimentActionsWidget import ExperimentActionsWidget
-from gui.Widgets.ConnectionWidgets.ConnectionWidget import ConnectionWidget
+from gui.Widgets.ConnectionWidgets.ProxpoolsWidget import ProxpoolsWidget
 from gui.Widgets.ChallengesWidgets.ChallengesWidget import ChallengesWidget
 
 from engine.Configuration.SystemConfigIO import SystemConfigIO
@@ -104,9 +104,10 @@ class MainApp(QWidget):
         self.tabWidget.addTab(self.experimentActionsWidget, "Experiment Actions")      
 
         # Remote Display Tab
-        self.connectionWidget = ConnectionWidget(statusBar=self.statusBar)
-        self.connectionWidget.setObjectName("connectionsWidget")
-        self.tabWidget.addTab(self.connectionWidget, "Remote Display")
+        self.proxpoolsWidget = ProxpoolsWidget(statusBar=self.statusBar)
+        self.proxpoolsWidget.setObjectName("connectionsWidget")
+        
+        self.tabWidget.addTab(self.proxpoolsWidget, "Proxmox Pools")
         
         # Challenges Tab
         self.challengesWidget = ChallengesWidget(statusBar=self.statusBar)
@@ -236,7 +237,7 @@ class MainApp(QWidget):
         configTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.experimentTree)
         configTreeWidgetItem.setText(0,configname)
         self.experimentActionsWidget.addExperimentItem(configname, config_jsondata=jsondata)
-        self.connectionWidget.addExperimentItem(configname, config_jsondata=jsondata)
+        self.proxpoolsWidget.addExperimentItem(configname, config_jsondata=jsondata)
         self.challengesWidget.addExperimentItem(configname, config_jsondata=jsondata)
         basejsondata = jsondata["xml"]
         # Base Config Widget 
@@ -338,7 +339,7 @@ class MainApp(QWidget):
         configTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.experimentTree)
         configTreeWidgetItem.setText(0,configname)
         self.experimentActionsWidget.addExperimentItem(configname)
-        self.connectionWidget.addExperimentItem(configname)
+        self.proxpoolsWidget.addExperimentItem(configname)
         self.challengesWidget.addExperimentItem(configname)
         # Base Config Widget 
         self.baseWidget = BaseWidget(self, configname, configname)
@@ -402,7 +403,7 @@ class MainApp(QWidget):
         configname = selectedItem.text(0)
         config_jsondata = self.getWritableData(configname)
         self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        self.proxpoolsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.statusBar.showMessage("Added " + str(len(vmsChosen)) + " VM files to experiment: " + str(selectedItemName))
 
@@ -440,7 +441,7 @@ class MainApp(QWidget):
         configname = selectedItem.text(0)
         config_jsondata = self.getWritableData(configname)
         self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        self.proxpoolsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.statusBar.showMessage("Added VM to experiment: " + str(selectedItemName))
 
@@ -509,7 +510,7 @@ class MainApp(QWidget):
             self.basedataStackedWidget.removeWidget(self.baseWidgets[selectedItemName]["BaseWidget"])
             del self.baseWidgets[selectedItemName]
             self.experimentActionsWidget.removeExperimentItem(selectedItemName)
-            self.connectionWidget.removeExperimentItem(selectedItemName)
+            self.proxpoolsWidget.removeExperimentItem(selectedItemName)
             self.challengesWidget.removeExperimentItem(selectedItemName)
             self.statusBar.showMessage("Removed experiment: " + str(selectedItemName))
         else:
@@ -523,7 +524,7 @@ class MainApp(QWidget):
                 #Also remove from the experiment action widget:
                 config_jsondata = self.getWritableData(configname)
                 self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-                self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+                self.proxpoolsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
 
             #Check if it's the case that a Material Name was selected
             elif(selectedItem.text(0)[0] == "M"):
@@ -688,7 +689,7 @@ class MainApp(QWidget):
         
         #Now reset the experimentActions view
         self.experimentActionsWidget.resetExperiment(configname, jsondata)
-        self.connectionWidget.resetExperiment(configname, jsondata)
+        self.proxpoolsWidget.resetExperiment(configname, jsondata)
         self.challengesWidget.resetExperiment(configname, jsondata)
         self.statusBar.showMessage("Succesfully saved experiment file for " + str(configname), 2000)
 

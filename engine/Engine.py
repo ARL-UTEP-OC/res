@@ -224,10 +224,12 @@ class Engine:
 
 
     def proxPoolsStatusCmd(self, args):
+        logging.debug("proxPoolsStatusCmd(): instantiated")
         #query proxPools manager status and then return it here        
         return self.proxPoolsConnManage.getConnectionManageStatus()
 
     def proxPoolsRefreshCmd(self, args):
+        logging.debug("proxPoolsRefreshCmd(): instantiated")
         hostname = args.hostname
         configname = args.configname
         username = args.username

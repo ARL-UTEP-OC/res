@@ -89,10 +89,10 @@ class WatchActioningThread(QThread):
         finally:
             return None
 
-class ConnectionActioningDialog(QDialog):
+class ProxpoolsActioningDialog(QDialog):
     def __init__(self, parent, configname, actionname, args):
-        logging.debug("ConnectionActioningDialog(): instantiated")
-        super(ConnectionActioningDialog, self).__init__(parent)     
+        logging.debug("ProxpoolsActioningDialog(): instantiated")
+        super(ProxpoolsActioningDialog, self).__init__(parent)     
         
         self.configname = configname
         self.actionname = actionname
@@ -125,7 +125,7 @@ class ConnectionActioningDialog(QDialog):
         t = WatchActioningThread(self.configname, self.actionname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ConnectionActioningDialog, self).exec_()
+        result = super(ProxpoolsActioningDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status

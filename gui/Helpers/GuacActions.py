@@ -1,5 +1,5 @@
 import logging
-from gui.Dialogs.ConnectionActionDialog import ConnectionActionDialog
+from gui.Dialogs.GuacActionDialog import GuacActionDialog
 
 class ConnectionActions():
 
@@ -16,4 +16,4 @@ class ConnectionActions():
 
     def connectionAction(self, parent, configname, actionname, vmHostname, rdpBrokerHostname, users_file, itype, name):
         logging.debug("connnectionAction(): showContextMenu(): instantiated")
-        ConnectionActionDialog(parent, configname, actionname, vmHostname, rdpBrokerHostname, users_file, itype, name).exec_()
+        GuacActionDialog(parent, configname, actionname, vmHostname, rdpBrokerHostname, users_file, itype, name).exec_()
