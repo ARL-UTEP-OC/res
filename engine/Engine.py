@@ -156,11 +156,10 @@ class Engine:
 
     def guacConnRefreshCmd(self, args):
         hostname = args.hostname
-        configname = args.configname
         username = args.username
         password = args.password
         #query guacConn manager status and then return it here
-        return self.guacConnManage.getConnectionManageRefresh(configname, hostname, username, password)
+        return self.guacConnManage.getConnectionManageRefresh(hostname, username, password)
         
     def guacConnCreateCmd(self, args):
         logging.debug("guacConnCreateCmd(): instantiated")
@@ -169,8 +168,8 @@ class Engine:
         hostname = args.hostname
         username = args.username
         password = args.password
-        maxguacConns = args.maxguacConns
-        maxguacConnsPerUser = args.maxguacConnsPerUser
+        maxConnections = args.maxConnections
+        maxConnectionsPerUser = args.maxConnectionsPerUser
         width = args.width
         height = args.height
         bitdepth = args.bitdepth
@@ -180,8 +179,8 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.guacConnManage.createConnections(configname, hostname, username, password, maxguacConns, maxguacConnsPerUser, width, height, bitdepth, full_creds_file, itype, name)
-        return self.guacConnManage.createConnections(configname, hostname, username, password, maxguacConns, maxguacConnsPerUser, width, height, bitdepth,itype=itype, name=name)
+                return self.guacConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
+        return self.guacConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
 
     def guacConnRemoveCmd(self, args):
         logging.debug("guacConnRemoveCmd(): instantiated")
@@ -202,17 +201,15 @@ class Engine:
     def guacConnClearAllCmd(self, args):
         logging.debug("guacConnClearAllCmd(): instantiated")
         #will remove guacConns as specified in configfile
-        configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password
         
-        return self.guacConnManage.clearAllConnections(configname, hostname, username, password)
+        return self.guacConnManage.clearAllConnections(hostname, username, password)
 
     def guacConnOpenCmd(self, args):
         logging.debug("guacConnOpenCmd(): instantiated")
         #open a display to the current guacConn
-        configname = args.configname
         experimentid = args.experimentid
         username = args.username
         password = args.password
@@ -220,7 +217,7 @@ class Engine:
         itype = args.itype
         name = args.itype
 
-        return self.guacConnManage.openConnection(configname, hostname, experimentid, itype, name, username, password)
+        return self.guacConnManage.openConnection(hostname, experimentid, itype, name, username, password)
 
 
     def proxPoolsStatusCmd(self, args):
@@ -694,8 +691,6 @@ class Engine:
         self.guacConnManageStatusParser.set_defaults(func=self.guacConnStatusCmd)
 
         self.guacConnManageRefreshParser = self.guacConnManageSubParser.add_parser('refresh', help='retrieve all guacConns manager status')
-        self.guacConnManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
-                                    help='path to config file')
         self.guacConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where guacConn host resides')
         self.guacConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
@@ -713,9 +708,9 @@ class Engine:
                                           help='Username for connecting to host')
         self.guacConnManageCreateParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.guacConnManageCreateParser.add_argument('--maxguacConns', metavar='<maxguacConns>', action="store", default="10",
+        self.guacConnManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
                                           help='Max number of guacConns allowed per remote conn')
-        self.guacConnManageCreateParser.add_argument('--maxguacConnsPerUser', metavar='<maxguacConnsPerUser>', action="store", default="10", 
+        self.guacConnManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
                                           help='Max number of guacConns allowed per user per remote conn')
         self.guacConnManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
                                           help='Width of remote guacConn display')
@@ -749,8 +744,6 @@ class Engine:
         self.guacConnManageRemoveParser.set_defaults(func=self.guacConnRemoveCmd)
 
         self.guacConnManageClearAllParser = self.guacConnManageSubParser.add_parser('clear', help='Clear all apache guacamole conns in database')
-        self.guacConnManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
         self.guacConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where guacConn host resides')
         self.guacConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
@@ -760,8 +753,6 @@ class Engine:
         self.guacConnManageClearAllParser.set_defaults(func=self.guacConnClearAllCmd)
 
         self.guacConnManageOpenParser = self.guacConnManageSubParser.add_parser('open', help='start guacConn to specified experiment instance and vrdp-enabled vm as specified in config file')
-        self.guacConnManageOpenParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
         self.guacConnManageOpenParser.add_argument('--hostname', metavar='<host address>', action="store",
                                           help='Name or IP address where guacConn host resides')
         self.guacConnManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",

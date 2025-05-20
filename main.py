@@ -116,14 +116,14 @@ class MainApp(QWidget):
 
         # Guacamole Connections Tab
         self.guacWidget = GuacWidget(statusBar=self.statusBar)
-        self.guacWidget.setObjectName("connectionsWidget")
+        self.guacWidget.setObjectName("guacWidget")
         if "Guacamole Conns" in self.features:
             self.features["Guacamole Conns"] = self.guacWidget
             self.tabWidget.addTab(self.guacWidget, "Guacamole Conns")
 
         # Proxmox Users/Pools Tab
         self.proxpoolsWidget = ProxpoolsWidget(statusBar=self.statusBar)
-        self.proxpoolsWidget.setObjectName("connectionsWidget")
+        self.proxpoolsWidget.setObjectName("proxpoolsWidget")
         if "Proxmox Pools" in self.features:
             self.features["Proxmox Pools"] = self.proxpoolsWidget
             self.tabWidget.addTab(self.proxpoolsWidget, "Proxmox Pools")

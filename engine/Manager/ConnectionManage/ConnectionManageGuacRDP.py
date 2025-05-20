@@ -25,27 +25,27 @@ class ConnectionManageGuacRDP(ConnectionManage):
     def createConnections(self, configname, guacHostname, username, password, maxConnections="", maxConnectionsPerUser="", width="1400", height="1050", bitdepth="16", creds_file="", itype="", name=""):
         logging.debug("createConnections(): instantiated")
         t = threading.Thread(target=self.runCreateConnections, args=(configname, guacHostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
+        self.writeStatus+=1
         t.start()
         return 0
 
     def runCreateConnections(self, configname, guacHostname, musername, mpassword, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name):
         logging.debug("runCreateConnections(): instantiated")
         #call guac backend API to make connections as specified in config file and then set the complete status
-        rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-        validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-        # if creds_file == None or creds_file == "":
-        #     creds_file = self.eco.getExperimentConfigFile(configname)
-
-        userpool = UserPool()
-        usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-
         try:
+            rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
+            validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+            # if creds_file == None or creds_file == "":
+            #     creds_file = self.eco.getExperimentConfigFile(configname)
+
+            userpool = UserPool()
+            usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
+
             if guacHostname == None or guacHostname == "":
                 vmserver, vmserversshport, guacHostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
                 if guacHostname == None or guacHostname == "":
                     logging.error("runCreateConnections(): Guacamole Hostname not found; returning")
                     return -1
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_CREATING
             url_path = "/"
             if guacHostname.startswith("http://"):
                 guacConnMethod = 'http'
@@ -67,7 +67,6 @@ class ConnectionManageGuacRDP(ConnectionManage):
             guacConn = Guacamole(guacHostname,username=musername,password=mpassword,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
                 logging.error("runCreateConnection(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(musername))
-                self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
                 return -1
             user_dict = guacConn.get_users()
             created_users = []
@@ -102,92 +101,93 @@ class ConnectionManageGuacRDP(ConnectionManage):
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_traceback)
             logging.debug("runCreateConnections(): Complete...")
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
         except Exception:
             logging.error("runCreateConnections(): Error in runCreateConnections(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
             return
         finally:
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
-    def clearAllConnections(self, configname, guacHostname, username, password):
+    def clearAllConnections(self, guacHostname, username, password):
         logging.debug("clearAllConnections(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(configname, guacHostname, username, password))
+        t = threading.Thread(target=self.runClearAllConnections, args=(guacHostname, username, password))
+        self.writeStatus+=1
         t.start()
         return 0
 
     def runClearAllConnections(self, guacHostname, username, password):
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REMOVING
+        try:
+            url_path = "/"
+            if guacHostname.startswith("http://"):
+                guacConnMethod = 'http'
+            elif guacHostname.startswith("https://"):
+                guacConnMethod = 'https'
+            else:
+                #if guacHostname doesn't start with http(s), then we need to add it
+                guacHostname = "https://" + guacHostname
+                guacConnMethod = 'https'
 
-        url_path = "/"
-        if guacHostname.startswith("http://"):
-            guacConnMethod = 'http'
-        elif guacHostname.startswith("https://"):
-            guacConnMethod = 'https'
-        else:
-            #if guacHostname doesn't start with http(s), then we need to add it
-            guacHostname = "https://" + guacHostname
-            guacConnMethod = 'https'
+            if len(guacHostname.split("://")) > 1:
+                tmp_path = guacHostname.split("://")[1]
+                url_path = "".join(tmp_path.split("/")[1:])
+                if url_path.startswith("/") == False:
+                    url_path = "/" + url_path
+                if url_path.endswith("/") == False:
+                    url_path = url_path + "/"            
+            guacHostname = guacHostname.split("://")[1].split('/')[0]
+            guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
+            if guacConn == None:
+                logging.error("Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))
+                return -1
 
-        if len(guacHostname.split("://")) > 1:
-            tmp_path = guacHostname.split("://")[1]
-            url_path = "".join(tmp_path.split("/")[1:])
-            if url_path.startswith("/") == False:
-                url_path = "/" + url_path
-            if url_path.endswith("/") == False:
-                url_path = url_path + "/"            
-        guacHostname = guacHostname.split("://")[1].split('/')[0]
-        guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
-        if guacConn == None:
-            logging.error("Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
-            return -1
-
-        # Get list of all users
-        usernames = guacConn.get_users()
-        for username in usernames:
-            logging.info( "Removing Username: " + username)
-            try:
-                guacConn.delete_user(username)
-            except Exception:
-                logging.error("runClearAllConnections(): Error in runClearAllConnections(): when trying to remove user.")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                #traceback.print_exception(exc_type, exc_value, exc_traceback)
-        # Clear AllConnections
-        connections = guacConn.get_connections()
-        logging.debug( "Retrieved Connections: " + str(connections))
-        if "childConnections" in connections:
-            for connection in connections["childConnections"]:
-                logging.info( "Removing Connection: " + str(connection))
+            # Get list of all users
+            usernames = guacConn.get_users()
+            for username in usernames:
+                logging.info( "Removing Username: " + username)
                 try:
-                    guacConn.delete_connection(connection["identifier"])
+                    guacConn.delete_user(username)
                 except Exception:
-                        logging.error("runClearAllConnections(): Error in runClearAllConnections(): when trying to remove connection.")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-                        #traceback.print_exception(exc_type, exc_value, exc_traceback)
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
+                    logging.error("runClearAllConnections(): Error in runClearAllConnections(): when trying to remove user.")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    #traceback.print_exception(exc_type, exc_value, exc_traceback)
+            # Clear AllConnections
+            connections = guacConn.get_connections()
+            logging.debug( "Retrieved Connections: " + str(connections))
+            if "childConnections" in connections:
+                for connection in connections["childConnections"]:
+                    logging.info( "Removing Connection: " + str(connection))
+                    try:
+                        guacConn.delete_connection(connection["identifier"])
+                    except Exception:
+                            logging.error("runClearAllConnections(): Error in runClearAllConnections(): when trying to remove connection.")
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+                            #traceback.print_exception(exc_type, exc_value, exc_traceback)
+        except Exception:
+                logging.error("runClearAllConnections(): Error in runClearAllConnections()")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+        finally:
+            self.writeStatus-=1
 
     #abstractmethod
     def removeConnections(self, configname, guacHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("removeConnections(): instantiated")
         t = threading.Thread(target=self.runRemoveConnections, args=(configname,guacHostname, username, password, creds_file, itype, name))
+        self.writeStatus+=1
         t.start()
         return 0
 
     def runRemoveConnections(self, configname, guacHostname, username, password, creds_file, itype, name):
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REMOVING
         logging.debug("runRemoveConnections(): instantiated")
-        #call guac backend API to remove connections as specified in config file and then set the complete status
-        rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-        validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-
-        userpool = UserPool()
         try:
+            #call guac backend API to remove connections as specified in config file and then set the complete status
+            rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
+            validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
+
+            userpool = UserPool()
             usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_CREATING
             url_path = "/"
             if guacHostname.startswith("http://"):
                 guacConnMethod = 'http'
@@ -209,7 +209,6 @@ class ConnectionManageGuacRDP(ConnectionManage):
             guacConn = Guacamole(guacHostname,username=username,password=password,url_path=url_path, method=guacConnMethod)
             if guacConn == None:
                 logging.error("runRemoveConnections(): Error with guac connection... skipping: " + str(guacHostname) + " " + str(username))
-                self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
                 return -1
 
             for (username, password) in usersConns:
@@ -240,28 +239,26 @@ class ConnectionManageGuacRDP(ConnectionManage):
                         exc_type, exc_value, exc_traceback = sys.exc_info()
                         traceback.print_exception(exc_type, exc_value, exc_traceback)
             logging.debug("runRemoveConnections(): Complete...")
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
         except Exception:
             logging.error("runRemoveConnections(): Error in runRemoveConnections(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
             return
         finally:
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
+            self.writeStatus-=1
 
     #abstractmethod
     def openConnection(self, configname, experimentid, vmid):
         logging.debug("openConnection(): instantiated")
-        t = threading.Thread(target=self.runOpenConnection, args=(configname,))
+        t = threading.Thread(target=self.runOpenConnection, args=(configname,experimentid, vmid))
+        self.writeStatus+=1
         t.start()
         return 0
 
     def runOpenConnection(self, configname, experimentid, vmid):
         logging.debug("runOpenConnection(): instantiated")
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_OPENING
         #open an RDP session using configuration from systemconfigIO to the specified experimentid/vmid
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
+        self.writeStatus-=1
 
     def createUser(self, guacConn, username, password):
         logging.debug("createUser(): Instantiated")
@@ -379,7 +376,6 @@ class ConnectionManageGuacRDP(ConnectionManage):
     
     def getConnectionManageRefresh(self, guacHostname, username, password):
         logging.debug("getConnectionManageRefresh(): instantiated")
-        self.writeStatus = ConnectionManage.CONNECTION_MANAGE_REFRESHING
         try:
             url_path = "/"
             if guacHostname.startswith("http://"):
@@ -440,7 +436,6 @@ class ConnectionManageGuacRDP(ConnectionManage):
             return None
         finally:
             self.lock.release()
-            self.writeStatus = ConnectionManage.CONNECTION_MANAGE_COMPLETE
 
     def get_user_pass_frombase(self, base, num_users):
         logging.debug("get_user_pass_frombase(): instantiated")

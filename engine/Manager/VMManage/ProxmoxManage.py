@@ -958,8 +958,9 @@ class ProxmoxManage(VMManage):
             #add vnc port to config file            
             vncport = int(vrdpPort) - 5900
             cmds = []
-            # cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
-            # cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            #need to figure out a way to make sure ports are reused...
+            cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             self.runRemoteCmds(cmds, proxssh, username, password)

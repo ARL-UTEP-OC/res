@@ -62,7 +62,7 @@ class ExperimentActionDialog(QDialog):
         self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
         self.experimentHostnameLineEdit.setEnabled(False)
         if self.s.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
-            self.layout.addRow(QLabel("PROXMOX Server URL:"), self.experimentHostnameLineEdit)
+            self.layout.addRow(QLabel("Proxmox Server URL:"), self.experimentHostnameLineEdit)
         else:
             self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
         mgmusername = ""

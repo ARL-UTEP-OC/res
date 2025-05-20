@@ -1,4 +1,4 @@
-from gui.Helpers.ProxpoolsActions import ConnectionActions
+from gui.Helpers.GuacActions import ConnectionActions
 from engine.Configuration.UserPool import UserPool
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QThread, pyqtSignal, QObject
