@@ -164,7 +164,7 @@ class ChallengesWidget(QtWidgets.QWidget):
 
         if rolledoutjson != None:
             #first check if ther'es an Challenges Server IP, if not, disable the tree and add a description to configname
-            if "rdp-broker-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
+            if "challenges-server-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
                 config_jsondata["xml"]["testbed-setup"]["network-config"]["challenges-server-ip"] == None or \
                     config_jsondata["xml"]["testbed-setup"]["network-config"]["challenges-server-ip"].strip() == "":
                 experimentTreeWidgetItem.setText(0,configname+" (Challenge Server IP Address required)")
@@ -309,7 +309,7 @@ class ChallengesWidget(QtWidgets.QWidget):
         configname, itype, name = self.getTypeNameFromSelection()
         
         ##get server info
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
         if challengesServerIP != None:
             if users_file == None:
                 ChallengesActions().challengesActionEvent(self, configname, actionlabelname, challengesServerIP, users_file="", itype=itype, name=name)
@@ -331,7 +331,7 @@ class ChallengesWidget(QtWidgets.QWidget):
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
 
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
         s = ChallengesActionDialog(self, configname, "Refresh", challengesServerIP).exec_()
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:

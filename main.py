@@ -21,6 +21,7 @@ from gui.Widgets.BaseWidget import BaseWidget
 from gui.Widgets.VMWidget import VMWidget
 from gui.Widgets.MaterialWidget import MaterialWidget
 from gui.Widgets.ExperimentActionsWidgets.ExperimentActionsWidget import ExperimentActionsWidget
+from gui.Widgets.ConnectionWidgets.KeycloakWidget import KeycloakWidget
 from gui.Widgets.ConnectionWidgets.GuacWidget import GuacWidget
 from gui.Widgets.ConnectionWidgets.ProxpoolsWidget import ProxpoolsWidget
 from gui.Widgets.ChallengesWidgets.ChallengesWidget import ChallengesWidget
@@ -63,6 +64,8 @@ class MainApp(QWidget):
             self.features["Guacamole Conns"] = None
         if self.cf.getConfig()['FEATURES']['PROXMOX'] == 'True':
             self.features["Proxmox Pools"] = None
+        if self.cf.getConfig()['FEATURES']['KEYCLOAK'] == 'True':
+            self.features["Keycloak"] = None            
         # if self.cf.getConfig()['FEATURES']['ROCKETCHAT'] == 'True':
         #     self.features["Challenges"] = None
         if self.cf.getConfig()['FEATURES']['CTFD'] == 'True':
@@ -127,7 +130,14 @@ class MainApp(QWidget):
         if "Proxmox Pools" in self.features:
             self.features["Proxmox Pools"] = self.proxpoolsWidget
             self.tabWidget.addTab(self.proxpoolsWidget, "Proxmox Pools")
-        
+
+        # Keycloak Users/Pools Tab
+        self.keycloakWidget = KeycloakWidget(statusBar=self.statusBar)
+        self.keycloakWidget.setObjectName("keycloakWidget")
+        if "Keycloak" in self.features:
+            self.features["Keycloak"] = self.keycloakWidget
+            self.tabWidget.addTab(self.keycloakWidget, "Keycloak")
+
         # Challenges Tab
         self.challengesWidget = ChallengesWidget(statusBar=self.statusBar)
         self.challengesWidget.setObjectName("challengesWidget")
@@ -250,6 +260,8 @@ class MainApp(QWidget):
             jsondata["xml"]["testbed-setup"]["vm-set"]["users-filename"] = ""
         if "rdp-broker-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
             jsondata["xml"]["testbed-setup"]["vm-set"]["rdp-broker-ip"] = ""
+        if "keycloak-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
+            jsondata["xml"]["testbed-setup"]["vm-set"]["keycloak-server-ip"] = ""
         if "chat-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
             jsondata["xml"]["testbed-setup"]["vm-set"]["chat-server-ip"] = ""
         if "challenges-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:

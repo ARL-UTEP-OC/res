@@ -106,12 +106,14 @@ class ConfigurationDialog(QDialog):
         self.featureGroupLayout = QHBoxLayout()
         self.vmCheckbox = QCheckBox("VM Control")
         self.guacCheckbox = QCheckBox("Guacamole")
-        self.proxmoxCheckbox = QCheckBox("Proxmox")
+        self.proxmoxCheckbox = QCheckBox("Proxmox Pools")
+        self.keycloakCheckbox = QCheckBox("Keycloak")
         self.rocketChatCheckbox = QCheckBox("RocketChat")
         self.ctfdCheckbox = QCheckBox("CTFd")
         self.featureGroupLayout.addWidget(self.vmCheckbox)
         self.featureGroupLayout.addWidget(self.guacCheckbox)
         self.featureGroupLayout.addWidget(self.proxmoxCheckbox)
+        self.featureGroupLayout.addWidget(self.keycloakCheckbox)
         self.featureGroupLayout.addWidget(self.rocketChatCheckbox)
         self.featureGroupLayout.addWidget(self.ctfdCheckbox)
         if self.s.getConfig()["FEATURES"]["VM"] == "True":
@@ -126,6 +128,10 @@ class ConfigurationDialog(QDialog):
             self.proxmoxCheckbox.setChecked(True)
         else:
             self.proxmoxCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["KEYCLOAK"] == "True":
+            self.keycloakCheckbox.setChecked(True)
+        else:
+            self.keycloakCheckbox.setChecked(False)
         if self.s.getConfig()["FEATURES"]["ROCKETCHAT"] == "True":
             self.rocketChatCheckbox.setChecked(True)
         else:
@@ -197,6 +203,7 @@ class ConfigurationDialog(QDialog):
             self.s.writeConfig("FEATURES", "VM", str(self.vmCheckbox.isChecked()))
             self.s.writeConfig("FEATURES", "GUAC", str(self.guacCheckbox.isChecked()))
             self.s.writeConfig("FEATURES", "PROXMOX", str(self.proxmoxCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "KEYCLOAK", str(self.keycloakCheckbox.isChecked()))
             self.s.writeConfig("FEATURES", "ROCKETCHAT", str(self.rocketChatCheckbox.isChecked()))
             self.s.writeConfig("FEATURES", "CTFD", str(self.ctfdCheckbox.isChecked()))
 

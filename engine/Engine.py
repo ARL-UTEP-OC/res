@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import re
+from engine.Manager.ConnectionManage.ConnectionManageKeycloakSSO import ConnectionManageKeycloakSSO
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
 from engine.Manager.ConnectionManage.ConnectionManageProxVNC import ConnectionManageProxVNC
 from engine.Manager.ChallengesManage.ChallengesManageCTFd import ChallengesManageCTFd
@@ -60,8 +61,10 @@ class Engine:
             else:
                 self.vmManage = ProxmoxManage()
 
-        #Create the ConnectionManage
-        #Later will enable/disable these as plugins
+        #Create the ConnectionManagers
+        
+        self.connectionManageKeycloakSSO = ConnectionManageKeycloakSSO()
+
         self.proxPoolsConnManage = ConnectionManageProxVNC()
         if username != None and password != None:
             self.proxPoolsConnManage.setRemoteCreds(username, password)
@@ -99,6 +102,7 @@ class Engine:
 
         return {"VMMgr" : self.vmManage.getManagerStatus(),
                     "PackageMgr" : self.packageManage.getPackageManageStatus(),
+                    "keycloakConnManage" : self.keycloakManage.getConnectionManageStatus(),
                     "guacConnManage" : self.guacConnManage.getConnectionManageStatus(),
                     "proxPoolsConnManage" : self.proxPoolsConnManage.getConnectionManageStatus(),
                     "ExperimentMgr": self.experimentManage.getExperimentManageStatus(),
@@ -149,6 +153,57 @@ class Engine:
         password = args.password
         vms = args.no_vms
         return self.packageManage.exportPackage(experimentname, exportpath, username, password, vms)
+
+    def keycloakStatusCmd(self, args):
+        #query keycloak manager status and then return it here        
+        return self.connectionManageKeycloakSSO.getUserManageStatus()
+
+    def keycloakRefreshCmd(self, args):
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        #query keycloak manager status and then return it here
+        return self.connectionManageKeycloakSSO.getUserManageRefresh(hostname, username, password)
+        
+    def keycloakCreateCmd(self, args):
+        logging.debug("keycloakCreateCmd(): instantiated")
+        #will create keycloaks as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.connectionManageKeycloakSSO.createUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.connectionManageKeycloakSSO.createUsers(configname, hostname, username, password, itype=itype, name=name)
+
+    def keycloakRemoveCmd(self, args):
+        logging.debug("keycloakRemoveCmd(): instantiated")
+        #will remove keycloaks as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.connectionManageKeycloakSSO.removeUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.connectionManageKeycloakSSO.removeUsers(configname, hostname, username, password, itype=itype, name=name)
+
+    def keycloakClearAllCmd(self, args):
+        logging.debug("keycloakClearAllCmd(): instantiated")
+        #will remove keycloaks as specified in configfile
+        hostname = args.hostname
+        username = args.username
+        password = args.password      
+        return self.connectionManageKeycloakSSO.clearAllUsers(hostname, username, password)
 
     def guacConnStatusCmd(self, args):
         #query guacConn manager status and then return it here        
@@ -592,6 +647,63 @@ class Engine:
         self.packageManageExportParser.add_argument('--no-vms', action="store_false",
                                           help='Do not export vms')
         self.packageManageExportParser.set_defaults(func=self.packagerExportCmd)
+
+#-----------Keycloak SSO
+        self.keycloakConnManageParser = self.subParsers.add_parser('keycloak')
+        self.keycloakConnManageSubParser = self.keycloakConnManageParser.add_subparsers(help='manage keycloak SSO')
+        self.keycloakConnManageStatusParser = self.keycloakConnManageSubParser.add_parser('status', help='retrieve keycloak manager status')
+        self.keycloakConnManageStatusParser.set_defaults(func=self.keycloakStatusCmd)
+        self.keycloakConnManageRefreshParser = self.keycloakConnManageSubParser.add_parser('refresh', help='retrieve all keycloak manager status')
+        self.keycloakConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageRefreshParser.set_defaults(func=self.keycloakRefreshCmd)
+
+        self.keycloakConnManageCreateParser = self.keycloakConnManageSubParser.add_parser('create', help='create conns as specified in config file')
+        self.keycloakConnManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageCreateParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageCreateParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                            help='File with username/password pairs.')
+        self.keycloakConnManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                            help='set, template, or vm')
+        self.keycloakConnManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                            help='all, set-number, template-vm-name, or clone-vm-name')
+        self.keycloakConnManageCreateParser.set_defaults(func=self.keycloakCreateCmd)
+        
+        self.keycloakConnManageRemoveParser = self.keycloakConnManageSubParser.add_parser('remove', help='remove conns as specified in config file')
+        self.keycloakConnManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                            help='File with username/password pairs.')
+        self.keycloakConnManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                            help='set, template, or vm')
+        self.keycloakConnManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                            help='all, set-number, template-vm-name, or clone-vm-name')
+        self.keycloakConnManageRemoveParser.set_defaults(func=self.keycloakRemoveCmd)
+        
+        self.keycloakConnManageClearAllParser = self.keycloakConnManageSubParser.add_parser('clearall', help='remove all conns')
+        self.keycloakConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageClearAllParser.set_defaults(func=self.keycloakClearAllCmd)
 
 #-----------Proxmox Pools
         self.proxPoolsConnManageParser = self.subParsers.add_parser('proxpools')

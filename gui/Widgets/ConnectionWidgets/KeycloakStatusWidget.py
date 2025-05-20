@@ -1,4 +1,4 @@
-from gui.Helpers.ProxpoolsActions import ConnectionActions
+from gui.Helpers.KeycloakActions import ConnectionActions
 from engine.Configuration.UserPool import UserPool
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QThread, pyqtSignal, QObject
@@ -11,9 +11,9 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
 
 import logging
 
-class ProxpoolsStatusWidget(QtWidgets.QWidget):
+class KeycloakStatusWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, configname=None, widgetname="", rolledoutjson=None, interest_vmnames = [], vmuser_mapping={}, status_bar=None):
-        logging.debug("ProxpoolsStatusWidget instantiated")
+        logging.debug("KeycloakStatusWidget instantiated")
         if configname == None:
             logging.error("configname cannot be empty")
             return None
@@ -25,8 +25,8 @@ class ProxpoolsStatusWidget(QtWidgets.QWidget):
         self.rolledoutjson = rolledoutjson
         self.eco = ExperimentConfigIO.getInstance()
 
-        self.setWindowTitle("ProxpoolsStatusWidget")
-        self.setObjectName("ProxpoolsStatusWidget")
+        self.setWindowTitle("KeycloakStatusWidget")
+        self.setObjectName("KeycloakStatusWidget")
         self.layoutWidget = QtWidgets.QWidget()
         self.layoutWidget.setObjectName("layoutWidget")
         self.outerVertBox = QtWidgets.QVBoxLayout()
@@ -53,14 +53,14 @@ class ProxpoolsStatusWidget(QtWidgets.QWidget):
         self.connStatusTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connStatusTable.customContextMenuRequested.connect(self.showContextMenu)
         self.connsContextMenu = QtWidgets.QMenu()
-        self.createProx = self.connsContextMenu.addAction("Create Users+Pools")
-        self.createProx.triggered.connect(self.menuItemSelected)
-        self.removeProx = self.connsContextMenu.addAction("Remove Users+Pools")
-        self.removeProx.triggered.connect(self.menuItemSelected)
-        self.clearProx = self.connsContextMenu.addAction("Clear All Users+Pools on Server")
-        self.clearProx.triggered.connect(self.menuItemSelected)
-        # self.openProx = self.connsContextMenu.addAction("Open Connections")
-        # self.openProx.triggered.connect(self.menuItemSelected)
+        self.createKeycloak = self.connsContextMenu.addAction("Create Users+Pools")
+        self.createKeycloak.triggered.connect(self.menuItemSelected)
+        self.removeKeycloak = self.connsContextMenu.addAction("Remove Users+Pools")
+        self.removeKeycloak.triggered.connect(self.menuItemSelected)
+        self.clearKeycloak = self.connsContextMenu.addAction("Clear All Users+Pools on Server")
+        self.clearKeycloak.triggered.connect(self.menuItemSelected)
+        # self.openKeycloak = self.connsContextMenu.addAction("Open Connections")
+        # self.openKeycloak.triggered.connect(self.menuItemSelected)
 
         self.connStatusTable.setSortingEnabled(True)
         self.outerVertBox.addWidget(self.connStatusTable)
@@ -69,7 +69,7 @@ class ProxpoolsStatusWidget(QtWidgets.QWidget):
         self.retranslateUi(rolledoutjson, interest_vmnames, vmuser_mapping)
 
     def retranslateUi(self, rolledoutjson, interest_vmnames, vmuser_mapping):
-        logging.debug("ProxpoolsStatusWidget: retranslateUi(): instantiated")
+        logging.debug("KeycloakStatusWidget: retranslateUi(): instantiated")
         user_num = 1
         if rolledoutjson == None:
             return
@@ -139,6 +139,6 @@ class ProxpoolsStatusWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    ui = ProxpoolsStatusWidget()
+    ui = KeycloakStatusWidget()
     ui.show()
     sys.exit(app.exec_())

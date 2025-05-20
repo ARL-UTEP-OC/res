@@ -17,7 +17,7 @@ from threading import RLock
 
 class ConnectionManageProxVNC(ConnectionManage):
     def __init__(self, username=None, password=None):
-        logging.debug("ConnectionManageGuacRDP(): instantiated")
+        logging.debug("ConnectionManageProxVNC(): instantiated")
         ConnectionManage.__init__(self)
         self.proxapi = None
         self.proxssh = None
@@ -31,7 +31,7 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getProxAPI(self, configname, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
-            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
             splithostname = vmHostname.split("://")
@@ -59,7 +59,7 @@ class ConnectionManageProxVNC(ConnectionManage):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
             
-            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             user = None
             if len(username) > 4:

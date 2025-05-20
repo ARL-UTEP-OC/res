@@ -113,7 +113,7 @@ class GuacStatusWidget(QtWidgets.QWidget):
             return
         connName = self.connStatusTable.item(connRow,0).text()
         actionlabelname = self.sender().text()
-        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(self.configname)
+        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(self.configname)
         ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, vmserverip, rdpbroker, users_file, "vm", connName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)
 

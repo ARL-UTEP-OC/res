@@ -54,7 +54,7 @@ class ExperimentManageProxmox(ExperimentManage):
     def getProxAPI(self, configname, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
-            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
             splithostname = vmHostname.split("://")
@@ -82,7 +82,7 @@ class ExperimentManageProxmox(ExperimentManage):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
             
-            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             if len(username) > 4:
                 user = username[:-4]

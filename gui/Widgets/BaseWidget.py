@@ -66,6 +66,17 @@ class BaseWidget(QtWidgets.QWidget):
         self.rdpBrokerHorBox.addWidget(self.rdpBrokerLineEdit)
         self.outerVertBox.addLayout(self.rdpBrokerHorBox)
 
+        self.keycloakHorBox = QtWidgets.QHBoxLayout()
+        self.keycloakHorBox.setObjectName("keycloakHorBox")
+        self.keycloakLabel = QtWidgets.QLabel()
+        self.keycloakLabel.setObjectName("keycloakLabel")
+        self.keycloakLabel.setText("Keycloak Server URL:")
+        self.keycloakHorBox.addWidget(self.keycloakLabel)
+        self.keycloakLineEdit = QtWidgets.QLineEdit()
+        self.keycloakLineEdit.setObjectName("keycloakLineEdit")
+        self.keycloakHorBox.addWidget(self.keycloakLineEdit)
+        self.outerVertBox.addLayout(self.keycloakHorBox)
+
         self.sshPortHorBox = QtWidgets.QHBoxLayout()
         self.sshPortHorBox.setObjectName("sshPortHorBox")
         self.sshPortLabel = QtWidgets.QLabel()
@@ -240,6 +251,10 @@ class BaseWidget(QtWidgets.QWidget):
             basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = "https://localhost:443/"
         self.rdpBrokerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["rdp-broker-ip"])
         ###
+        if "keycloak-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
+            basejsondata["testbed-setup"]["network-config"]["keycloak-server-ip"] = "https://localhost:443/"
+        self.keycloakLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["keycloak-server-ip"])
+        ###
         if "chat-server-ip" not in basejsondata["testbed-setup"]["network-config"]:
             basejsondata["testbed-setup"]["network-config"]["chat-server-ip"] = "https://localhost:6006/"
         self.chatServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["chat-server-ip"])
@@ -285,6 +300,7 @@ class BaseWidget(QtWidgets.QWidget):
         jsondata["testbed-setup"]["network-config"]["vm-server-ip"] = self.vmServerIPLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["vm-server-ssh-port"] = self.vmServerSSHPortLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = self.rdpBrokerLineEdit.text()
+        jsondata["testbed-setup"]["network-config"]["keycloak-server-ip"] = self.keycloakLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["chat-server-ip"] = self.chatServerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = self.challengesServerLineEdit.text()
         jsondata["testbed-setup"]["vm-set"] = {}

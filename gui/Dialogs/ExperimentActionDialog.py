@@ -27,7 +27,7 @@ class ExperimentActionDialog(QDialog):
         super(ExperimentActionDialog, self).__init__(parent)
         self.parent = parent
         self.eco = ExperimentConfigIO.getInstance()
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
         self.s = SystemConfigIO()
         self.configname = configname
         self.actionname = actionname

@@ -1,10 +1,10 @@
-from gui.Dialogs.ProxpoolsActionDialog import ProxpoolsActionDialog
-from gui.Dialogs.ProxpoolsActioningDialog import ProxpoolsActioningDialog
+from gui.Dialogs.KeycloakActionDialog import KeycloakActionDialog
+from gui.Dialogs.KeycloakActioningDialog import KeycloakActioningDialog
 from gui.Dialogs.GUIFunctionExecutingDialog import GUIFunctionExecutingDialog
 from PyQt5 import QtCore, QtGui, QtWidgets
 import logging
 from gui.Dialogs.ExperimentActionDialog import ExperimentActionDialog
-from gui.Widgets.ConnectionWidgets.ProxpoolsStatusWidget import ProxpoolsStatusWidget
+from gui.Widgets.ConnectionWidgets.KeycloakStatusWidget import KeycloakStatusWidget
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from engine.Configuration.UserPool import UserPool
 from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, QDateTimeEdit,
@@ -12,19 +12,19 @@ from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, 
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QMessageBox, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar)
-from gui.Helpers.ProxpoolsActions import ConnectionActions
+from gui.Helpers.KeycloakActions import ConnectionActions
 import os
 
-class ProxpoolsWidget(QtWidgets.QWidget):
+class KeycloakWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, statusBar=None):
-        logging.debug("ProxpoolsWidget instantiated")
+        logging.debug("KeycloakWidget instantiated")
         QtWidgets.QWidget.__init__(self, parent=None)
         self.statusBar = statusBar
         self.experimentItemNames = {}
         self.connectionBaseWidgets = {}
         self.eco = ExperimentConfigIO.getInstance()
 
-        self.setObjectName("ProxpoolsWidget")
+        self.setObjectName("KeycloakWidget")
 
         self.windowWidget = QtWidgets.QWidget()
         self.windowWidget.setObjectName("windowWidget")
@@ -65,19 +65,19 @@ class ProxpoolsWidget(QtWidgets.QWidget):
         
         # Context menu
         self.connsContextMenu = QtWidgets.QMenu()
-        self.createProx = self.connsContextMenu.addAction("Create Users+Pools")
-        self.createProx.triggered.connect(self.menuItemSelected)
-        self.removeProx = self.connsContextMenu.addAction("Remove Users+Pools")
-        self.removeProx.triggered.connect(self.menuItemSelected)
-        self.clearProx = self.connsContextMenu.addAction("Clear All Users+Pools on Server")
-        self.clearProx.triggered.connect(self.menuItemSelected)
+        self.createKeycloak = self.connsContextMenu.addAction("Create Users")
+        self.createKeycloak.triggered.connect(self.menuItemSelected)
+        self.removeKeycloak = self.connsContextMenu.addAction("Remove Users")
+        self.removeKeycloak.triggered.connect(self.menuItemSelected)
+        self.clearKeycloak = self.connsContextMenu.addAction("Clear All Users on Server")
+        self.clearKeycloak.triggered.connect(self.menuItemSelected)
 
         self.setLayout(self.windowBoxHLayout)
         self.retranslateUi()
 
     def retranslateUi(self):
-        logging.debug("ProxpoolsWidget: retranslateUi(): instantiated")
-        self.setWindowTitle("ProxpoolsWidget")
+        logging.debug("KeycloakWidget: retranslateUi(): instantiated")
+        self.setWindowTitle("KeycloakWidget")
         self.experimentTree.headerItem().setText(0, "Experiments")
         self.experimentTree.setSortingEnabled(False)
     
@@ -123,7 +123,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
 
 
     def getExperimentVMRolledOut(self, configname, config_json):
-        logging.debug("ProxpoolsWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
+        logging.debug("KeycloakWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
         self.rolledoutjson = self.eco.getExperimentVMRolledOut(configname, config_json)
 
     def addExperimentItem(self, configname, config_jsondata=None):
@@ -162,10 +162,10 @@ class ProxpoolsWidget(QtWidgets.QWidget):
 
         if rolledoutjson != None:
             #first check if ther'es an RDP Broker IP, if not, disable the tree and add a description to configname
-            if "vm-server-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
-                config_jsondata["xml"]["testbed-setup"]["network-config"]["vm-server-ip"] == None or \
-                    config_jsondata["xml"]["testbed-setup"]["network-config"]["vm-server-ip"].strip() == "":
-                experimentTreeWidgetItem.setText(0,configname+" (VM Server Address required)")
+            if "keycloak-server-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
+                config_jsondata["xml"]["testbed-setup"]["network-config"]["keycloak-server-ip"] == None or \
+                    config_jsondata["xml"]["testbed-setup"]["network-config"]["keycloak-server-ip"].strip() == "":
+                experimentTreeWidgetItem.setText(0,configname+" (Keycloak Address required)")
                 experimentTreeWidgetItem.setDisabled(True)
             #get the usersConn associations first:
             # if file was specified, but it doesn't exist, prepend usernames
@@ -186,7 +186,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                         vmuser_mapping[cloneVMName] = "userfile_not_found"
                     
             #create the status widgets (tables)
-            self.experimentActionsBaseWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+            self.experimentActionsBaseWidget = KeycloakStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
             self.connectionBaseWidgets[configname] = {"ExperimentActionsBaseWidget": {}, "ExperimentActionsSetWidgets": {}, "ExperimentActionsTemplateWidgets": {}, "ExperimentActionsVMWidgets": {}, "ExperimentActionsUserWidgets": {} }
             self.connectionBaseWidgets[configname]["ExperimentActionsBaseWidget"] = self.experimentActionsBaseWidget
             self.basedataStackedWidget.addWidget(self.experimentActionsBaseWidget)
@@ -199,7 +199,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                 setlabel = "S: Set " + set
                 set_item.setText(0,setlabel)
                 # Set Widget
-                experimentActionsSetStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsSetStatusWidget = KeycloakStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"][setlabel] = experimentActionsSetStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsSetStatusWidget)
 
@@ -209,7 +209,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                 templatelabel = "T: " + templatename
                 template_item.setText(0,templatelabel)
                 # Set Widget
-                experimentActionsTemplateStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsTemplateStatusWidget = KeycloakStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"][templatelabel] = experimentActionsTemplateStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsTemplateStatusWidget)
 
@@ -221,7 +221,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                 vmlabel = "V: " + vmname
                 vm_item.setText(0,vmlabel)
                 # VM Config Widget
-                connectionStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                connectionStatusWidget = KeycloakStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"][vmlabel] = connectionStatusWidget
                 self.basedataStackedWidget.addWidget(connectionStatusWidget)
 
@@ -234,7 +234,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                 num+=1
                 user_item.setText(0,user_label)
                 # VM Config Widget
-                experimentActionsUserStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsUserStatusWidget = KeycloakStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"][user_label] = experimentActionsUserStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsUserStatusWidget)
         else:
@@ -262,7 +262,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
         logging.debug("removeExperimentItem(): Completed")
 
     def showContextMenu(self, position):
-        logging.debug("ProxpoolsWidget(): showContextMenu(): instantiated")
+        logging.debug("KeycloakWidget(): showContextMenu(): instantiated")
         self.connsContextMenu.popup(self.experimentTree.mapToGlobal(position))
 
     def getTypeNameFromSelection(self):
@@ -330,8 +330,8 @@ class ProxpoolsWidget(QtWidgets.QWidget):
         configname = selectedItem.text(0)
 
         vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
-        s = ProxpoolsActionDialog(self, configname, "Refresh", vmHostname).exec_()
-        #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
+        s = KeycloakActionDialog(self, configname, "Refresh", keycloakserver).exec_()
+        #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:
             logging.debug("Cancel pressed")
             return
@@ -343,7 +343,7 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                         QMessageBox.Ok)
             return
 
-        if s == None or s["usersConnsStatus"] == {} or s["usersConnsStatus"] == None:
+        if s == None or s["usersStatus"] == {} or s["usersStatus"] == None:
             logging.error("Could not retrieve conns status: " + str(s))
             QMessageBox.warning(self,
                         "No Results",
@@ -351,27 +351,27 @@ class ProxpoolsWidget(QtWidgets.QWidget):
                         QMessageBox.Ok)
             return None
 
-        self.usersConnsStatus = s["usersConnsStatus"]
+        self.usersStatus = s["usersStatus"]
        
         
         #Update all vm status in the subtrees
         #First the "all" view
         for widget in self.connectionBaseWidgets[configname].values():
-            if isinstance(widget, ProxpoolsStatusWidget):
-                widget.updateConnStatus(self.usersConnsStatus)
+            if isinstance(widget, KeycloakStatusWidget):
+                widget.updateConnStatus(self.usersStatus)
         #The Sets:
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"].values():
-            if isinstance(widget, ProxpoolsStatusWidget):
-                widget.updateConnStatus(self.usersConnsStatus)
+            if isinstance(widget, KeycloakStatusWidget):
+                widget.updateConnStatus(self.usersStatus)
         #The Templates:
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"].values():
-            if isinstance(widget, ProxpoolsStatusWidget):
-                widget.updateConnStatus(self.usersConnsStatus)
+            if isinstance(widget, KeycloakStatusWidget):
+                widget.updateConnStatus(self.usersStatus)
         #The VMs
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"].values():
-            if isinstance(widget, ProxpoolsStatusWidget):
-                widget.updateConnStatus(self.usersConnsStatus)
+            if isinstance(widget, KeycloakStatusWidget):
+                widget.updateConnStatus(self.usersStatus)
         #The Users
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"].values():
-            if isinstance(widget, ProxpoolsStatusWidget):
-                widget.updateConnStatus(self.usersConnsStatus)
+            if isinstance(widget, KeycloakStatusWidget):
+                widget.updateConnStatus(self.usersStatus)
