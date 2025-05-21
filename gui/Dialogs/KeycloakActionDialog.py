@@ -94,16 +94,7 @@ class KeycloakActionDialog(QDialog):
         if str(result) == str(1):
             logging.debug("dialog_response(): OK was pressed")
             if self.actionname == "Add":
-                bitDepth = self.bitdepthComboBox.currentText()
-                if bitDepth == "256 colors (8-bit)":
-                    bitDepth = "8"
-                elif bitDepth == "Low color (16-bit)":
-                    bitDepth = "16"
-                elif bitDepth == "True color (24-bit)":
-                    bitDepth = "24"
-                elif bitDepth == "True color (32-bit)":
-                    bitDepth = "32"
-                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Remove":
                 self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Clear":

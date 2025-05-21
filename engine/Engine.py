@@ -194,16 +194,17 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.connectionManageKeycloakSSO.removeUsers(configname, hostname, username, password, full_creds_file, itype, name)
-        return self.connectionManageKeycloakSSO.removeUsers(configname, hostname, username, password, itype=itype, name=name)
+                return self.connectionManageKeycloakSSO.deleteUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.connectionManageKeycloakSSO.deleteUsers(configname, hostname, username, password, itype=itype, name=name)
 
     def keycloakClearAllCmd(self, args):
         logging.debug("keycloakClearAllCmd(): instantiated")
         #will remove keycloaks as specified in configfile
+        configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password      
-        return self.connectionManageKeycloakSSO.clearAllUsers(hostname, username, password)
+        return self.connectionManageKeycloakSSO.clearAllUsers(configname, hostname, username, password)
 
     def guacConnStatusCmd(self, args):
         #query guacConn manager status and then return it here        
@@ -678,7 +679,7 @@ class Engine:
         self.keycloakConnManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                             help='all, set-number, template-vm-name, or clone-vm-name')
         self.keycloakConnManageCreateParser.set_defaults(func=self.keycloakCreateCmd)
-        
+
         self.keycloakConnManageRemoveParser = self.keycloakConnManageSubParser.add_parser('remove', help='remove conns as specified in config file')
         self.keycloakConnManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
                                             help='path to config file')
@@ -697,6 +698,8 @@ class Engine:
         self.keycloakConnManageRemoveParser.set_defaults(func=self.keycloakRemoveCmd)
         
         self.keycloakConnManageClearAllParser = self.keycloakConnManageSubParser.add_parser('clearall', help='remove all conns')
+        self.keycloakConnManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
         self.keycloakConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
                                             help='Name or IP address where keycloak host resides')
         self.keycloakConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",

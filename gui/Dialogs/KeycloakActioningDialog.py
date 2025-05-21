@@ -28,13 +28,13 @@ class WatchActioningThread(QThread):
             e = Engine.getInstance()
             creds_file = " None "
             if self.actionname == "Add":
-                if len(self.args) != 11:
+                if len(self.args) != 6:
                     logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                     self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
                 #10 is the users_file 
-                if str(self.args[8]).strip() != "":
+                if str(self.args[3]).strip() != "":
                     creds_file = str(self.args[3])
                     if " " in creds_file:
                         creds_file = "\""+creds_file+"\""
@@ -56,7 +56,7 @@ class WatchActioningThread(QThread):
                     self.watchsignal.emit("Invalid number of args for clear connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                cmd = "keycloak " + " clear "+ self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+                cmd = "keycloak " + " clearall "+ self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             logging.debug("WatchActioningThread(): running: " + cmd)
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected

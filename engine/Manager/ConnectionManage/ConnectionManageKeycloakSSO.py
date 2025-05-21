@@ -47,44 +47,81 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
             self.proxapi = None
             return None
 
+    def deleteUsers(self, configname, keycloakHostname, username, password, creds_file="", itype="", name="", exceptions=[]):
+        logging.debug("deleteUsers(): instantiated")
+        t = threading.Thread(target=self.runDeleteUsers, args=(configname, keycloakHostname, username, password, creds_file, itype, name, exceptions))
+        self.writeStatus+=1
+        t.start()
+        return 0
 
-    def createUser(self, apiSession, username, password, email="", email_ext="@fake.com"):
-        pass
+    def runDeleteUsers(self, configname, keycloakHostname, musername, mpassword, creds_file="", itype="", name="", exceptions=["root","admin", "jacosta", "jcacosta"]):
+        logging.debug("runDeleteUsers(): instantiated")
+        #call keycloak backend API to make connections as specified in config file and then set the complete status
+        rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
+        validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
 
-    def createUsers(self, apiSession, users_passes, ignore=[""]):
-        logging.debug("KeycloakManage: createUsers(): instantiated")
-        results = []
-        if isinstance(ignore, str):
-            ignore = [ignore]
-        for (user, password) in users_passes:
-            name = user
-            if name.lower() not in (string.lower() for string in ignore):
-                results.append((user, self.createUser(apiSession, user, password)))
-        return results
+        userpool = UserPool()
+        usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
+        users = []
+        try:
+            #get accessors to the proxmox api and ssh
+            try:
+                keycloakAPI = self.getKeycloakAPI(configname, musername, mpassword)
+                if keycloakAPI == None:
+                    return None
 
-    def deleteUser(self, apiSession, username):
-        logging.debug("KeycloakManage: deleteUser(): instantiated")
-        # ID from username
-        logging.debug("Getting Username ID: " + username)
-        result = apiSession.get_user_id(username)
-        if result == None:
-            return False
-        # Delete user
-        logging.info("Removing user: " + result)
-        result = apiSession.delete_user(result)
-        logging.debug("Result: " + str(result))
-        if result == {}:
-            return True
-        return False
+            except Exception:
+                logging.error("Error in runDeleteUsers(): An error occured when trying to connect to proxmox")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            #get the list of all users and pools
+            try:
+                res = keycloakAPI.get_users({})
+                for user_info in res:
+                    users.append(user_info['username'])
+            except Exception:
+                logging.error("Error in runDeleteUsers(): An error occured when trying to get users")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-    def deleteUsers(self, apiSession, users, ignore=[""]):
-        results = []
-        if isinstance(ignore, str):
-            ignore = [ignore]
-        for name in users:
-            if name.lower() not in (string.lower() for string in ignore):
-                results.append((name, self.deleteUser(apiSession, name)))
-        return results
+            try:
+                for (username, password) in usersConns:  
+                    for conn in usersConns[(username, password)]:
+                        cloneVMName = conn[0]
+
+                        #only if this is a specific connection to create; based on itype and name
+                        if cloneVMName in validconnsnames:
+                            if users != None and username not in users and username in exceptions:
+                                logging.debug("runDeleteUsers(): User " + username + " does not exist; skipping...")
+                                continue             
+                            logging.debug("Getting Username ID: " + username)
+                            userid = keycloakAPI.get_user_id(username)
+                            if userid == None:
+                                logging.debug("runDeleteUsers(): User " + username + " does not exist; skipping...")
+                                continue
+                            # Delete user
+                            logging.debug("-User ID: " + str(userid))
+                            logging.info("runDeleteUsers(): Removing user: " + username + " ID: " + str(userid))
+                            result = keycloakAPI.delete_user(userid)
+
+                            if result == {}:
+                                logging.debug("runDeleteUsers(): User removed: " + str(result))
+                                if username in users:
+                                    users.remove(username)
+                            else:
+                                logging.debug("runDeleteUsers(): User " + username + " could not be deleted...")
+            except Exception:
+                    logging.error("runDeleteUsers(): (): Error in runDeleteUsers(): when trying to remove user.")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
+            logging.debug("runDeleteUsers(): (): Complete...")
+        except Exception:
+            logging.error("runDeleteUsers(): (): Error in runDeleteUsers(): (): An error occured ")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+        finally:
+            self.writeStatus-=1
 
     #abstractmethod
     def createUsers(self, configname, keycloakHostname, username, password, creds_file="", itype="", name=""):
@@ -102,7 +139,7 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
 
         userpool = UserPool()
         usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-
+        users = []
         try:
             #get accessors to the proxmox api and ssh
             try:
@@ -118,7 +155,6 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
             #get the list of all users and pools
             try:
                 res = keycloakAPI.get_users({})
-                users = []
                 for user_info in res:
                     users.append(user_info['username'])
             except Exception:
@@ -128,24 +164,29 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
 
             try:
                 for (username, password) in usersConns:  
-                    if username in users:
-                        logging.debug("runCreateUsers(): User " + username + " already exists; skipping...")
-                        continue             
-                    logging.info("runCreateUsers(): Creating user: " + username)
-                    email = username+str("@fake.com")
-                    result = keycloakAPI.create_user({"email": email,
-                        "username": username,
-                        "enabled": True,
-                        "firstName": username,
-                        "lastName": username,
-                        "credentials": [{"value": password, "type": "password",}]},
-                        exist_ok=True)
+                    for conn in usersConns[(username, password)]:
+                        cloneVMName = conn[0]
 
-                    if result != {}:
-                        logging.debug("runCreateUsers(): User create with ID: " + str(result))
-                        users.append(username)
-                    else:
-                        logging.debug("runCreateUsers(): User " + username + " could not be created...")
+                        #only if this is a specific connection to create; based on itype and name
+                        if cloneVMName in validconnsnames:
+                            if users != None and username in users:
+                                logging.debug("runCreateUsers(): User " + username + " already exists; skipping...")
+                                continue             
+                            logging.info("runCreateUsers(): Creating user: " + username)
+                            email = username+str("@fake.com")
+                            result = keycloakAPI.create_user({"email": email,
+                                "username": username,
+                                "enabled": True,
+                                "firstName": username,
+                                "lastName": username,
+                                "credentials": [{"value": password, "type": "password",}]},
+                                exist_ok=True)
+
+                            if result != {}:
+                                logging.debug("runCreateUsers(): User create with ID: " + str(result))
+                                users.append(username)
+                            else:
+                                logging.debug("runCreateUsers(): User " + username + " could not be created...")
             except Exception:
                     logging.error("runCreateUsers(): (): Error in runCreateUsers(): when trying to add user.")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -159,135 +200,70 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllUsers(self, configname, keycloakHostname, username, password, exceptions=[]):
+    def clearAllUsers(self, configname, keycloakHostname, username, password, exceptions=["root","admin", "jacosta", "jcacosta"]):
         logging.debug("clearAllUsers(): instantiated")
         t = threading.Thread(target=self.runClearAllUsers, args=(configname, keycloakHostname, username, password, exceptions))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runClearAllUsers(self, configname, keycloakHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
-        logging.debug("runClearAllUsers(): instantiated")
+    def runClearAllUsers(self, configname, keycloakHostname, musername, mpassword, exceptions=["root","admin", "jacosta", "jcacosta"]):
+        logging.debug("runDeleteUsers(): instantiated")
+        #call keycloak backend API to make connections as specified in config file and then set the complete status
+        users = []
         try:
+            #get accessors to the api
             try:
                 keycloakAPI = self.getKeycloakAPI(configname, musername, mpassword)
                 if keycloakAPI == None:
                     return None
 
             except Exception:
-                logging.error("Error in runClearAllUsers(): An error occured when trying to connect to keycloak")
+                logging.error("Error in runDeleteUsers(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
-            #get the list of all users and pools
+            #get the list of all users
             try:
-                res = keycloakAPI.access.users.get()
-                users = []
+                res = keycloakAPI.get_users({})
                 for user_info in res:
-                    user = user_info['userid']
-                    if len(user.strip()) > 4 and user[-4:] == "@pam":
-                        users.append(user_info['userid'][:-4])
+                    users.append(user_info['username'])
             except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to get users")
+                logging.error("Error in runDeleteUsers(): An error occured when trying to get users")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return None
+            removed = []
+            try:
+                for username in users:
+                    #remove the user
+                    if username in removed or username in exceptions:
+                        logging.debug("runDeleteUsers(): User " + username + " already removed or in exceptions list...")
+                        continue             
+                    logging.info("runDeleteUsers(): Removing user: " + username)
+                    logging.debug("Getting Username ID: " + username)
+                    userid = keycloakAPI.get_user_id(username)
+                    if userid == None:
+                        return False
+                    # Delete user
+                    logging.debug("-User ID: " + str(userid))
+                    result = keycloakAPI.delete_user(userid)
 
-            users_removed = []
-
-            #remove all users except root, ana, and nathan
-            for user in users:
-                if user in exceptions or user in users_removed:
-                    continue
-                logging.debug( "Removing User: " + user)
-                try:
-                    # result = proxssh._exec(shlex.split("userdel " + user))
-                    result = self.removeUser(user)
-                    if result != None and 'err' in result and "does not exist" in result['err']:
-                        logging.debug("User" + user + " does not exist; skipping...")
+                    if result != {}:
+                        logging.debug("runDeleteUsers(): User removed: " + str(result))
+                        if username in users:
+                            removed.append(username)
                     else:
-                        users_removed.append(user)
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove user: " + user)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
+                        logging.debug("runDeleteUsers(): User " + username + " could not be deleted...")
+            except Exception:
+                    logging.error("runDeleteUsers(): (): Error in runDeleteUsers(): when trying to remove user.")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
+            logging.debug("runDeleteUsers(): (): Complete...")
         except Exception:
-            logging.error("Error in runClearAllConnections: An error occured.")
+            logging.error("runDeleteUsers(): (): Error in runDeleteUsers(): (): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-        finally:
-            self.writeStatus-=1
-
-    #abstractmethod
-    def removeUsers(self, configname, keycloakHostname, username, password, creds_file="", itype="", name=""):
-        logging.debug("removeUsers(): instantiated")
-        t = threading.Thread(target=self.runRemoveUsers, args=(configname,keycloakHostname, username, password, creds_file, itype, name))
-        self.writeStatus+=1
-        t.start()
-        return 0
-
-    def runRemoveUsers(self, configname, keycloakHostname, musername, mpassword, creds_file, itype, name):
-        logging.debug("runRemoveUsers(): instantiated")
-        try:
-            rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-            validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-
-            userpool = UserPool()
-            usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-
-            #get accessors to the proxmox api and ssh
-            try:
-                keycloakAPI = self.getKeycloakAPI(configname, musername, mpassword)
-                if keycloakAPI == None:
-                    return None
-
-            except Exception:
-                logging.error("Error in runRemoveUsers(): An error occured when trying to connect to proxmox")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return None
-            users_removed = []
-            users_removed_lin = []
-
-            for (username, password) in usersConns:
-                logging.debug( "Removing Pool and User: " + username)
-                try:
-                    for conn in usersConns[(username, password)]:
-                        cloneVMName = conn[0]
-                        if cloneVMName in validconnsnames:
-                            #remove user
-                            if username in users_removed_lin:
-                                continue
-                            logging.debug( "Removing User: " + username)
-                            try:
-                                # result = proxssh._exec(shlex.split("userdel " + user))
-                                result = self.executeSSH("userdel " + username)
-                                if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
-                                    logging.debug("User" + username + " does not exist; skipping...")
-                                else:
-                                    users_removed_lin.append(username)
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            if username in users_removed:
-                                continue
-                            try:
-                                result = keycloakAPI.access.users(username).delete()
-                                if result != None and  len(result) > 1 and "does not exist" in result[1]:
-                                    logging.debug("User" + username + " does not exist; skipping...")
-                                else:
-                                    users_removed.append(username)
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                except Exception:
-                        logging.error("runRemoveConnections(): Error in runRemoveConnections(): when trying to remove connection.")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-                        traceback.print_exception(exc_type, exc_value, exc_traceback)
-            logging.debug("runRemoveConnections(): Complete...")
         finally:
             self.writeStatus-=1
 
