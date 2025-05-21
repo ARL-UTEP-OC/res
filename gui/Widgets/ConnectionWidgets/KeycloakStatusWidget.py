@@ -114,7 +114,7 @@ class KeycloakStatusWidget(QtWidgets.QWidget):
         connName = self.connStatusTable.item(connRow,0).text()
         actionlabelname = self.sender().text()
         vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(self.configname)
-        ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, vmserverip, users_file, "vm", connName)
+        ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, keycloakserver, users_file, "vm", connName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)
 
     def updateConnStatus(self, usersConnsStatus):

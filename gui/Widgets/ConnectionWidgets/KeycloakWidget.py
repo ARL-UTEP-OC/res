@@ -310,9 +310,9 @@ class KeycloakWidget(QtWidgets.QWidget):
         vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
         if vmHostname != None:
             if users_file == None:
-                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, users_file="", itype=itype, name=name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, keycloakserver, users_file="", itype=itype, name=name)
             else:
-                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, users_file, itype, name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, keycloakserver, users_file, itype, name)
 
     def refreshConnsStatus(self):
         logging.debug("refreshVMStatus(): instantiated")
