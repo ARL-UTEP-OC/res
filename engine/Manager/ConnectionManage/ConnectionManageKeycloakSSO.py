@@ -20,6 +20,7 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
         self.keycloakapi = None
         self.eco = ExperimentConfigIO.getInstance()
         self.usersStatus = {}
+        self.usersConnsStatus = {}
         self.lock = RLock()
         self.s = SystemConfigIO()
 
@@ -200,14 +201,14 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllUsers(self, configname, keycloakHostname, username, password, exceptions=["root","admin", "jacosta", "jcacosta"]):
+    def clearAllUsers(self, configname, keycloakHostname, username, password, exceptions=["root","admin", "jacosta", "jcacosta", "darien", "piplai"]):
         logging.debug("clearAllUsers(): instantiated")
         t = threading.Thread(target=self.runClearAllUsers, args=(configname, keycloakHostname, username, password, exceptions))
         self.writeStatus+=1
         t.start()
         return 0
 
-    def runClearAllUsers(self, configname, keycloakHostname, musername, mpassword, exceptions=["root","admin", "jacosta", "jcacosta"]):
+    def runClearAllUsers(self, configname, keycloakHostname, musername, mpassword, exceptions=["root","admin", "jacosta", "jcacosta", "darien", "piplai"]):
         logging.debug("runDeleteUsers(): instantiated")
         #call keycloak backend API to make connections as specified in config file and then set the complete status
         users = []
@@ -270,7 +271,7 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
     #abstractmethod
     def getUserManageStatus(self):
         logging.debug("getUserManageStatus(): instantiated")
-        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersStatus" : self.usersStatus}
+        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersStatus" : self.usersConnsStatus}
     
     def getUserManageRefresh(self, configname, proxHostname, musername, mpassword):
         logging.debug("getUserManageRefresh(): instantiated")
@@ -278,8 +279,11 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
             self.lock.acquire()
             self.usersStatus.clear()
 
-            # if pool name with username exists, then "connection exists"
-            # check tasks and look for those without end time; if type is vnxproxy, get username; that user is connected
+            vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, keycloakserver, creds_file = self.eco.getExperimentServerInfo(configname)
+            
+            userpool = UserPool()
+            usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
+
             try:
                 keycloakapi = self.getKeycloakAPI(configname, musername, mpassword)
                 if keycloakapi == None:
@@ -291,107 +295,48 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
             
-            #get vmid -> vmname mapping
-            vmid_name = {}
             try:
-                allinfo = proxapi.cluster.resources.get(type='vm')
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh: An error occured when trying to get cluster info")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-            for vmiter in allinfo:
-                #GET UUID
-                vmname = vmiter['name']
-                vmid = vmiter['vmid']
-                vmid_name[str(vmid)] = vmname
-
-            #get the list of all pools
-            try:
-                res = proxapi.pools.get()
-                pools = {}
-                for pool_info in res:
-                    pool_id = pool_info['poolid']
-                    pools[pool_id] = []
-                    try:
-                        members_ds = proxapi.pools(pool_id).get()
-                        for member in members_ds['members']:
-                            pools[pool_id].append(vmid_name[str(member['vmid'])])
-                    except ResourceException:
-                        logging.warning("getConnectionManageRefresh(): Pool " + pool_id + " does not exist, skipping.")
-                        # exc_type, exc_value, exc_traceback = sys.exc_info()
-                        # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                    except Exception:
-                        logging.error("getConnectionManageRefresh(): error when trying to remove pool: " + pool_id)
-                        # exc_type, exc_value, exc_traceback = sys.exc_info()
-                        # traceback.print_exception(exc_type, exc_value, exc_traceback)
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            #get task list
-            try:
-                #res = proxapi.nodes(nodename).tasks.get()
-                res = proxapi.cluster.tasks.get()
-                connected = {}
-                for task in res:
-                    if task['type'] != "vncproxy" or task['node'] != nodename:
-                        continue
-                    taskvmid = None
-                    taskvmname = None
-                    if 'id' in task:
-                        taskvmid = task['id']
-                        taskvmname = vmid_name[taskvmid]
+                users = keycloakapi.get_users({})
+                for user_info in users:
+                    username = user_info['username']
+                    userid = user_info['id']
+                    if username not in self.usersStatus:
+                        self.usersStatus[username] = {}
+                    self.usersStatus[username]["user_status"] = "exists"
+                    self.usersStatus[username]["connStatus"] = "inactive"
+                    user_sessions = keycloakapi.get_sessions(userid)
+                    print("User Sessions: " + str(user_sessions))
+                    if user_sessions != None and user_sessions != []:
+                        #get info about user
+                        self.usersStatus[username]["user_status"] = "active"
+                        lastAccess = user_sessions[0]['lastAccess']
+                        formatted_time = datetime.datetime.fromtimestamp(lastAccess / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                        self.usersStatus[username]["connStatus"] = formatted_time
                     else:
-                        continue
-                    taskuser = task['user']
-                    taskstarttime = None
-                    if 'starttime' in task:
-                        taskstarttime = task['starttime']
-                    taskendtime = 'Active'
-                    if 'endtime' in task:
-                        taskendtime = task['endtime']
-                    if len(taskuser) > 4 and taskuser[-4:] == "@pam":
-                        taskuser = task['user'][:-4]
-                    if (taskuser, taskvmname) in connected:
-                        #since these come from logs, there may be more than one connection. Take the later one.
-                        if taskstarttime != None and (connected[(taskuser,taskvmname)]['taskendtime'] != "Active" and taskstarttime > connected[(taskuser,taskvmname)]['taskendtime']) or taskendtime == "Running":
-                            connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
-                        #else, do nothing, leave the previous
-                    else:
-                        connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
-                            
+                        self.usersStatus[username]["user_status"] = "exists"
+                        self.usersStatus[username]["connStatus"] = "inactive"
+
             except Exception:
-                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
+                logging.error("Error in getConnectionManageRefresh: An error occured when trying to get users")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            for username in pools.keys():
-                logging.debug("getConnectionManageRefresh(): username: " + username)
-                if username not in pools or pools[username] == []:
-                    #if user is not in pools, then user is not connected
-                    user_perm = "Found"
-                    active = "Empty Pool"
-                    self.usersStatus[(username,"")] = {"user_status": user_perm, "connStatus": active}
-                    continue
-                for vmname in pools[username]:
-                    #if user/vmname is in connected, then user is connected
-                    active = "No Recent Record"
-                    if (username, vmname) in connected:
-                        if connected[(username, vmname)]['taskendtime'] != 'Active':
-                            active = datetime.datetime.fromtimestamp(connected[(username, vmname)]['taskendtime']).strftime("%Y-%m-%d %H:%M:%S")
-                        else:
-                            active = 'Active'
-                    logging.debug("getConnectionManageRefresh(): username: " + username + "; vmname: " + vmname + "; active: " + str(active))
-                    self.usersStatus[(username,vmname)] = {"user_status": user_perm, "connStatus": active}
-            logging.debug("getConnectionManageRefresh(): usersStatus: " + str(self.usersStatus))
+                self.usersConnsStatus = {}
+                return None
             
+            for (username, password) in usersConns:
+                for conn in usersConns[(username, password)]:
+                    cloneVMName = conn[0]
+                    if username in self.usersStatus:
+                        self.usersConnsStatus[(username,cloneVMName)] = {"user_status": self.usersStatus[username]["user_status"], "connStatus": self.usersStatus[username]["connStatus"]}
+
+            logging.debug("getConnectionManageRefresh(): usersStatus: " + str(self.usersStatus))
+
         except Exception as e:
             logging.error("Error in getConnectionManageRefresh(). Could not refresh connections!")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             trace_back = traceback.extract_tb(exc_traceback)
             traceback.print_exception(exc_type, exc_value, exc_traceback)
+            self.usersConnsStatus = {}
             return None
         finally:
             self.lock.release()
-            self.writeStatus-=1

@@ -159,11 +159,12 @@ class Engine:
         return self.connectionManageKeycloakSSO.getUserManageStatus()
 
     def keycloakRefreshCmd(self, args):
+        configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password
         #query keycloak manager status and then return it here
-        return self.connectionManageKeycloakSSO.getUserManageRefresh(hostname, username, password)
+        return self.connectionManageKeycloakSSO.getUserManageRefresh(configname, hostname, username, password)
         
     def keycloakCreateCmd(self, args):
         logging.debug("keycloakCreateCmd(): instantiated")
@@ -654,7 +655,10 @@ class Engine:
         self.keycloakConnManageSubParser = self.keycloakConnManageParser.add_subparsers(help='manage keycloak SSO')
         self.keycloakConnManageStatusParser = self.keycloakConnManageSubParser.add_parser('status', help='retrieve keycloak manager status')
         self.keycloakConnManageStatusParser.set_defaults(func=self.keycloakStatusCmd)
+
         self.keycloakConnManageRefreshParser = self.keycloakConnManageSubParser.add_parser('refresh', help='retrieve all keycloak manager status')
+        self.keycloakConnManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
         self.keycloakConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
                                             help='Name or IP address where keycloak host resides')
         self.keycloakConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",

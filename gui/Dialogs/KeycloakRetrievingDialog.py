@@ -96,7 +96,7 @@ class KeycloakRetrievingDialog(QDialog):
         t = WatchRetrieveThread(self.configname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ProxpoolsRetrievingDialog, self).exec_()
+        result = super(KeycloakRetrievingDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status
