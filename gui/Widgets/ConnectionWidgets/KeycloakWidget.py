@@ -347,7 +347,7 @@ class KeycloakWidget(QtWidgets.QWidget):
             logging.error("Could not retrieve conns status: " + str(s))
             QMessageBox.warning(self,
                         "No Results",
-                        "No Pools found. If you think this is an error, check your credentials and connectivity",
+                        "No Users found. If you think this is an error, check your credentials and connectivity",
                         QMessageBox.Ok)
             return None
 

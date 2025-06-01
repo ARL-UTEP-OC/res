@@ -305,13 +305,13 @@ class ConnectionManageKeycloakSSO(ConnectionManage):
                     self.usersStatus[username]["user_status"] = "exists"
                     self.usersStatus[username]["connStatus"] = "inactive"
                     user_sessions = keycloakapi.get_sessions(userid)
-                    print("User Sessions: " + str(user_sessions))
                     if user_sessions != None and user_sessions != []:
                         #get info about user
+                        num_sessions = len(user_sessions)
                         self.usersStatus[username]["user_status"] = "active"
-                        lastAccess = user_sessions[0]['lastAccess']
+                        lastAccess = user_sessions[-1]['lastAccess']
                         formatted_time = datetime.datetime.fromtimestamp(lastAccess / 1000).strftime('%Y-%m-%d %H:%M:%S')
-                        self.usersStatus[username]["connStatus"] = formatted_time
+                        self.usersStatus[username]["connStatus"] = formatted_time # + " || ("+str(num_sessions) + ")"
                     else:
                         self.usersStatus[username]["user_status"] = "exists"
                         self.usersStatus[username]["connStatus"] = "inactive"
