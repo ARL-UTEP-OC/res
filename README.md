@@ -22,7 +22,7 @@ RES has been tested on:
 * Ubuntu 16.04+ LTE (64-bit)
 
 ##### Requirements
-* [Python 3.6 (64-bit) - Python 3.10 ](https://www.python.org/downloads/release/python-360/) (Note that RES does not work with Python 3.12 due to double-inheritance issues in the console handler code). It is recommended to use conda with a Python 3.9 virtual environment.
+* [Python 3.10 (64-bit)](https://www.python.org/downloads/release/python-3100/) (Note that RES does not work with Python 3.12 due to double-inheritance issues in the console handler code). It is recommended to use conda with a Python 3.9 virtual environment.
 
 * [VirtualBox 6.1.6+](https://www.virtualbox.org/wiki/Downloads) or VMWare Workstation 17+
 * [Several Other Python packages] (see requirements.txt)
