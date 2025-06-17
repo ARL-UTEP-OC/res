@@ -6,21 +6,18 @@ import csv
 import time
 import datetime
 from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
-from proxmoxer import ProxmoxAPI
-from proxmoxer.core import ResourceException
-from proxmoxer.backends import ssh_paramiko
-from proxmoxer.tools import Tasks
+import paramiko
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from engine.Configuration.SystemConfigIO import SystemConfigIO
 from engine.Configuration.UserPool import UserPool
 from threading import RLock
 
-class ConnectionManageProxVNC(ConnectionManage):
-    def __init__(self, username=None, password=None):
+class ConnectionManageRESVMControl(ConnectionManage):
+#
+    def __init__(self):
         logging.debug("ConnectionManageGuacRDP(): instantiated")
         ConnectionManage.__init__(self)
-        self.proxapi = None
-        self.proxssh = None
+        self.vmcontrol = None
         self.eco = ExperimentConfigIO.getInstance()
         self.usersConnsStatus = {}
         self.lock = RLock()
@@ -28,62 +25,44 @@ class ConnectionManageProxVNC(ConnectionManage):
         self.sshusername = None
         self.sshpassword = None
 
-    def getProxAPI(self, configname, username=None, password=None):
-        logging.debug("ProxmoxManage: getProxAPI(): instantiated")
-        try:
-            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, vmcontrolip, vmcontrolsshport, users_file = self.eco.getExperimentServerInfo(configname)
-            server = vmHostname
-            self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
-            splithostname = vmHostname.split("://")
-            if len(splithostname) > 1:
-                rsplit = splithostname[1]
-                if len(rsplit.split(":")) > 1:
-                    port = rsplit.split(":")[1].split("/")[0]
-                server = rsplit.split("/")[0]
-
-            if self.proxapi == None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
-            elif self.proxapi != None and username != None and password != None and username.strip() != "" and password.strip() != "":
-                self.proxapi = None
-                self.proxapi = ProxmoxAPI(server, port=port, user=username, password=password, verify_ssl=False)
-
-            return self.proxapi, self.nodename
-        except Exception:
-            logging.error("Error in getProxAPI(): An error occured when trying to connect to proxmox; possibly incorrect credentials.")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.proxapi = None
-            return None
-
-    def getProxSSH(self, configname, username=None, password=None):
-        logging.debug("ProxmoxManage: getProxSSH(): instantiated")
+    def getVMControlSSH(self, configname, username=None, password=None):
+        logging.debug("getVMControlSSH(): instantiated")
         try:
             
-            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, vmcontrolip, vmcontrolsshport, users_file = self.eco.getExperimentServerInfo(configname)
-            server = vmHostname
-            user = None
-            if len(username) > 4:
-                user = username[:-4]
-            splithostname = vmHostname.split("://")
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, vmcontrolhostname, vmcontrolsshport, users_file = self.eco.getExperimentServerInfo(configname)
+            server = vmcontrolhostname
+            user = username
+            splithostname = vmcontrolhostname.split("://")
             if len(splithostname) > 1:
                 rsplit = splithostname[1]
                 server = rsplit.split("/")[0]
                 server = server.split(":")[0]
-            if self.proxssh == None and user != None and password != None and user.strip() != "" and password.strip() != "":
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+            
+            if self.vmcontrol == None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                # Create SSH client
+                self.vmcontrol = paramiko.SSHClient()
+                self.vmcontrol.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                # Connect to the remote server
+                logging.debug(f"getVMControlSSH(): Connecting to " + str(server) + ":" + str(vmcontrolsshport) + " as " + str(username))
+                self.vmcontrol.connect(hostname=server, port=vmcontrolsshport, username=username, password=password)
                 self.sshusername = user
                 self.sshpassword = password
-            elif self.proxssh != None and user != None and password != None and user.strip() != "" and password.strip() != "":
-                self.proxssh = None
-                self.proxssh = ssh_paramiko.SshParamikoSession(server,port=vmserversshport, user=user,password=password)
+            elif self.vmcontrol != None and user != None and password != None and user.strip() != "" and password.strip() != "":
+                self.vmcontrol = None
+                # Create SSH client
+                self.vmcontrol = paramiko.SSHClient()
+                self.vmcontrol.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                # Connect to the remote server
+                logging.debug(f"getVMControlSSH(): Connecting to " + str(server) + ":" + str(vmcontrolsshport) + " as " + str(username))
+                self.vmcontrol.connect(hostname=server, port=vmcontrolsshport, username=username, password=password)
                 self.sshusername = user
                 self.sshpassword = password
-            return self.proxssh
+            return self.vmcontrol
         except Exception:
-            logging.error("Error in getProxSSH(): An error occured when trying to connect to proxmox with ssh; possibly incorrect credentials.")
+            logging.error("Error in getVMControlSSH(): An error occured when trying to connect to proxmox with ssh; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.proxssh = None
+            self.vmcontrol = None
             return None
 
     def executeSSH(self, command, sudo=True):
@@ -91,28 +70,44 @@ class ConnectionManageProxVNC(ConnectionManage):
         if sudo and self.sshusername != "root":
             command = "sudo -S -p '' %s" % command
             feed_password = self.sshpassword is not None and len(self.sshpassword) > 0
-        stdin, stdout, stderr = self.proxssh.ssh_client.exec_command(command)
+        stdin, stdout, stderr = self.vmcontrol.exec_command(command)
         if feed_password:
             stdin.write(self.sshpassword + "\n")
             stdin.flush()
         return {'out': stdout.readlines(), 
                 'err': stderr.readlines(),
-                'retval': stdout.channel.recv_exit_status()}        
+                'retval': stdout.channel.recv_exit_status()}
 
-    def basic_blocking_task_status(self, proxmox_api, task_id, caller=""):
-        logging.debug("ProxmoxManage: basic_blocking_task_status(): instantiated by " + str(caller))
-        Tasks.blocking_status(proxmox_api, task_id)
+    def startPyroService(self, username, password):
+        logging.debug("startPyroService(): instantiated")
+        #
 
-    #abstractmethod
-    def createConnections(self, configname, proxHostname, username, password, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
-        logging.debug("createConnections(): instantiated")
-        t = threading.Thread(target=self.runCreateConnections, args=(configname, proxHostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, creds_file, itype, name))
-        self.writeStatus+=1
-        t.start()
-        return 0
+    def stopPyroService(self, username, password):
+        logging.debug("stopPyroService(): instantiated")
+        #conda activate res
+        #get docker0 interface ip address
+        #nohup pyro5-ns -n <docker0-ip> -p 10291
 
-    def runCreateConnections(self, configname, proxHostname, musername, mpassword, maxConnections="", maxConnectionsPerUser="", width="", height="", bitdepth="", creds_file="", itype="", name=""):
-        logging.debug("runCreateConnections(): instantiated")
+    def getPyroStatus(self, username, password):
+        logging.debug("getPyroStatus(): instantiated")
+        # conda activate res
+        #
+
+    def startVMControl(self, configname, username, password):
+        logging.debug("startVMControl(): instantiated")
+        #stop and then start pyro4-ns
+
+        #copy creds file
+
+        #copy configname configfile
+
+        #stop and then start docker container
+
+
+    def updateCredsRemote(self, configname, vmcontrolhostname, musername, mpassword):
+        logging.debug("updateCreds(): instantiated")
+        #scp the creds_file to the remote host
+
         #call guac backend API to make connections as specified in config file and then set the complete status
         rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
         validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
@@ -123,20 +118,17 @@ class ConnectionManageProxVNC(ConnectionManage):
         try:
             #get accessors to the proxmox api and ssh
             try:
-                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
-                if proxapi == None:
-                    return None
-
-                proxssh = self.getProxSSH(configname, username=musername,password=mpassword)
-                if proxssh == None:
+                vmcontrol = self.getVMControlSSH(configname, username=musername,password=mpassword)
+                if vmcontrol == None:
                     return None
             except Exception:
                 logging.error("Error in runCreateConnections(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
-            #get the list of all users and pools
+            #get the list of all users
             try:
+
                 res = proxapi.access.users.get()
                 users = []
                 for user_info in res:
@@ -193,7 +185,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                             if username not in users and username not in created_users_lin:
                                 logging.debug( "Creating User: " + username)
                                 try:
-                                    # result = self.proxssh._exec(shlex.split("/usr/sbin/useradd " + username))
+                                    # result = self.vmcontrol._exec(shlex.split("/usr/sbin/useradd " + username))
                                     result = self.executeSSH("/usr/sbin/useradd " + username)
                                     if result != None and 'err' in result and "already exists" in result['err']:
                                         logging.debug("User" + username + " already exists; skipping...")
@@ -288,7 +280,7 @@ class ConnectionManageProxVNC(ConnectionManage):
             self.writeStatus-=1
 
     #abstractmethod
-    def clearAllConnections(self, configname, proxHostname, username, password, exceptions=[]):
+    def credsExistsRemote(self, configname, proxHostname, username, password, exceptions=[]):
         logging.debug("clearAllConnections(): instantiated")
         t = threading.Thread(target=self.runClearAllConnections, args=(configname, proxHostname, username, password, exceptions))
         self.writeStatus+=1
@@ -304,8 +296,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                 if proxapi == None:
                     return None
 
-                proxssh = self.getProxSSH(configname, musername, mpassword)
-                if proxssh == None:
+                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
+                if vmcontrol == None:
                     return None
             except Exception:
                 logging.error("Error in runClearAllConnections(): An error occured when trying to connect to proxmox")
@@ -397,7 +389,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                     continue
                 logging.debug( "Removing User: " + user)
                 try:
-                    # result = proxssh._exec(shlex.split("userdel " + user))
+                    # result = vmcontrol._exec(shlex.split("userdel " + user))
                     result = self.executeSSH("userdel " + user)
                     if result != None and 'err' in result and "does not exist" in result['err']:
                         logging.debug("User" + user + " does not exist; skipping...")
@@ -458,8 +450,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                 if proxapi == None:
                     return None
 
-                proxssh = self.getProxSSH(configname, musername, mpassword)
-                if proxssh == None:
+                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
+                if vmcontrol == None:
                     return None
             except Exception:
                 logging.error("Error in runClearAllConnections(): An error occured when trying to connect to proxmox")
@@ -539,7 +531,7 @@ class ConnectionManageProxVNC(ConnectionManage):
                                 continue
                             logging.debug( "Removing User: " + username)
                             try:
-                                # result = proxssh._exec(shlex.split("userdel " + user))
+                                # result = vmcontrol._exec(shlex.split("userdel " + user))
                                 result = self.executeSSH("userdel " + username)
                                 if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
                                     logging.debug("User" + username + " does not exist; skipping...")
@@ -610,8 +602,8 @@ class ConnectionManageProxVNC(ConnectionManage):
                 if proxapi == None:
                     return None
 
-                proxssh = self.getProxSSH(configname, musername, mpassword)
-                if proxssh == None:
+                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
+                if vmcontrol == None:
                     return None
             except Exception:
                 logging.error("Error in getConnectionManageRefresh(): An error occured when trying to connect to proxmox")

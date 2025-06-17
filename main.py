@@ -232,7 +232,10 @@ class MainApp(QWidget):
             jsondata["xml"]["testbed-setup"]["vm-set"]["chat-server-ip"] = ""
         if "challenges-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
             jsondata["xml"]["testbed-setup"]["vm-set"]["challenges-server-ip"] = ""
-
+        if "vmcontrol-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
+            jsondata["xml"]["testbed-setup"]["vm-set"]["vmcontrol-ip"] = ""
+        if "vmcontrol-ssh-port" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
+            jsondata["xml"]["testbed-setup"]["vm-set"]["vmcontrol-ssh-port"] = ""
         configTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.experimentTree)
         configTreeWidgetItem.setText(0,configname)
         self.experimentActionsWidget.addExperimentItem(configname, config_jsondata=jsondata)

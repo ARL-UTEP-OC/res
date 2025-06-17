@@ -106,6 +106,8 @@ class UserPool():
                     rdpBrokerIP = cloneinfo["rdp-broker-ip"]
                     chatServerIP = cloneinfo["chat-server-ip"]
                     challengesServerIP = cloneinfo["challenges-server-ip"]
+                    vmControlIP = cloneinfo["vmcontrol-ip"]
+                    vmControlSSHPort = cloneinfo["vmcontrol-ssh-port"]
                     cloneVMName = cloneinfo["name"]
                     vrdpPort = cloneinfo["vrdpPort"]
 

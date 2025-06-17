@@ -248,6 +248,14 @@ class BaseWidget(QtWidgets.QWidget):
             basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = "https://localhost:443/remote/"
         self.challengesServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"])
         ###
+        if "vmcontrol-ip" not in basejsondata["testbed-setup"]["network-config"]:
+            basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = "https://localhost/"
+        #self.TODO.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"])
+        ###
+        if "vmcontrol-ssh-port" not in basejsondata["testbed-setup"]["network-config"]:
+            basejsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"] = "9999"
+        #self.TODO.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"])
+        ###
         if "base-groupname" not in basejsondata["testbed-setup"]["vm-set"]:
             basejsondata["testbed-setup"]["vm-set"]["base-groupname"] = self.configname
         self.baseGroupNameLineEdit.setText(basejsondata["testbed-setup"]["vm-set"]["base-groupname"])
@@ -287,6 +295,8 @@ class BaseWidget(QtWidgets.QWidget):
         jsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = self.rdpBrokerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["chat-server-ip"] = self.chatServerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = self.challengesServerLineEdit.text()
+        #jsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = self.TODO.text()
+        #jsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"] = self.TODO.text()
         jsondata["testbed-setup"]["vm-set"] = {}
         jsondata["testbed-setup"]["vm-set"]["base-groupname"] = self.baseGroupNameLineEdit.text()
         jsondata["testbed-setup"]["vm-set"]["num-clones"] = str(self.numClonesEntry.value())

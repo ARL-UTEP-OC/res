@@ -22,3 +22,6 @@ active = VBOX
 experiments_path = ExperimentData
 temp_data_path = tmp
 
+[CONNECTIONS]
+handler = GUAC
+
