@@ -15,7 +15,7 @@ from threading import RLock
 class ConnectionManageRESVMControl(ConnectionManage):
 #
     def __init__(self):
-        logging.debug("ConnectionManageGuacRDP(): instantiated")
+        logging.debug("ConnectionManageRESVMControl(): instantiated")
         ConnectionManage.__init__(self)
         self.vmcontrol = None
         self.eco = ExperimentConfigIO.getInstance()
@@ -59,13 +59,14 @@ class ConnectionManageRESVMControl(ConnectionManage):
                 self.sshpassword = password
             return self.vmcontrol
         except Exception:
-            logging.error("Error in getVMControlSSH(): An error occured when trying to connect to proxmox with ssh; possibly incorrect credentials.")
+            logging.error("Error in getVMControlSSH(): An error occured when trying to connect to remote service with ssh; possibly incorrect credentials.")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             self.vmcontrol = None
             return None
 
     def executeSSH(self, command, sudo=True):
+        logging.debug("executeSSH(): instantiated")
         feed_password = False
         if sudo and self.sshusername != "root":
             command = "sudo -S -p '' %s" % command
@@ -78,24 +79,101 @@ class ConnectionManageRESVMControl(ConnectionManage):
                 'err': stderr.readlines(),
                 'retval': stdout.channel.recv_exit_status()}
 
-    def startPyroService(self, username, password):
+    def startPyroService(self, configname, username=None, password=None):
         logging.debug("startPyroService(): instantiated")
-        #
-
-    def stopPyroService(self, username, password):
-        logging.debug("stopPyroService(): instantiated")
-        #conda activate res
         #get docker0 interface ip address
         #nohup pyro5-ns -n <docker0-ip> -p 10291
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in statusPyro(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
 
-    def getPyroStatus(self, username, password):
+        #check if pyro service is already running
+        if self.statusPyro(configname, username, password) == True:
+            logging.warning("startVMControl(): Pyro5 nameservice already running, stop and restart to create new instance")
+            logging.debug("Using existing pyro5-ns")
+            return True
+        else:
+            #start pyro5-ns
+            logging.debug("startVMControl(): Starting Pyro5 Nameservice")
+            res = self.executeSSH("source ~/miniconda3/etc/profile.d/conda.sh && conda activate res && nohup pyro5-ns &", sudo=False)
+            logging.debug("pyro5-ns started")
+            return True
+        return None
+
+    def stopPyroService(self, configname, username=None, password=None):
+        logging.debug("stopPyroService(): instantiated")
+        #conda activate res
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in statusPyro(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+
+        try:
+            if self.statusPyro(configname, username, password) == True:
+                logging.debug("Attempting to stop pyro5-ns process")
+                res = self.executeSSH("pkill pyro5-ns", sudo=False)
+                logging.debug("Stopped pyro5-ns process")
+                if self.statusPyro(configname, username, password) == True:
+                    return False #could not be stopped
+                return True #stopped succesfully
+            else:
+                logging.debug("Pyro service already not running")
+                return False
+        except Exception:
+            logging.error("Error in runCreateConnections(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return False
+
+    def statusPyro(self, configname, username=None, password=None):
         logging.debug("getPyroStatus(): instantiated")
-        # conda activate res
-        #
 
-    def startVMControl(self, configname, username, password):
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in statusPyro(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+
+        try:
+            res = self.executeSSH("pgrep pyro5-ns", sudo=False)
+            if len(res['out']) > 0:
+                return True
+            else:
+                return False
+        except Exception:
+            logging.error("Error in runCreateConnections(): An error occured when trying to connect to proxmox")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return False
+
+    def startVMControl(self, configname, username=None, password=None):
         logging.debug("startVMControl(): instantiated")
-        #stop and then start pyro4-ns
+
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in startVMControl(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+        self.startPyroService(configname, username, password)
 
         #copy creds file
 
@@ -103,640 +181,95 @@ class ConnectionManageRESVMControl(ConnectionManage):
 
         #stop and then start docker container
 
-
-    def updateCredsRemote(self, configname, vmcontrolhostname, musername, mpassword):
-        logging.debug("updateCreds(): instantiated")
-        #scp the creds_file to the remote host
-
-        #call guac backend API to make connections as specified in config file and then set the complete status
-        rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-        validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-
-        userpool = UserPool()
-        usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-
+    def statusServiceRemote(self, configname, username=None, password=None):
+        logging.debug("statusServiceRemote(): instantiated")    
+        #conda activate res
         try:
-            #get accessors to the proxmox api and ssh
-            try:
-                vmcontrol = self.getVMControlSSH(configname, username=musername,password=mpassword)
-                if vmcontrol == None:
-                    return None
-            except Exception:
-                logging.error("Error in runCreateConnections(): An error occured when trying to connect to proxmox")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
                 return None
-            #get the list of all users
-            try:
-
-                res = proxapi.access.users.get()
-                users = []
-                for user_info in res:
-                    user = user_info['userid']
-                    if len(user.strip()) > 4 and user[-4:] == "@pam":
-                        users.append(user_info['userid'][:-4])
-            except Exception:
-                logging.error("Error in runCreateConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            try:
-                res = proxapi.pools.get()
-                pools = []
-                for pool_info in res:
-                    pools.append(pool_info['poolid'])
-            except Exception:
-                logging.error("Error in runCreateConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            #get the list of all VMs
-            try:
-                allinfo = proxapi.cluster.resources.get(type='vm')
-            except Exception:
-                logging.error("Error in runCreateConnections: An error occured when trying to get cluster info")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            if allinfo is None:
-                logging.error("runCreateConnections(): info is None")
-                return -1
-            vmname_id = {}
-            for vmiter in allinfo:
-                #GET UUID
-                vmname_id[vmiter['name']] = vmiter['vmid']
-
-            try:
-                created_users_lin = []
-                created_users = []
-                created_pools = []
-                created_pool_privs = []
-                added_vms = []
-
-                for (username, password) in usersConns:
-                    for conn in usersConns[(username, password)]:
-                        cloneVMName = conn[0]
-                        vmServerIP = conn[1]
-                        vrdpPort = conn[2]
-                        #only if this is a specific connection to create; based on itype and name
-                        if cloneVMName in validconnsnames:
-                            #if user doesn't exist, create it
-                            result = self.executeSSH("/usr/sbin/useradd " + username)
-                            if username not in users and username not in created_users_lin:
-                                logging.debug( "Creating User: " + username)
-                                try:
-                                    # result = self.vmcontrol._exec(shlex.split("/usr/sbin/useradd " + username))
-                                    result = self.executeSSH("/usr/sbin/useradd " + username)
-                                    if result != None and 'err' in result and "already exists" in result['err']:
-                                        logging.debug("User" + username + " already exists; skipping...")
-                                    else:
-                                        created_users_lin.append(username)
-                                except ResourceException:
-                                    logging.warning("runCreateConnections(): Pool " + username + " already exists, skipping.")
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                              
-                                except Exception:
-                                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to create user.")
-                                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    traceback.print_exception(exc_type, exc_value, exc_traceback)
-                            if username not in users and username not in created_users:
-                                try:
-                                    result = self.proxapi.access.users.post(userid=username+"@pam", password=password)
-                                    if result != None and len(result) > 1 and 'already exists' in result[1]:
-                                        logging.debug("User" + username + " already exists; skipping...")
-                                    else:
-                                        created_users.append(username)
-                                except ResourceException:
-                                    logging.warning("runCreateConnections(): Pool " + username + " already exists, skipping.")
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                                                 
-                                except Exception:
-                                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to create user.")
-                                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            if username not in pools and username not in created_pools:
-                                logging.debug( "Creating Pool: " + username)
-                                try:
-                                    result = proxapi.pools.create(poolid=username, comment="Pool for user " + username)
-                                    if result == None:
-                                        created_pools.append(username)
-                                except ResourceException:
-                                    logging.warning("runCreateConnections(): Pool " + username + " already exists, skipping.")
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                                except Exception:
-                                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to create pool: " + username)
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-                            if username not in created_pool_privs:
-                                #now give user privs on the pool:
-                                logging.debug( "Setting Pool Privs for: " + username)
-                                try:
-                                    result = proxapi.access.acl.put(path='/pool/'+username, users=username+"@pam", roles='PVEVMUser, PVEPoolUser', propagate=1)
-                                    if result == None:
-                                        created_pool_privs.append(username)
-                                except ResourceException:
-                                    logging.warning("runCreateConnections(): Pool Privs for " + username + " already exist, skipping.")
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                                except Exception:
-                                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to create pool privs for: " + username)
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-                            
-                            if cloneVMName not in added_vms:
-                                #add vms with vrdp enabled to the pool
-                                logging.debug( "Adding VMs to pool: " + username)
-                                try:
-                                    if cloneVMName not in vmname_id:
-                                        logging.debug("VM " + cloneVMName + " not found; skipping...")
-                                        continue
-                                    vmid = vmname_id[cloneVMName]
-                                    # if the VM is not already in the pool, add it
-                                    result = proxapi.pools.put(poolid=username, vms=vmid)
-                                    if result == None:
-                                        logging.debug("runCreateConnections(): Added VM: " + str(vmid) + " to pool: " + str(username))
-                                        added_vms.append(vmid)
-                                except ResourceException:
-                                    logging.warning("runCreateConnections(): VM " + str(vmid) + " already in pool: " + username + " skipping.")
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                                except Exception:
-                                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to add vm to pool: " + username)
-                                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            except Exception:
-                    logging.error("runCreateConnections(): Error in runCreateConnections(): when trying to add connection.")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_exception(exc_type, exc_value, exc_traceback)
-            logging.debug("runCreateConnections(): Complete...")
         except Exception:
-            logging.error("runCreateConnections(): Error in runCreateConnections(): An error occured ")
+            logging.error("Error in statusServiceRemote(): An error occured when trying to connect to remote service")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-        finally:
-            self.writeStatus-=1
+            return None
+
+        try:
+            res = self.executeSSH("docker ps --filter 'name=resvmcontrol'", sudo=True)
+            if len(res['out']) > 1 and 'resvmcontrol' in ''.join(res['out']):
+                return True
+            else:
+                if len(res['err']) > 0:
+                    logging.error("Error in statusServiceRmote(): " + res['err'])
+                return False
+        except Exception:
+            logging.error("Error in statusServiceRemote(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return False
+
+
+    def startServiceRemote(self, configname, username=None, password=None):
+        logging.debug("startServiceRemote(): instantiated")    
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in statusPyro(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+
+        #check if pyro service is already running
+        if self.statusServiceRemote(configname, username, password) == True:
+            logging.warning("startVMControl(): Docker service container already running, stop and restart to create new instance")
+            logging.debug("Using existing service container")
+            return True
+        else:
+            #start docker service
+            logging.debug("startVMControl(): Starting Docker service container")
+            res = self.executeSSH("docker start resvmcontrol", sudo=True)
+            logging.debug("Docker container started")
+            return True
+        return None
+    
+    def stopServiceRemote(self, configname, username=None, password=None):
+        logging.debug("stopServiceRemote(): instantiated")    
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in stopServiceRemote(): An error occured when trying to stop remote container")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
+
+        #check if docker service is running
+        if self.statusServiceRemote(configname, username, password) == True:
+            logging.debug("stopServiceRemote(): Stopping Docker service container")
+            res = self.executeSSH("docker stop resvmcontrol", sudo=True)
+            logging.debug("Docker container stopped")
+            return True
+        else:
+            #stop docker container
+            logging.warning("stopVMControl(): docker container already stopped")
+            return True
+        return None
+    
+    def updateConfigRemote(self, configname, username=None, password=None):
+        logging.debug("updateConfigRemote(): instantiated")
+        #scp the creds_file to the remote host
+
+    def updateCredsRemote(self, configname, username=None, password=None):
+        logging.debug("updateCredsRemote(): instantiated")
+        #scp the creds_file to the remote host
 
     #abstractmethod
-    def credsExistsRemote(self, configname, proxHostname, username, password, exceptions=[]):
-        logging.debug("clearAllConnections(): instantiated")
+    def credsExistsRemote(self, configname, proxHostname, username=None, password=None):
+        logging.debug("credsExistsRemote(): instantiated")
         t = threading.Thread(target=self.runClearAllConnections, args=(configname, proxHostname, username, password, exceptions))
         self.writeStatus+=1
         t.start()
         return 0
-
-    def runClearAllConnections(self, configname, proxHostname, musername, mpassword, exceptions=["root","nathanvms", "ana", "arodriguez", "jacosta", "jcacosta"]):
-        logging.debug("runClearAllConnections(): instantiated")
-        try:
-            #get accessors to the proxmox api and ssh
-            try:
-                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
-                if proxapi == None:
-                    return None
-
-                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
-                if vmcontrol == None:
-                    return None
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to connect to proxmox")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return None
-            #get the list of all users and pools
-            try:
-                res = proxapi.access.users.get()
-                users = []
-                for user_info in res:
-                    user = user_info['userid']
-                    if len(user.strip()) > 4 and user[-4:] == "@pam":
-                        users.append(user_info['userid'][:-4])
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            try:
-                res = proxapi.pools.get()
-                pools = []
-                for pool_info in res:
-                    pools.append(pool_info['poolid'])
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            #get the list of all VMs
-            try:
-                allinfo = proxapi.cluster.resources.get(type='vm')
-            except Exception:
-                logging.error("Error in runClearAllConnections: An error occured when trying to get cluster info")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            users_removed_lin = []
-            users_removed = []
-            pools_removed = []
-
-            #for each pool, remove all users from the pool and then the pool itself
-            for pool in pools:
-                if pool in exceptions or pool in pools_removed:
-                    continue
-                try:
-                    members_ds = proxapi.pools(pool).get()
-                    members = []
-                    for member in members_ds['members']:
-                        members.append(str(member['vmid']))
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): Pool " + pool + " does not exist, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove pool: " + pool)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                try:
-                    logging.debug( "Removing VMs: " + str(members))
-                    result = proxapi.pools(pool).put(delete=1,vms=",".join(members))
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): members do not exist" + str(members) + ", skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove member: " + member)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                logging.debug( "Removing Pool: " + pool)
-                try:
-                    result = proxapi.pools.delete(poolid=pool)
-                    if result == None:
-                        pools_removed.append(pool)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): Pool " + pool + " already exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove pool: " + pool)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            #remove all users except root, ana, and nathan
-            for user in users:
-                if user in exceptions or user in users_removed_lin:
-                    continue
-                logging.debug( "Removing User: " + user)
-                try:
-                    # result = vmcontrol._exec(shlex.split("userdel " + user))
-                    result = self.executeSSH("userdel " + user)
-                    if result != None and 'err' in result and "does not exist" in result['err']:
-                        logging.debug("User" + user + " does not exist; skipping...")
-                    else:
-                        users_removed_lin.append(user)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): User " + user + " does not exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove user: " + user)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                if user in users_removed:
-                    continue
-                try:
-                    result = proxapi.access.users(user+"@pam").delete()
-                    if result != None and len(result) > 1 and 'already exists' in result[1]:
-                        logging.debug("User" + user + " does not exist; skipping...")
-                    else:
-                        users_removed.append(user)
-                except ResourceException:
-                    logging.warning("runClearAllConnections(): User " + user + " does not exists, skipping.")
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                except Exception:
-                    logging.error("runClearAllConnections(): error when trying to remove user: " + user)
-                    # exc_type, exc_value, exc_traceback = sys.exc_info()
-                    # traceback.print_exception(exc_type, exc_value, exc_traceback)
-        except Exception:
-            logging.error("Error in runClearAllConnections: An error occured.")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-        finally:
-            self.writeStatus-=1
-
-    #abstractmethod
-    def removeConnections(self, configname, proxHostname, username, password, creds_file="", itype="", name=""):
-        logging.debug("removeConnections(): instantiated")
-        t = threading.Thread(target=self.runRemoveConnections, args=(configname,proxHostname, username, password, creds_file, itype, name))
-        self.writeStatus+=1
-        t.start()
-        return 0
-
-    def runRemoveConnections(self, configname, proxHostname, musername, mpassword, creds_file, itype, name):
-        logging.debug("runRemoveConnections(): instantiated")
-        try:
-            rolledoutjson = self.eco.getExperimentVMRolledOut(configname)
-            validconnsnames = self.eco.getValidVMsFromTypeName(configname, itype, name, rolledoutjson)
-
-            userpool = UserPool()
-            usersConns = userpool.generateUsersConns(configname, creds_file=creds_file)
-
-            #get accessors to the proxmox api and ssh
-            try:
-                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
-                if proxapi == None:
-                    return None
-
-                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
-                if vmcontrol == None:
-                    return None
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to connect to proxmox")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return None
-            #get the list of all pools
-            try:
-                res = proxapi.pools.get()
-                pools = []
-                for pool_info in res:
-                    pools.append(pool_info['poolid'])
-            except Exception:
-                logging.error("Error in runClearAllConnections(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            users_removed_lin = []
-            users_removed = []
-            pools_removed = []
-
-            for (username, password) in usersConns:
-                logging.debug( "Removing Pool and User: " + username)
-                try:
-                    for conn in usersConns[(username, password)]:
-                        cloneVMName = conn[0]
-                        if cloneVMName in validconnsnames:
-                            #get vms in pool
-                            
-                            if username not in pools or cloneVMName not in validconnsnames or username == "nathanvms" or username == "ana" or username in pools_removed:
-                                continue
-                            try:
-                                members_ds = proxapi.pools(username).get()
-                                members = []
-                                #get vms in pool
-                                for member in members_ds['members']:
-                                    members.append(str(member['vmid']))
-                            except ResourceException:
-                                logging.warning("runClearAllConnections(): Pool " + username + " already exists, skipping.")
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                            except Exception:
-                                logging.error("runClearAllConnections(): error when trying to remove pool: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            #remove vms from pool
-                            try:
-                                logging.debug( "Removing VMs: " + str(members))
-                                result = proxapi.pools(username).put(delete=1,vms=",".join(members))
-                            except ResourceException:
-                                logging.warning("runRemoveConnections(): members do not exist" + str(members) + ", skipping.")
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove member: " + member)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            #remove the pool
-                            logging.debug( "Removing Pool: " + username)
-                            try:
-                                result = proxapi.pools.delete(poolid=username)
-                                if result == None:
-                                    pools_removed.append(username)
-                            except ResourceException:
-                                logging.warning("runRemoveConnections(): Pool " + username + " does not exists, skipping.")
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove pool: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            #remove user
-                            if username in users_removed_lin:
-                                continue
-                            logging.debug( "Removing User: " + username)
-                            try:
-                                # result = vmcontrol._exec(shlex.split("userdel " + user))
-                                result = self.executeSSH("userdel " + username)
-                                if result != None and len(result) > 1 and 'err' in result and "does not exist" in result['err']:
-                                    logging.debug("User" + username + " does not exist; skipping...")
-                                else:
-                                    users_removed_lin.append(username)
-                            except ResourceException:
-                                logging.warning("runRemoveConnections(): User " + username + " does not exist, skipping.")
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                            if username in users_removed:
-                                continue
-                            try:
-                                result = proxapi.access.users(username+"@pam").delete()
-                                if result != None and  len(result) > 1 and "does not exist" in result[1]:
-                                    logging.debug("User" + username + " does not exist; skipping...")
-                                else:
-                                    users_removed.append(username)
-                            except ResourceException:
-                                logging.warning("runRemoveConnections(): User " + username + " does not exists, skipping.")
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                            except Exception:
-                                logging.error("runRemoveConnections(): error when trying to remove user: " + username)
-                                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                                # traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-                except Exception:
-                        logging.error("runRemoveConnections(): Error in runRemoveConnections(): when trying to remove connection.")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-                        traceback.print_exception(exc_type, exc_value, exc_traceback)
-            logging.debug("runRemoveConnections(): Complete...")
-        finally:
-            self.writeStatus-=1
-
-    #abstractmethod
-    def openConnection(self, configname, experimentid, vmid):
-        logging.debug("openConnection(): instantiated")
-        t = threading.Thread(target=self.runOpenConnection, args=(configname,))
-        self.writeStatus+=1
-        t.start()
-        return 0
-
-    def runOpenConnection(self, configname, experimentid, vmid):
-        logging.debug("runOpenConnection(): instantiated")
-        #open an RDP session using configuration from systemconfigIO to the specified experimentid/vmid
-        self.writeStatus-=1
-
-    #abstractmethod
-    def getConnectionManageStatus(self):
-        logging.debug("getConnectionManageStatus(): instantiated")
-        return {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : self.usersConnsStatus}
-    
-    def getConnectionManageRefresh(self, configname, proxHostname, musername, mpassword):
-        logging.debug("getConnectionManageStatus(): instantiated")
-        try:
-            self.lock.acquire()
-            self.usersConnsStatus.clear()
-
-            # if pool name with username exists, then "connection exists"
-            # check tasks and look for those without end time; if type is vnxproxy, get username; that user is connected
-            try:
-                proxapi, nodename = self.getProxAPI(configname, musername, mpassword)
-                if proxapi == None:
-                    return None
-
-                vmcontrol = self.getVMControlSSH(configname, musername, mpassword)
-                if vmcontrol == None:
-                    return None
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to connect to proxmox")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return None
-            
-            #get vmid -> vmname mapping
-            vmid_name = {}
-            try:
-                allinfo = proxapi.cluster.resources.get(type='vm')
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh: An error occured when trying to get cluster info")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-            for vmiter in allinfo:
-                #GET UUID
-                vmname = vmiter['name']
-                vmid = vmiter['vmid']
-                vmid_name[str(vmid)] = vmname
-
-            #get the list of all pools
-            try:
-                res = proxapi.pools.get()
-                pools = {}
-                for pool_info in res:
-                    pool_id = pool_info['poolid']
-                    pools[pool_id] = []
-                    try:
-                        members_ds = proxapi.pools(pool_id).get()
-                        for member in members_ds['members']:
-                            pools[pool_id].append(vmid_name[str(member['vmid'])])
-                    except ResourceException:
-                        logging.warning("runClearAllConnections(): Pool " + pool_id + " does not exist, skipping.")
-                        # exc_type, exc_value, exc_traceback = sys.exc_info()
-                        # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
-                    except Exception:
-                        logging.error("runClearAllConnections(): error when trying to remove pool: " + pool_id)
-                        # exc_type, exc_value, exc_traceback = sys.exc_info()
-                        # traceback.print_exception(exc_type, exc_value, exc_traceback)
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            #get task list
-            try:
-                #res = proxapi.nodes(nodename).tasks.get()
-                res = proxapi.cluster.tasks.get()
-                connected = {}
-                for task in res:
-                    if task['type'] != "vncproxy" or task['node'] != nodename:
-                        continue
-                    taskvmid = None
-                    taskvmname = None
-                    if 'id' in task:
-                        taskvmid = task['id']
-                        taskvmname = vmid_name[taskvmid]
-                    else:
-                        continue
-                    taskuser = task['user']
-                    taskstarttime = None
-                    if 'starttime' in task:
-                        taskstarttime = task['starttime']
-                    taskendtime = 'Active'
-                    if 'endtime' in task:
-                        taskendtime = task['endtime']
-                    if len(taskuser) > 4 and taskuser[-4:] == "@pam":
-                        taskuser = task['user'][:-4]
-                    if (taskuser, taskvmname) in connected:
-                        #since these come from logs, there may be more than one connection. Take the later one.
-                        if taskstarttime != None and (connected[(taskuser,taskvmname)]['taskendtime'] != "Active" and taskstarttime > connected[(taskuser,taskvmname)]['taskendtime']) or taskendtime == "Running":
-                            connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
-                        #else, do nothing, leave the previous
-                    else:
-                        connected[(taskuser, taskvmname)] = {"taskstarttime": taskstarttime, "taskendtime": taskendtime, "taskvmid": taskvmid}
-                            
-            except Exception:
-                logging.error("Error in getConnectionManageRefresh(): An error occured when trying to get users")
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-
-            for username in pools.keys():
-                for vmname in pools[username]:
-                    #if user/vmname is in connected, then user is connected
-                    user_perm = "Found"
-                    active = "No Record"
-                    if (username, vmname) in connected:
-                        if connected[(username, vmname)]['taskendtime'] != 'Active':
-                            active = datetime.datetime.fromtimestamp(connected[(username, vmname)]['taskendtime']).strftime("%Y-%m-%d %H:%M:%S")
-                        else:
-                            active = 'Active'
-                        
-                    self.usersConnsStatus[(username,vmname)] = {"user_status": user_perm, "connStatus": active}
-            
-        except Exception as e:
-            logging.error("Error in getConnectionManageRefresh(). Could not refresh connections!")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            trace_back = traceback.extract_tb(exc_traceback)
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-            return None
-        finally:
-            self.lock.release()
-
-    def get_user_pass_frombase(self, base, num_users):
-        logging.debug("get_user_pass_frombase(): instantiated")
-        #not efficient at all, but it's a quick lazy way to do it:
-        answer = []
-        for i in range(1,num_users+1):
-            answer.append(((str(base)+str(i),str(base)+str(i))))
-        return answer
-
-    def get_user_pass_fromfile(self, filename):
-        logging.debug("get_user_pass_fromfile(): instantiated")
-        #not efficient at all, but it's a quick lazy way to do it:
-        answer = []
-        i = 0
-        try:
-            if os.path.exists(filename) == False:
-                logging.error("getConnectionManageStatus(): Filename: " + filename + " does not exists; returning")
-                return None
-            with open(filename) as infile:
-                reader = csv.reader(infile, delimiter=" ")
-                for user, password in reader:
-                    i = i+1
-                    answer.append((user, password))
-            # if len(answer) < num_users:
-            #     logging.error("getConnectionManageStatus(): file does not have enough users: " + len(answer) + "; returning")
-            #     return None
-            return answer
-        except Exception as e:
-            logging.error("Error in getConnectionManageStatus().")
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            trace_back = traceback.extract_tb(exc_traceback)
-            #traceback.print_exception(exc_type, exc_value, exc_traceback)
-            return None
