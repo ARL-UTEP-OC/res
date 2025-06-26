@@ -255,7 +255,26 @@ class ConnectionManageRESVMControl(ConnectionManage):
             logging.warning("stopVMControl(): docker container already stopped")
             return True
 
-    def updateCreds(self, configname, username=None, password=None):
+    def mkdirP(self, sftp, remote_directory):
+        logging.debug("mkdirP(): instantiated")
+
+        if remote_directory == '/':
+            # absolute path so change directory to root
+            sftp.chdir('/')
+            return
+        if remote_directory == '':
+            # top-level relative directory must exist
+            return
+        try:
+            sftp.chdir(remote_directory) # sub-directory exists
+        except IOError:
+            dirname, basename = os.path.split(remote_directory.rstrip('/'))
+            self.mkdirP(sftp, dirname) # make parent directories
+            sftp.mkdir(basename) # sub-directory missing, so created it
+            sftp.chdir(basename)
+            return True
+
+    def statusCreds(self, configname, username=None, password=None):
         logging.debug("updateCredsRemote(): instantiated")
         #scp the creds_file to the remote host
 
@@ -263,10 +282,45 @@ class ConnectionManageRESVMControl(ConnectionManage):
         logging.debug("updateConfigRemote(): instantiated")
         #scp the config to the remote host
 
-    def statusCreds(self, configname, proxHostname, username=None, password=None):
-        logging.debug("credsExistsRemote(): instantiated")
+    def updateCreds(self, configname, username=None, password=None):
+        logging.debug("statusCreds(): instantiated")
         #check if creds file exists on remote end
+        try:
+            vmcontrolssh = self.getVMControlSSH(configname=configname, username=username, password=password)
+            if vmcontrolssh == None:
+                return None
+        except Exception:
+            logging.error("Error in statusServiceRemote(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return None
 
-    def statusConfig(self, configname, proxHostname, username=None, password=None):
+        try:
+            local_path = os.path.join(configname,"ExperimentData",configname,"Materials","creds.csv")
+            remote_path = "/home/dockerutils/git/res/"
+            os.path.join(remote_path,"ExperimentData",configname,"Materials","creds.csv")
+            sftp_client = vmcontrolssh.open_sftp()
+
+            # Extract the remote directory path from the full remote path
+            remote_dir = os.path.dirname(remote_path)
+
+            # Check if the remote directory exists and create it if not
+            try:
+                sftp_client.stat(remote_dir)  # Try to stat the directory
+            except IOError:
+                # Directory does not exist, so create it recursively
+                self.mkdirP(sftp_client, remote_dir)
+                logging.debug("Remote directory " + str(remote_dir) + " created.")
+
+            # Upload the file
+            sftp_client.put(local_path, remote_path)
+
+        except Exception:
+            logging.error("Error in statusServiceRemote(): An error occured when trying to connect to remote service")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            return False
+
+    def statusConfig(self, configname, username=None, password=None):
         logging.debug("credsExistsRemote(): instantiated")
         #check if config file exists on remote end
