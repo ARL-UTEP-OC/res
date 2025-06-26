@@ -208,7 +208,6 @@ class ConnectionManageRESVMControl(ConnectionManage):
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             return False
 
-
     def startServiceRemote(self, configname, username=None, password=None):
         logging.debug("startServiceRemote(): instantiated")    
         try:
@@ -232,7 +231,6 @@ class ConnectionManageRESVMControl(ConnectionManage):
             res = self.executeSSH("docker start resvmcontrol", sudo=True)
             logging.debug("Docker container started")
             return True
-        return None
     
     def stopServiceRemote(self, configname, username=None, password=None):
         logging.debug("stopServiceRemote(): instantiated")    
@@ -256,20 +254,19 @@ class ConnectionManageRESVMControl(ConnectionManage):
             #stop docker container
             logging.warning("stopVMControl(): docker container already stopped")
             return True
-        return None
-    
-    def updateConfigRemote(self, configname, username=None, password=None):
-        logging.debug("updateConfigRemote(): instantiated")
-        #scp the creds_file to the remote host
 
-    def updateCredsRemote(self, configname, username=None, password=None):
+    def updateCreds(self, configname, username=None, password=None):
         logging.debug("updateCredsRemote(): instantiated")
         #scp the creds_file to the remote host
 
-    #abstractmethod
-    def credsExistsRemote(self, configname, proxHostname, username=None, password=None):
+    def updateConfig(self, configname, username=None, password=None):
+        logging.debug("updateConfigRemote(): instantiated")
+        #scp the config to the remote host
+
+    def statusCreds(self, configname, proxHostname, username=None, password=None):
         logging.debug("credsExistsRemote(): instantiated")
-        t = threading.Thread(target=self.runClearAllConnections, args=(configname, proxHostname, username, password, exceptions))
-        self.writeStatus+=1
-        t.start()
-        return 0
+        #check if creds file exists on remote end
+
+    def statusConfig(self, configname, proxHostname, username=None, password=None):
+        logging.debug("credsExistsRemote(): instantiated")
+        #check if config file exists on remote end
