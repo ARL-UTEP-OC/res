@@ -101,6 +101,28 @@ class BaseWidget(QtWidgets.QWidget):
         self.challengesServerHorBox.addWidget(self.challengesServerLineEdit)
         self.outerVertBox.addLayout(self.challengesServerHorBox)
 
+        self.resServerHorBox = QtWidgets.QHBoxLayout()
+        self.resServerHorBox.setObjectName("resServerHorBox")
+        self.resServerLabel = QtWidgets.QLabel()
+        self.resServerLabel.setObjectName("resServerLabel")
+        self.resServerLabel.setText("Remote RES User Control Hostname:")
+        self.resServerHorBox.addWidget(self.resServerLabel)
+        self.resServerLineEdit = QtWidgets.QLineEdit() 
+        self.resServerLineEdit.setObjectName("resServerLineEdit")
+        self.resServerHorBox.addWidget(self.resServerLineEdit)
+        self.outerVertBox.addLayout(self.resServerHorBox)
+
+        self.resPortHorBox = QtWidgets.QHBoxLayout()
+        self.resPortHorBox.setObjectName("resPortHorBox")
+        self.resPortLabel = QtWidgets.QLabel()
+        self.resPortLabel.setObjectName("resPortLabel")
+        self.resPortLabel.setText("Remote RES User Control Port:")
+        self.resPortHorBox.addWidget(self.resPortLabel)
+        self.resPortLineEdit = QtWidgets.QLineEdit()
+        self.resPortLineEdit.setObjectName("resPortLineEdit")
+        self.resPortHorBox.addWidget(self.resPortLineEdit)
+        self.outerVertBox.addLayout(self.resPortHorBox)
+
         self.baseGroupNameHorBox = QtWidgets.QHBoxLayout()
         self.baseGroupNameHorBox.setObjectName("baseGroupNameHorBox")
         self.baseGroupNameLabel = QtWidgets.QLabel()
@@ -249,12 +271,12 @@ class BaseWidget(QtWidgets.QWidget):
         self.challengesServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["challenges-server-ip"])
         ###
         if "vmcontrol-ip" not in basejsondata["testbed-setup"]["network-config"]:
-            basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = "https://localhost/"
-        #self.TODO.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"])
+            basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = "localhost"
+        self.resServerLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"])
         ###
         if "vmcontrol-ssh-port" not in basejsondata["testbed-setup"]["network-config"]:
             basejsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"] = "9999"
-        #self.TODO.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ip"])
+        self.resPortLineEdit.setText(basejsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"])
         ###
         if "base-groupname" not in basejsondata["testbed-setup"]["vm-set"]:
             basejsondata["testbed-setup"]["vm-set"]["base-groupname"] = self.configname
@@ -295,8 +317,8 @@ class BaseWidget(QtWidgets.QWidget):
         jsondata["testbed-setup"]["network-config"]["rdp-broker-ip"] = self.rdpBrokerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["chat-server-ip"] = self.chatServerLineEdit.text()
         jsondata["testbed-setup"]["network-config"]["challenges-server-ip"] = self.challengesServerLineEdit.text()
-        #jsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = self.TODO.text()
-        #jsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"] = self.TODO.text()
+        jsondata["testbed-setup"]["network-config"]["vmcontrol-ip"] = self.resServerLineEdit.text()
+        jsondata["testbed-setup"]["network-config"]["vmcontrol-ssh-port"] = self.resPortLineEdit.text()
         jsondata["testbed-setup"]["vm-set"] = {}
         jsondata["testbed-setup"]["vm-set"]["base-groupname"] = self.baseGroupNameLineEdit.text()
         jsondata["testbed-setup"]["vm-set"]["num-clones"] = str(self.numClonesEntry.value())
