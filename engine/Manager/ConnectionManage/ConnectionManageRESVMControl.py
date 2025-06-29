@@ -282,7 +282,7 @@ class ConnectionManageRESVMControl(ConnectionManage):
         logging.debug("updateConfigRemote(): instantiated")
         #scp the config to the remote host
 
-    def updateCreds(self, configname, username=None, password=None):
+    def updateExperimentFiles(self, configname, username=None, password=None):
         logging.debug("statusCreds(): instantiated")
         #check if creds file exists on remote end
         try:
@@ -296,13 +296,14 @@ class ConnectionManageRESVMControl(ConnectionManage):
             return None
 
         try:
-            local_path = os.path.join(configname,"ExperimentData",configname,"Materials","creds.csv")
-            remote_path = "/home/dockerutils/git/res/"
-            os.path.join(remote_path,"ExperimentData",configname,"Materials","creds.csv")
             sftp_client = vmcontrolssh.open_sftp()
 
+            localcreds_path = os.path.join(configname,"ExperimentData",configname,"Materials","creds.csv")
+            remote_path = "/home/dockerutils/git/res/"
+            remotecreds_path = os.path.join(remote_path,"ExperimentData",configname,"Materials","creds.csv")
+
             # Extract the remote directory path from the full remote path
-            remote_dir = os.path.dirname(remote_path)
+            remote_dir = os.path.dirname(remotecreds_path)
 
             # Check if the remote directory exists and create it if not
             try:
@@ -311,9 +312,23 @@ class ConnectionManageRESVMControl(ConnectionManage):
                 # Directory does not exist, so create it recursively
                 self.mkdirP(sftp_client, remote_dir)
                 logging.debug("Remote directory " + str(remote_dir) + " created.")
-
             # Upload the file
-            sftp_client.put(local_path, remote_path)
+            sftp_client.put(localcreds_path, remotecreds_path)
+
+            localconfig_path = os.path.join(configname,"ExperimentData",configname,"Materials","creds.csv")
+            remoteconfig_path = os.path.join(remote_path,"ExperimentData",configname,"Experiments",configname+".xml")
+            # Extract the remote directory path from the full remote path
+            remote_dir = os.path.dirname(remoteconfig_path)
+
+            # Check if the remote directory exists and create it if not
+            try:
+                sftp_client.stat(remote_dir)  # Try to stat the directory
+            except IOError:
+                # Directory does not exist, so create it recursively
+                self.mkdirP(sftp_client, remote_dir)
+                logging.debug("Remote directory " + str(remote_dir) + " created.")
+            # Upload the file
+            sftp_client.put(localconfig_path, remoteconfig_path)
 
         except Exception:
             logging.error("Error in statusServiceRemote(): An error occured when trying to connect to remote service")
