@@ -94,10 +94,6 @@ class SystemConfigIO():
         self.config['PROXMOX']['VMANAGE_PVESH_PATH'] = "pvesh"
         self.config['PROXMOX']['VMANAGE_QMRESTORE_PATH'] = "qmrestore"
         self.config['PROXMOX']['VMANAGE_STORAGE_VOL'] = "local-lvm"
-        self.config['PROXMOX']['VMANAGE_NODE_NAME'] = "acostave"
-        self.config['PROXMOX']['VMANAGE_SERVER'] = "acostanet.ddns.net"
-        self.config['PROXMOX']['VMANAGE_APIPORT'] = "64646"
-        self.config['PROXMOX']['VMANAGE_CMDPORT'] = "5734"
         self.config['PROXMOX']['VMANAGE_MAXCREATEJOBS'] = "20"
         self.config['PROXMOX']['VMANAGE_SNAPWAITTIME'] = "2.0"
         #Other platform agnostic settings

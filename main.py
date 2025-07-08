@@ -530,6 +530,7 @@ class MainApp(QWidget):
         #Check if it's the case that an experiment name was selected
         parentSelectedItem = selectedItem.parent()
         if(parentSelectedItem == None):
+            configname = selectedItem.text(0)
             #A base widget was selected
             successfilenames = ExperimentRemoveFileDialog().experimentRemoveFileDialog(selectedItemName)
             if successfilenames == [] or successfilenames == "":
@@ -618,7 +619,6 @@ class MainApp(QWidget):
         logging.debug("MainApp:editPathActionEvent() instantiated")
         result = ConfigurationDialog(self).exec_()
         
-
     def closeEvent(self, event):
         logging.debug("MainApp:closeEvent(): instantiated")
         logging.debug("closeEvent(): returning accept")
