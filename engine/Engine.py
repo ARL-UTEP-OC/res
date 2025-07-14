@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import re
+from engine.Manager.ConnectionManage.ConnectionManageKeycloakSSO import ConnectionManageKeycloakSSO
 from engine.Manager.ConnectionManage.ConnectionManageGuacRDP import ConnectionManageGuacRDP
 from engine.Manager.ConnectionManage.ConnectionManageProxVNC import ConnectionManageProxVNC
 from engine.Manager.ChallengesManage.ChallengesManageCTFd import ChallengesManageCTFd
@@ -60,13 +61,15 @@ class Engine:
             else:
                 self.vmManage = ProxmoxManage()
 
-        #Create the ConnectionManage
-        if c.getConfig()['CONNECTIONS']['HANDLER'] == 'PROXMOX':
-            self.connectionManage = ConnectionManageProxVNC()
-            if username != None and password != None:
-                self.connectionManage.setRemoteCreds(username, password)
-        else:
-            self.connectionManage = ConnectionManageGuacRDP()
+        #Create the ConnectionManagers
+        
+        self.connectionManageKeycloakSSO = ConnectionManageKeycloakSSO()
+
+        self.proxPoolsConnManage = ConnectionManageProxVNC()
+        if username != None and password != None:
+            self.proxPoolsConnManage.setRemoteCreds(username, password)
+
+        self.guacConnManage = ConnectionManageGuacRDP()
 
         #Create the ChallengesManage
         self.challengesManage = ChallengesManageCTFd()
@@ -99,7 +102,9 @@ class Engine:
 
         return {"VMMgr" : self.vmManage.getManagerStatus(),
                     "PackageMgr" : self.packageManage.getPackageManageStatus(),
-                    "ConnectionMgr" : self.connectionManage.getConnectionManageStatus(),
+                    "keycloakConnManage" : self.keycloakManage.getConnectionManageStatus(),
+                    "guacConnManage" : self.guacConnManage.getConnectionManageStatus(),
+                    "proxPoolsConnManage" : self.proxPoolsConnManage.getConnectionManageStatus(),
                     "ExperimentMgr": self.experimentManage.getExperimentManageStatus(),
                     "ChallengesMgr": self.challengesManage.getChallengesManageStatus() }
 
@@ -149,21 +154,73 @@ class Engine:
         vms = args.no_vms
         return self.packageManage.exportPackage(experimentname, exportpath, username, password, vms)
 
-    def connectionStatusCmd(self, args):
-        #query connection manager status and then return it here        
-        return self.connectionManage.getConnectionManageStatus()
+    def keycloakStatusCmd(self, args):
+        #query keycloak manager status and then return it here        
+        return self.connectionManageKeycloakSSO.getUserManageStatus()
 
-    def connectionRefreshCmd(self, args):
-        hostname = args.hostname
+    def keycloakRefreshCmd(self, args):
         configname = args.configname
+        hostname = args.hostname
         username = args.username
         password = args.password
-        #query connection manager status and then return it here
-        return self.connectionManage.getConnectionManageRefresh(configname, hostname, username, password)
+        #query keycloak manager status and then return it here
+        return self.connectionManageKeycloakSSO.getUserManageRefresh(configname, hostname, username, password)
         
-    def connectionCreateCmd(self, args):
-        logging.debug("connectionCreateCmd(): instantiated")
-        #will create connections as specified in configfile
+    def keycloakCreateCmd(self, args):
+        logging.debug("keycloakCreateCmd(): instantiated")
+        #will create keycloaks as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.connectionManageKeycloakSSO.createUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.connectionManageKeycloakSSO.createUsers(configname, hostname, username, password, itype=itype, name=name)
+
+    def keycloakRemoveCmd(self, args):
+        logging.debug("keycloakRemoveCmd(): instantiated")
+        #will remove keycloaks as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.connectionManageKeycloakSSO.deleteUsers(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.connectionManageKeycloakSSO.deleteUsers(configname, hostname, username, password, itype=itype, name=name)
+
+    def keycloakClearAllCmd(self, args):
+        logging.debug("keycloakClearAllCmd(): instantiated")
+        #will remove keycloaks as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password      
+        return self.connectionManageKeycloakSSO.clearAllUsers(configname, hostname, username, password)
+
+    def guacConnStatusCmd(self, args):
+        #query guacConn manager status and then return it here        
+        return self.guacConnManage.getConnectionManageStatus()
+
+    def guacConnRefreshCmd(self, args):
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        #query guacConn manager status and then return it here
+        return self.guacConnManage.getConnectionManageRefresh(hostname, username, password)
+        
+    def guacConnCreateCmd(self, args):
+        logging.debug("guacConnCreateCmd(): instantiated")
+        #will create guacConns as specified in configfile
         configname = args.configname
         hostname = args.hostname
         username = args.username
@@ -179,12 +236,12 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.connectionManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
-        return self.connectionManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
+                return self.guacConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
+        return self.guacConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
 
-    def connectionRemoveCmd(self, args):
-        logging.debug("connectionRemoveCmd(): instantiated")
-        #will remove connections as specified in configfile
+    def guacConnRemoveCmd(self, args):
+        logging.debug("guacConnRemoveCmd(): instantiated")
+        #will remove guacConns as specified in configfile
         configname = args.configname
         hostname = args.hostname
         username = args.username
@@ -195,22 +252,95 @@ class Engine:
         if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
             full_creds_file = os.path.abspath(creds_file)
             if os.path.exists(full_creds_file):
-                return self.connectionManage.removeConnections(configname, hostname, username, password, full_creds_file, itype, name)
-        return self.connectionManage.removeConnections(configname, hostname, username, password, itype=itype, name=name)
+                return self.guacConnManage.removeConnections(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.guacConnManage.removeConnections(configname, hostname, username, password, itype=itype, name=name)
 
-    def connectionClearAllCmd(self, args):
-        logging.debug("connectionClearAllCmd(): instantiated")
-        #will remove connections as specified in configfile
+    def guacConnClearAllCmd(self, args):
+        logging.debug("guacConnClearAllCmd(): instantiated")
+        #will remove guacConns as specified in configfile
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        
+        return self.guacConnManage.clearAllConnections(hostname, username, password)
+
+    def guacConnOpenCmd(self, args):
+        logging.debug("guacConnOpenCmd(): instantiated")
+        #open a display to the current guacConn
+        experimentid = args.experimentid
+        username = args.username
+        password = args.password
+        hostname = args.hostname
+        itype = args.itype
+        name = args.itype
+
+        return self.guacConnManage.openConnection(hostname, experimentid, itype, name, username, password)
+
+
+    def proxPoolsStatusCmd(self, args):
+        logging.debug("proxPoolsStatusCmd(): instantiated")
+        #query proxPools manager status and then return it here        
+        return self.proxPoolsConnManage.getConnectionManageStatus()
+
+    def proxPoolsRefreshCmd(self, args):
+        logging.debug("proxPoolsRefreshCmd(): instantiated")
+        hostname = args.hostname
+        configname = args.configname
+        username = args.username
+        password = args.password
+        #query proxPools manager status and then return it here
+        return self.proxPoolsConnManage.getConnectionManageRefresh(configname, hostname, username, password)
+        
+    def proxPoolsCreateCmd(self, args):
+        logging.debug("proxPoolsCreateCmd(): instantiated")
+        #will create proxPools as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        maxConnections = args.maxConnections
+        maxConnectionsPerUser = args.maxConnectionsPerUser
+        width = args.width
+        height = args.height
+        bitdepth = args.bitdepth
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.proxPoolsConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth, full_creds_file, itype, name)
+        return self.proxPoolsConnManage.createConnections(configname, hostname, username, password, maxConnections, maxConnectionsPerUser, width, height, bitdepth,itype=itype, name=name)
+
+    def proxPoolsRemoveCmd(self, args):
+        logging.debug("proxPoolsRemoveCmd(): instantiated")
+        #will remove proxPools as specified in configfile
+        configname = args.configname
+        hostname = args.hostname
+        username = args.username
+        password = args.password
+        itype = args.itype
+        name = args.name
+        creds_file = args.creds_file
+        if creds_file != None and isinstance(creds_file, str) and creds_file.strip() != "None":
+            full_creds_file = os.path.abspath(creds_file)
+            if os.path.exists(full_creds_file):
+                return self.proxPoolsConnManage.removeConnections(configname, hostname, username, password, full_creds_file, itype, name)
+        return self.proxPoolsConnManage.removeConnections(configname, hostname, username, password, itype=itype, name=name)
+
+    def proxPoolsClearAllCmd(self, args):
+        logging.debug("proxPoolsClearAllCmd(): instantiated")
+        #will remove proxPools as specified in configfile
         configname = args.configname
         hostname = args.hostname
         username = args.username
         password = args.password
         
-        return self.connectionManage.clearAllConnections(configname, hostname, username, password)
+        return self.proxPoolsConnManage.clearAllConnections(configname, hostname, username, password)
 
-    def connectionOpenCmd(self, args):
-        logging.debug("connectionOpenCmd(): instantiated")
-        #open a display to the current connection
+    def proxPoolsOpenCmd(self, args):
+        logging.debug("proxPoolsOpenCmd(): instantiated")
+        #open a display to the current proxPools
         configname = args.configname
         experimentid = args.experimentid
         username = args.username
@@ -219,7 +349,7 @@ class Engine:
         itype = args.itype
         name = args.itype
 
-        return self.connectionManage.openConnection(configname, hostname, experimentid, itype, name, username, password)
+        return self.proxPoolsConnManage.openConnection(configname, hostname, experimentid, itype, name, username, password)
 
     def challengesStatusCmd(self, args):
         #query challenge manager status and then return it here
@@ -293,7 +423,7 @@ class Engine:
         return self.challengesManage.openChallengeUsersStats(configname, hostname, experimentid, itype, name)
 
     def experimentStatusCmd(self, args):
-        #query connection manager status and then return it here
+        #query guacConn manager status and then return it here
         return self.experimentManage.getExperimentManageStatus()
     
     def experimentRefreshCmd(self, args):
@@ -520,95 +650,241 @@ class Engine:
                                           help='Do not export vms')
         self.packageManageExportParser.set_defaults(func=self.packagerExportCmd)
 
-#-----------Connections
-        self.connectionManageParser = self.subParsers.add_parser('conns')
-        self.connectionManageSubParser = self.connectionManageParser.add_subparsers(help='manage connections')
+#-----------Keycloak SSO
+        self.keycloakConnManageParser = self.subParsers.add_parser('keycloak')
+        self.keycloakConnManageSubParser = self.keycloakConnManageParser.add_subparsers(help='manage keycloak SSO')
+        self.keycloakConnManageStatusParser = self.keycloakConnManageSubParser.add_parser('status', help='retrieve keycloak manager status')
+        self.keycloakConnManageStatusParser.set_defaults(func=self.keycloakStatusCmd)
 
-        self.connectionManageStatusParser = self.connectionManageSubParser.add_parser('status', help='retrieve connection manager status')
-        self.connectionManageStatusParser.set_defaults(func=self.connectionStatusCmd)
+        self.keycloakConnManageRefreshParser = self.keycloakConnManageSubParser.add_parser('refresh', help='retrieve all keycloak manager status')
+        self.keycloakConnManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageRefreshParser.set_defaults(func=self.keycloakRefreshCmd)
 
-        self.connectionManageRefreshParser = self.connectionManageSubParser.add_parser('refresh', help='retrieve all connection manager status')
-        self.connectionManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
-                                    help='path to config file')
-        self.connectionManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
-                                          help='Name or IP address where Connection host resides')
-        self.connectionManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
-                                          help='Username for connecting to host')
-        self.connectionManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')
-        self.connectionManageRefreshParser.set_defaults(func=self.connectionRefreshCmd)
+        self.keycloakConnManageCreateParser = self.keycloakConnManageSubParser.add_parser('create', help='create conns as specified in config file')
+        self.keycloakConnManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageCreateParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageCreateParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                            help='File with username/password pairs.')
+        self.keycloakConnManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                            help='set, template, or vm')
+        self.keycloakConnManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                            help='all, set-number, template-vm-name, or clone-vm-name')
+        self.keycloakConnManageCreateParser.set_defaults(func=self.keycloakCreateCmd)
 
-        self.connectionManageCreateParser = self.connectionManageSubParser.add_parser('create', help='create conns as specified in config file')
-        self.connectionManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
-        self.connectionManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
-                                          help='Name or IP address where Connection host resides')
-        self.connectionManageCreateParser.add_argument('--username', metavar='<username>', action="store",
-                                          help='Username for connecting to host')
-        self.connectionManageCreateParser.add_argument('--password', metavar='<password>', action="store",
-                                          help='Password for connecting to host')
-        self.connectionManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
-                                          help='Max number of connections allowed per remote conn')
-        self.connectionManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
-                                          help='Max number of connections allowed per user per remote conn')
-        self.connectionManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
-                                          help='Width of remote connection display')
-        self.connectionManageCreateParser.add_argument('--height', metavar='<height>', action="store", default="1050",
-                                          help='Height of remote connection display')
-        self.connectionManageCreateParser.add_argument('--bitdepth', metavar='<bitdepth>', action="store", default="16",
-                                          help='Bit-depth (8, 16, 24, or 32)')
-        self.connectionManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
-                                          help='File with username/password pairs.')
-        self.connectionManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
-                                          help='set, template, or vm')
-        self.connectionManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
-                                          help='all, set-number, template-vm-name, or clone-vm-name')
-        self.connectionManageCreateParser.set_defaults(func=self.connectionCreateCmd)
+        self.keycloakConnManageRemoveParser = self.keycloakConnManageSubParser.add_parser('remove', help='remove conns as specified in config file')
+        self.keycloakConnManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                            help='File with username/password pairs.')
+        self.keycloakConnManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                            help='set, template, or vm')
+        self.keycloakConnManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                            help='all, set-number, template-vm-name, or clone-vm-name')
+        self.keycloakConnManageRemoveParser.set_defaults(func=self.keycloakRemoveCmd)
         
-        self.connectionManageRemoveParser = self.connectionManageSubParser.add_parser('remove', help='remove conns as specified in config file')
-        self.connectionManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
-                                          help='path to config file')
-        self.connectionManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
-                                          help='Name or IP address where Connection host resides')
-        self.connectionManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
+        self.keycloakConnManageClearAllParser = self.keycloakConnManageSubParser.add_parser('clearall', help='remove all conns')
+        self.keycloakConnManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
+                                            help='path to config file')
+        self.keycloakConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                            help='Name or IP address where keycloak host resides')
+        self.keycloakConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
+                                            help='Username for connecting to host')
+        self.keycloakConnManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
+                                            help='Password for connecting to host')
+        self.keycloakConnManageClearAllParser.set_defaults(func=self.keycloakClearAllCmd)
+
+#-----------Proxmox Pools
+        self.proxPoolsConnManageParser = self.subParsers.add_parser('proxpools')
+        self.proxPoolsConnManageSubParser = self.proxPoolsConnManageParser.add_subparsers(help='manage proxPools')
+
+        self.proxPoolsConnManageStatusParser = self.proxPoolsConnManageSubParser.add_parser('status', help='retrieve proxPools manager status')
+        self.proxPoolsConnManageStatusParser.set_defaults(func=self.proxPoolsStatusCmd)
+
+        self.proxPoolsConnManageRefreshParser = self.proxPoolsConnManageSubParser.add_parser('refresh', help='retrieve all proxPools manager status')
+        self.proxPoolsConnManageRefreshParser.add_argument('configname', metavar='<config filename>', action="store",
+                                    help='path to config file')
+        self.proxPoolsConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where proxPools host resides')
+        self.proxPoolsConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
+        self.proxPoolsConnManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+        self.proxPoolsConnManageRefreshParser.set_defaults(func=self.proxPoolsRefreshCmd)
+
+        self.proxPoolsConnManageCreateParser = self.proxPoolsConnManageSubParser.add_parser('create', help='create conns as specified in config file')
+        self.proxPoolsConnManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
+                                          help='path to config file')
+        self.proxPoolsConnManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where proxPools host resides')
+        self.proxPoolsConnManageCreateParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.proxPoolsConnManageCreateParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.proxPoolsConnManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
+                                          help='Max number of proxPools allowed per remote conn')
+        self.proxPoolsConnManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
+                                          help='Max number of proxPools allowed per user per remote conn')
+        self.proxPoolsConnManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
+                                          help='Width of remote proxPools display')
+        self.proxPoolsConnManageCreateParser.add_argument('--height', metavar='<height>', action="store", default="1050",
+                                          help='Height of remote proxPools display')
+        self.proxPoolsConnManageCreateParser.add_argument('--bitdepth', metavar='<bitdepth>', action="store", default="16",
+                                          help='Bit-depth (8, 16, 24, or 32)')
+        self.proxPoolsConnManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
                                           help='File with username/password pairs.')
-        self.connectionManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+        self.proxPoolsConnManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+        self.proxPoolsConnManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
-        self.connectionManageRemoveParser.set_defaults(func=self.connectionRemoveCmd)
-
-        self.connectionManageClearAllParser = self.connectionManageSubParser.add_parser('clear', help='Clear all connections in database')
-        self.connectionManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
+        self.proxPoolsConnManageCreateParser.set_defaults(func=self.proxPoolsCreateCmd)
+        
+        self.proxPoolsConnManageRemoveParser = self.proxPoolsConnManageSubParser.add_parser('remove', help='remove conns as specified in config file')
+        self.proxPoolsConnManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.connectionManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
-                                          help='Name or IP address where Connection host resides')
-        self.connectionManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
+        self.proxPoolsConnManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where proxPools host resides')
+        self.proxPoolsConnManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
+        self.proxPoolsConnManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageClearAllParser.set_defaults(func=self.connectionClearAllCmd)
+        self.proxPoolsConnManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                          help='File with username/password pairs.')
+        self.proxPoolsConnManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                          help='set, template, or vm')
+        self.proxPoolsConnManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.proxPoolsConnManageRemoveParser.set_defaults(func=self.proxPoolsRemoveCmd)
 
-        self.connectionManageOpenParser = self.connectionManageSubParser.add_parser('open', help='start connection to specified experiment instance and vrdp-enabled vm as specified in config file')
-        self.connectionManageOpenParser.add_argument('configname', metavar='<config filename>', action="store",
+        self.proxPoolsConnManageClearAllParser = self.proxPoolsConnManageSubParser.add_parser('clear', help='Clear all proxPools in database')
+        self.proxPoolsConnManageClearAllParser.add_argument('configname', metavar='<config filename>', action="store",
                                           help='path to config file')
-        self.connectionManageOpenParser.add_argument('--hostname', metavar='<host address>', action="store",
-                                          help='Name or IP address where Connection host resides')
-        self.connectionManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
+        self.proxPoolsConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where proxPools host resides')
+        self.proxPoolsConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.proxPoolsConnManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.proxPoolsConnManageClearAllParser.set_defaults(func=self.proxPoolsClearAllCmd)
+
+        self.proxPoolsConnManageOpenParser = self.proxPoolsConnManageSubParser.add_parser('open', help='start proxPools to specified experiment instance and vrdp-enabled vm as specified in config file')
+        self.proxPoolsConnManageOpenParser.add_argument('configname', metavar='<config filename>', action="store",
+                                          help='path to config file')
+        self.proxPoolsConnManageOpenParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where proxPools host resides')
+        self.proxPoolsConnManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
                                           help='experiment instance number')
-        self.connectionManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+        self.proxPoolsConnManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
                                           help='set, template, or vm')
-        self.connectionManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+        self.proxPoolsConnManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
                                           help='all, set-number, template-vm-name, or clone-vm-name')
-        self.connectionManageOpenParser.add_argument('--username', metavar='<username>', action="store",
+        self.proxPoolsConnManageOpenParser.add_argument('--username', metavar='<username>', action="store",
                                           help='Username for connecting to host')
-        self.connectionManageOpenParser.add_argument('--password', metavar='<password>', action="store",
+        self.proxPoolsConnManageOpenParser.add_argument('--password', metavar='<password>', action="store",
                                           help='Password for connecting to host')
-        self.connectionManageOpenParser.set_defaults(func=self.connectionOpenCmd)
+        self.proxPoolsConnManageOpenParser.set_defaults(func=self.proxPoolsOpenCmd)
+
+#-----------Guacamole Connection
+        self.guacConnManageParser = self.subParsers.add_parser('guac')
+        self.guacConnManageSubParser = self.guacConnManageParser.add_subparsers(help='manage apache guacamole connections')
+
+        self.guacConnManageStatusParser = self.guacConnManageSubParser.add_parser('status', help='retrieve guacConn manager status')
+        self.guacConnManageStatusParser.set_defaults(func=self.guacConnStatusCmd)
+
+        self.guacConnManageRefreshParser = self.guacConnManageSubParser.add_parser('refresh', help='retrieve all guacConns manager status')
+        self.guacConnManageRefreshParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where guacConn host resides')
+        self.guacConnManageRefreshParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.guacConnManageRefreshParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.guacConnManageRefreshParser.set_defaults(func=self.guacConnRefreshCmd)
+
+        self.guacConnManageCreateParser = self.guacConnManageSubParser.add_parser('create', help='create guacamole connections as specified in config file')
+        self.guacConnManageCreateParser.add_argument('configname', metavar='<config filename>', action="store",
+                                          help='path to config file')
+        self.guacConnManageCreateParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where guacConn host resides')
+        self.guacConnManageCreateParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.guacConnManageCreateParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.guacConnManageCreateParser.add_argument('--maxConnections', metavar='<maxConnections>', action="store", default="10",
+                                          help='Max number of guacConns allowed per remote conn')
+        self.guacConnManageCreateParser.add_argument('--maxConnectionsPerUser', metavar='<maxConnectionsPerUser>', action="store", default="10", 
+                                          help='Max number of guacConns allowed per user per remote conn')
+        self.guacConnManageCreateParser.add_argument('--width', metavar='<width>', action="store", default="1400",
+                                          help='Width of remote guacConn display')
+        self.guacConnManageCreateParser.add_argument('--height', metavar='<height>', action="store", default="1050",
+                                          help='Height of remote guacConn display')
+        self.guacConnManageCreateParser.add_argument('--bitdepth', metavar='<bitdepth>', action="store", default="16",
+                                          help='Bit-depth (8, 16, 24, or 32)')
+        self.guacConnManageCreateParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                          help='File with username/password pairs.')
+        self.guacConnManageCreateParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                          help='set, template, or vm')
+        self.guacConnManageCreateParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.guacConnManageCreateParser.set_defaults(func=self.guacConnCreateCmd)
+        
+        self.guacConnManageRemoveParser = self.guacConnManageSubParser.add_parser('remove', help='remove apache guacamole conns as specified in config file')
+        self.guacConnManageRemoveParser.add_argument('configname', metavar='<config filename>', action="store",
+                                          help='path to config file')
+        self.guacConnManageRemoveParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where guacConn host resides')
+        self.guacConnManageRemoveParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.guacConnManageRemoveParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.guacConnManageRemoveParser.add_argument('--creds_file', metavar='<creds_file>', action="store",
+                                          help='File with username/password pairs.')
+        self.guacConnManageRemoveParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                          help='set, template, or vm')
+        self.guacConnManageRemoveParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.guacConnManageRemoveParser.set_defaults(func=self.guacConnRemoveCmd)
+
+        self.guacConnManageClearAllParser = self.guacConnManageSubParser.add_parser('clear', help='Clear all apache guacamole conns in database')
+        self.guacConnManageClearAllParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where guacConn host resides')
+        self.guacConnManageClearAllParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.guacConnManageClearAllParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.guacConnManageClearAllParser.set_defaults(func=self.guacConnClearAllCmd)
+
+        self.guacConnManageOpenParser = self.guacConnManageSubParser.add_parser('open', help='start guacConn to specified experiment instance and vrdp-enabled vm as specified in config file')
+        self.guacConnManageOpenParser.add_argument('--hostname', metavar='<host address>', action="store",
+                                          help='Name or IP address where guacConn host resides')
+        self.guacConnManageOpenParser.add_argument('experimentid', metavar='<experiment id>', action="store",
+                                          help='experiment instance number')
+        self.guacConnManageOpenParser.add_argument('--itype', metavar='<instance-type>', action="store", default="set",
+                                          help='set, template, or vm')
+        self.guacConnManageOpenParser.add_argument('--name', metavar='<instance-name>', action="store", default="all",
+                                          help='all, set-number, template-vm-name, or clone-vm-name')
+        self.guacConnManageOpenParser.add_argument('--username', metavar='<username>', action="store",
+                                          help='Username for connecting to host')
+        self.guacConnManageOpenParser.add_argument('--password', metavar='<password>', action="store",
+                                          help='Password for connecting to host')
+        self.guacConnManageOpenParser.set_defaults(func=self.guacConnOpenCmd)
 
 #-----------Challenges
         self.challengesManageParser = self.subParsers.add_parser('challenges')

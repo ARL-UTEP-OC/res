@@ -17,7 +17,7 @@ from threading import RLock
 
 class ConnectionManageProxVNC(ConnectionManage):
     def __init__(self, username=None, password=None):
-        logging.debug("ConnectionManageGuacRDP(): instantiated")
+        logging.debug("ConnectionManageProxVNC(): instantiated")
         ConnectionManage.__init__(self)
         self.proxapi = None
         self.proxssh = None
@@ -31,7 +31,7 @@ class ConnectionManageProxVNC(ConnectionManage):
     def getProxAPI(self, configname, username=None, password=None):
         logging.debug("ProxmoxManage: getProxAPI(): instantiated")
         try:
-            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdiplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             self.nodename = self.eco.getExperimentJSONFileData(configname)["xml"]["testbed-setup"]["vm-set"]["base-groupname"]
             splithostname = vmHostname.split("://")
@@ -59,7 +59,7 @@ class ConnectionManageProxVNC(ConnectionManage):
         logging.debug("ProxmoxManage: getProxSSH(): instantiated")
         try:
             
-            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(configname)
+            vmHostname, vmserversshport, rdisplayhostname, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
             server = vmHostname
             user = None
             if len(username) > 4:
@@ -645,11 +645,11 @@ class ConnectionManageProxVNC(ConnectionManage):
                         for member in members_ds['members']:
                             pools[pool_id].append(vmid_name[str(member['vmid'])])
                     except ResourceException:
-                        logging.warning("runClearAllConnections(): Pool " + pool_id + " does not exist, skipping.")
+                        logging.warning("getConnectionManageRefresh(): Pool " + pool_id + " does not exist, skipping.")
                         # exc_type, exc_value, exc_traceback = sys.exc_info()
                         # traceback.print_exception(exc_type, exc_value, exc_traceback)                                    
                     except Exception:
-                        logging.error("runClearAllConnections(): error when trying to remove pool: " + pool_id)
+                        logging.error("getConnectionManageRefresh(): error when trying to remove pool: " + pool_id)
                         # exc_type, exc_value, exc_traceback = sys.exc_info()
                         # traceback.print_exception(exc_type, exc_value, exc_traceback)
             except Exception:
@@ -695,17 +695,24 @@ class ConnectionManageProxVNC(ConnectionManage):
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
 
             for username in pools.keys():
+                logging.debug("getConnectionManageRefresh(): username: " + username)
+                if username not in pools or pools[username] == []:
+                    #if user is not in pools, then user is not connected
+                    user_perm = "Found"
+                    active = "Empty Pool"
+                    self.usersConnsStatus[(username,"")] = {"user_status": user_perm, "connStatus": active}
+                    continue
                 for vmname in pools[username]:
                     #if user/vmname is in connected, then user is connected
-                    user_perm = "Found"
-                    active = "No Record"
+                    active = "No Recent Record"
                     if (username, vmname) in connected:
                         if connected[(username, vmname)]['taskendtime'] != 'Active':
                             active = datetime.datetime.fromtimestamp(connected[(username, vmname)]['taskendtime']).strftime("%Y-%m-%d %H:%M:%S")
                         else:
                             active = 'Active'
-                        
+                    logging.debug("getConnectionManageRefresh(): username: " + username + "; vmname: " + vmname + "; active: " + str(active))
                     self.usersConnsStatus[(username,vmname)] = {"user_status": user_perm, "connStatus": active}
+            logging.debug("getConnectionManageRefresh(): usersConnsStatus: " + str(self.usersConnsStatus))
             
         except Exception as e:
             logging.error("Error in getConnectionManageRefresh(). Could not refresh connections!")

@@ -77,14 +77,6 @@ class ConfigurationDialog(QDialog):
         self.layout.addRow(QLabel("qmrestore Path:"), self.proxmoxQMRestorePathLineEdit)
         self.proxmoxStorageVolLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_STORAGE_VOL'])
         self.layout.addRow(QLabel("Storage Volume:"), self.proxmoxStorageVolLineEdit)
-        self.proxmoxNodeNameLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_NODE_NAME'])
-        self.layout.addRow(QLabel("Node Name:"), self.proxmoxNodeNameLineEdit)
-        self.proxmoxServerLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_SERVER'])
-        self.layout.addRow(QLabel("Proxmox Server:"), self.proxmoxServerLineEdit)
-        self.proxmoxApiPortLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_APIPORT'])
-        self.layout.addRow(QLabel("Proxmox API Port:"), self.proxmoxApiPortLineEdit)
-        self.proxmoxCmdPortLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_CMDPORT'])
-        self.layout.addRow(QLabel("Proxmox Command Port:"), self.proxmoxCmdPortLineEdit)
         self.proxmoxMaxCreateJobsLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_MAXCREATEJOBS'])
         self.layout.addRow(QLabel("Max Create Jobs:"), self.proxmoxMaxCreateJobsLineEdit)
         self.proxmoxSnapWaitTimeLineEdit = QLineEdit(self.s.getConfig()['PROXMOX']['VMANAGE_SNAPWAITTIME'])
@@ -103,21 +95,45 @@ class ConfigurationDialog(QDialog):
         self.temporaryPathLineEdit = QLineEdit(self.s.getConfig()["EXPERIMENTS"]["TEMP_DATA_PATH"])
         self.layout.addRow(QLabel("Temporary Data Path:"), self.temporaryPathLineEdit)
 
-        self.connHandlerGroupLayout = QHBoxLayout()
-        self.guacHandlerRadio = QRadioButton("Guacamole")
-        self.proxmoxHandlerRadio = QRadioButton("Proxmox")
-        self.connhandlerbuttonGroup = QButtonGroup()
-        self.connhandlerbuttonGroup.addButton(self.guacHandlerRadio)
-        self.connhandlerbuttonGroup.addButton(self.proxmoxHandlerRadio)
-        self.connHandlerGroupLayout.addWidget(self.guacHandlerRadio)
-        self.connHandlerGroupLayout.addWidget(self.proxmoxHandlerRadio)
-        if self.s.getConfig()["CONNECTIONS"]["HANDLER"] == "GUAC":
-            self.guacHandlerRadio.setChecked(True)
-        elif self.s.getConfig()["CONNECTIONS"]["HANDLER"] == "PROXMOX":
-            self.proxmoxHandlerRadio.setChecked(True)
+        self.featureGroupLayout = QHBoxLayout()
+        self.vmCheckbox = QCheckBox("VM Control")
+        self.guacCheckbox = QCheckBox("Guacamole")
+        self.proxmoxCheckbox = QCheckBox("Proxmox Pools")
+        self.keycloakCheckbox = QCheckBox("Keycloak")
+        self.rocketChatCheckbox = QCheckBox("RocketChat")
+        self.ctfdCheckbox = QCheckBox("CTFd")
+        self.featureGroupLayout.addWidget(self.vmCheckbox)
+        self.featureGroupLayout.addWidget(self.guacCheckbox)
+        self.featureGroupLayout.addWidget(self.proxmoxCheckbox)
+        self.featureGroupLayout.addWidget(self.keycloakCheckbox)
+        self.featureGroupLayout.addWidget(self.rocketChatCheckbox)
+        self.featureGroupLayout.addWidget(self.ctfdCheckbox)
+        if self.s.getConfig()["FEATURES"]["VM"] == "True":
+            self.vmCheckbox.setChecked(True)
         else:
-            self.guacHandlerRadio.setChecked(True)
-        self.layout.addRow(QLabel("Connection Handler"), self.connHandlerGroupLayout)
+            self.vmCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["GUAC"] == "True":
+            self.guacCheckbox.setChecked(True)
+        else:
+            self.guacCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["PROXMOX"] == "True":
+            self.proxmoxCheckbox.setChecked(True)
+        else:
+            self.proxmoxCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["KEYCLOAK"] == "True":
+            self.keycloakCheckbox.setChecked(True)
+        else:
+            self.keycloakCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["ROCKETCHAT"] == "True":
+            self.rocketChatCheckbox.setChecked(True)
+        else:
+            self.rocketChatCheckbox.setChecked(False)
+        if self.s.getConfig()["FEATURES"]["CTFD"] == "True":
+            self.ctfdCheckbox.setChecked(True)
+        else:
+            self.ctfdCheckbox.setChecked(False)
+
+        self.layout.addRow(QLabel("Enable Features"), self.featureGroupLayout)
 
         self.groupLayout = QHBoxLayout()
         self.vboxRadio = QRadioButton("VirtualBox")
@@ -164,10 +180,6 @@ class ConfigurationDialog(QDialog):
             self.s.writeConfig("PROXMOX", "VMANAGE_PVESH_PATH", self.proxmoxPVESHPathLineEdit.text())
             self.s.writeConfig("PROXMOX", "VMANAGE_QMRESTORE_PATH", self.proxmoxQMRestorePathLineEdit.text())
             self.s.writeConfig("PROXMOX", "VMANAGE_STORAGE_VOL", self.proxmoxStorageVolLineEdit.text())
-            self.s.writeConfig("PROXMOX", "VMANAGE_NODE_NAME", self.proxmoxNodeNameLineEdit.text())
-            self.s.writeConfig("PROXMOX", "VMANAGE_SERVER", self.proxmoxServerLineEdit.text())
-            self.s.writeConfig("PROXMOX", "VMANAGE_APIPORT", self.proxmoxApiPortLineEdit.text())
-            self.s.writeConfig("PROXMOX", "VMANAGE_CMDPORT", self.proxmoxCmdPortLineEdit.text())
             self.s.writeConfig("PROXMOX", "VMANAGE_MAXCREATEJOBS", self.proxmoxMaxCreateJobsLineEdit.text())
             self.s.writeConfig("PROXMOX", "VMANAGE_SNAPWAITTIME", self.proxmoxSnapWaitTimeLineEdit.text())
 
@@ -176,10 +188,12 @@ class ConfigurationDialog(QDialog):
             self.s.writeConfig("EXPERIMENTS", "EXPERIMENTS_PATH", self.experimentPathLineEdit.text())
             self.s.writeConfig("EXPERIMENTS", "TEMP_DATA_PATH", self.temporaryPathLineEdit.text())
 
-            if self.guacHandlerRadio.isChecked():
-                self.s.writeConfig("CONNECTIONS", "HANDLER", "GUAC")
-            elif self.proxmoxHandlerRadio.isChecked():
-                self.s.writeConfig("CONNECTIONS", "HANDLER", "PROXMOX")
+            self.s.writeConfig("FEATURES", "VM", str(self.vmCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "GUAC", str(self.guacCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "PROXMOX", str(self.proxmoxCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "KEYCLOAK", str(self.keycloakCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "ROCKETCHAT", str(self.rocketChatCheckbox.isChecked()))
+            self.s.writeConfig("FEATURES", "CTFD", str(self.ctfdCheckbox.isChecked()))
 
             if self.vboxRadio.isChecked():
                 self.s.writeConfig("HYPERVISOR", "ACTIVE", "VBOX")

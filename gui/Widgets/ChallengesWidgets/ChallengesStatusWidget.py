@@ -116,7 +116,7 @@ class ChallengesStatusWidget(QtWidgets.QWidget):
             return
         challengeName = self.challengeStatusTable.item(challengeRow,0).text()
         actionlabelname = self.sender().text()
-        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(self.configname)
+        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(self.configname)
         #parent, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype="", name=""
         ChallengesActions().challengesActionEvent(self.parent, self.configname, actionlabelname, challengesserver, users_file, "vm", challengeName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)

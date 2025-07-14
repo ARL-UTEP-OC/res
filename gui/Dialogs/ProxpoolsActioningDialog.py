@@ -38,7 +38,7 @@ class WatchActioningThread(QThread):
                     creds_file = str(self.args[8])
                     if " " in creds_file:
                         creds_file = "\""+creds_file+"\""
-                cmd = "conns " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --maxConnections " + str(self.args[3]) + " --maxConnectionsPerUser " + str(self.args[4]) + " --width " + str(self.args[5]) + " --height " + str(self.args[6]) + " --bitdepth " + str(self.args[7]) + " --creds_file " + creds_file + " --itype " + str(self.args[9]) + " --name " + str(self.args[10])
+                cmd = "proxpools " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --maxConnections " + str(self.args[3]) + " --maxConnectionsPerUser " + str(self.args[4]) + " --width " + str(self.args[5]) + " --height " + str(self.args[6]) + " --bitdepth " + str(self.args[7]) + " --creds_file " + creds_file + " --itype " + str(self.args[9]) + " --name " + str(self.args[10])
             if self.actionname == "Remove":
                 if len(self.args) != 6:
                     logging.error("WatchActioningThread(): invalid number of args for remove connections. Skipping...")
@@ -49,21 +49,21 @@ class WatchActioningThread(QThread):
                     creds_file = str(self.args[3])
                     if " " in creds_file:
                         creds_file = "\""+creds_file+"\""
-                cmd = "conns " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + creds_file + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
+                cmd = "proxpools " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + creds_file + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
             if self.actionname == "Clear":
                 if len(self.args) != 3:
                     logging.error("WatchActioningThread(): invalid number of args for clear connections. Skipping...")
                     self.watchsignal.emit("Invalid number of args for clear connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                cmd = "conns " + " clear "+ self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+                cmd = "proxpools " + " clear "+ self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             logging.debug("WatchActioningThread(): running: " + cmd)
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
             while(True):
                 logging.debug("WatchActioningThread(): running: " + cmd)
-                self.status = e.execute("conns status")
+                self.status = e.execute("proxpools status")
                 logging.debug("WatchActioningThread(): result: " + str(self.status))
                 if self.status["writeStatus"] != ConnectionManage.CONNECTION_MANAGE_COMPLETE:
                     dotstring = ""
@@ -89,10 +89,10 @@ class WatchActioningThread(QThread):
         finally:
             return None
 
-class ConnectionActioningDialog(QDialog):
+class ProxpoolsActioningDialog(QDialog):
     def __init__(self, parent, configname, actionname, args):
-        logging.debug("ConnectionActioningDialog(): instantiated")
-        super(ConnectionActioningDialog, self).__init__(parent)     
+        logging.debug("ProxpoolsActioningDialog(): instantiated")
+        super(ProxpoolsActioningDialog, self).__init__(parent)     
         
         self.configname = configname
         self.actionname = actionname
@@ -125,7 +125,7 @@ class ConnectionActioningDialog(QDialog):
         t = WatchActioningThread(self.configname, self.actionname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ConnectionActioningDialog, self).exec_()
+        result = super(ProxpoolsActioningDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status

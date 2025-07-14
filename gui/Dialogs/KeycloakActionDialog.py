@@ -1,6 +1,6 @@
 from engine.Configuration.SystemConfigIO import SystemConfigIO
-from gui.Dialogs.ConnectionOpeningDialog import ConnectionOpeningDialog
-from gui.Dialogs.ConnectionRetrievingDialog import ConnectionRetrievingDialog
+from gui.Dialogs.KeycloakOpeningDialog import KeycloakOpeningDialog
+from gui.Dialogs.KeycloakRetrievingDialog import KeycloakRetrievingDialog
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QThread, pyqtSignal, QObject
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -11,29 +11,24 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
 from engine.Engine import Engine
 from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
-from gui.Dialogs.ConnectionActioningDialog import ConnectionActioningDialog
+from gui.Dialogs.KeycloakActioningDialog import KeycloakActioningDialog
 import logging
 from engine.Configuration.UserPool import UserPool
 
-class ConnectionActionDialog(QDialog):
+class KeycloakActionDialog(QDialog):
 
-    def __init__(self, parent, configname, actionname, experimentHostname, rdpBrokerHostname="", users_file="", itype="", name=""):
-        logging.debug("ConnectionActionDialog(): instantiated")
-        super(ConnectionActionDialog, self).__init__(parent)
+    def __init__(self, parent, configname, actionname, keycloakserver, users_file="", itype="", name=""):
+        logging.debug("KeycloakActionDialog(): instantiated")
+        super(KeycloakActionDialog, self).__init__(parent)
         self.parent = parent
         self.eco = ExperimentConfigIO.getInstance()
         self.s = SystemConfigIO()
         self.configname = configname
         self.actionname = actionname
-        self.experimentHostname = experimentHostname
+        self.keycloakserver = keycloakserver
         self.usersFile = users_file
         self.itype = itype
         self.name = name
-        if rdpBrokerHostname.strip() == "":
-            self.rdpBrokerHostname = ""
-            self.setEnabled(False)
-        else:
-            self.rdpBrokerHostname = rdpBrokerHostname
         self.cm = ConnectionManage()
         self.setMinimumWidth(450)
 
@@ -53,18 +48,13 @@ class ConnectionActionDialog(QDialog):
     def createFormGroupBox(self):
         self.formGroupBox = QGroupBox("Connection Information")
         self.layout = QFormLayout()
-        self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
-        self.experimentHostnameLineEdit.setEnabled(False)
-        if self.s.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
-            self.layout.addRow(QLabel("PROXMOX Server URL:"), self.experimentHostnameLineEdit)
-        else:
-            self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
-        self.hostnameLineEdit = QLineEdit(self.rdpBrokerHostname)
-        self.hostnameLineEdit.setEnabled(False)
-        self.layout.addRow(QLabel("rDisplay Server URL:"), self.hostnameLineEdit)
+        self.keycloakserverLineEdit = QLineEdit(self.keycloakserver)
+        self.keycloakserverLineEdit.setEnabled(False)
+        self.layout.addRow(QLabel("Keycloak Server URL:"), self.keycloakserverLineEdit)
+
         mgmusername = ""
         mgmpassword = ""
-        cachedCreds = self.eco.getConfigRDPBrokerCreds(self.configname)
+        cachedCreds = self.eco.getConfigKeycloakCreds(self.configname)
         if cachedCreds != None:
             mgmusername = cachedCreds[0]
             mgmpassword = cachedCreds[1]
@@ -72,9 +62,8 @@ class ConnectionActionDialog(QDialog):
         self.usernameLineEdit = QLineEdit(mgmusername)
         self.passwordLineEdit = QLineEdit(mgmpassword)
         self.passwordLineEdit.setEchoMode(QLineEdit.Password)
-        if self.actionname != "Open":
-            self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
-            self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
+        self.layout.addRow(QLabel("Management Username:"), self.usernameLineEdit)
+        self.layout.addRow(QLabel("Management Password:"), self.passwordLineEdit)
         
         self.maxConnectionsLineEdit = QLineEdit("10")
         self.heightLineEdit = QLineEdit("1400")
@@ -91,36 +80,27 @@ class ConnectionActionDialog(QDialog):
         if self.actionname == "Add":
             #Need to make a function to create more than one user to a single instance 
             self.layout.addRow(QLabel("Users File: "), self.usersFileLabel)
-            self.layout.addRow(QLabel("Max Connections Per User:"), self.maxConnectionsLineEdit)      
-            self.layout.addRow(QLabel("Display Height:"), self.heightLineEdit)
-            self.layout.addRow(QLabel("Display Width:"), self.widthLineEdit)
-            self.layout.addRow(QLabel("Bit Depth:"), self.bitdepthComboBox)
+            # self.layout.addRow(QLabel("Max Connections Per User:"), self.maxConnectionsLineEdit)      
+            # self.layout.addRow(QLabel("Display Height:"), self.heightLineEdit)
+            # self.layout.addRow(QLabel("Display Width:"), self.widthLineEdit)
+            # self.layout.addRow(QLabel("Bit Depth:"), self.bitdepthComboBox)
         if self.actionname == "Remove":
             self.layout.addRow(QLabel("Users File: "), self.usersFileLabel)
         self.formGroupBox.setLayout(self.layout)
 
     def exec_(self):
-        logging.debug("ConnectionActionDialog(): exec_() instantiated")
-        result = super(ConnectionActionDialog, self).exec_()
+        logging.debug("KeycloakActionDialog(): exec_() instantiated")
+        result = super(KeycloakActionDialog, self).exec_()
         if str(result) == str(1):
             logging.debug("dialog_response(): OK was pressed")
             if self.actionname == "Add":
-                bitDepth = self.bitdepthComboBox.currentText()
-                if bitDepth == "256 colors (8-bit)":
-                    bitDepth = "8"
-                elif bitDepth == "Low color (16-bit)":
-                    bitDepth = "16"
-                elif bitDepth == "True color (24-bit)":
-                    bitDepth = "24"
-                elif bitDepth == "True color (32-bit)":
-                    bitDepth = "32"
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), "1", self.maxConnectionsLineEdit.text(), self.heightLineEdit.text(), self.widthLineEdit.text(), bitDepth, self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Remove":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
+                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text(), self.usersFileLabel.text(), self.itype, self.name]
             elif self.actionname == "Clear":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
+                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Refresh":
-                self.args = [self.hostnameLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
+                self.args = [self.keycloakserverLineEdit.text(), self.usernameLineEdit.text(), self.passwordLineEdit.text()]
             elif self.actionname == "Open":
                 #get all of the connections from the currently selected item
                 userpool = UserPool()
@@ -141,18 +121,11 @@ class ConnectionActionDialog(QDialog):
             else:
                 pass
             if self.actionname == "Refresh":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                crd = ConnectionRetrievingDialog(self.parent, self.configname, self.args).exec_()
+                self.eco.storeConfigKeycloakCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
+                crd = KeycloakRetrievingDialog(self.parent, self.configname, self.args).exec_()
                 return crd
-            elif self.actionname == "Open":
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                pathToBrowser = self.s.getConfig()["BROWSER"]["BROWSER_PATH"]
-                browserArgs = self.s.getConfig()["BROWSER"]["ARGS"]
-                url = self.rdpBrokerHostname
-                cod = ConnectionOpeningDialog(self.parent, pathToBrowser, browserArgs, usersToOpen, url).exec_()
-                return cod
             else:
-                self.eco.storeConfigRDPBrokerCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
-                cad = ConnectionActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
+                self.eco.storeConfigKeycloakCreds(self.configname, self.usernameLineEdit.text(), self.passwordLineEdit.text())
+                cad = KeycloakActioningDialog(self.parent, self.configname, self.actionname, self.args).exec_()
                 return (QMessageBox.Ok)
         return (QMessageBox.Cancel)

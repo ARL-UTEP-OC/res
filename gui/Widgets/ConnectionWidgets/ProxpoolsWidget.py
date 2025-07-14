@@ -1,10 +1,10 @@
-from gui.Dialogs.ConnectionActionDialog import ConnectionActionDialog
-from gui.Dialogs.ConnectionActioningDialog import ConnectionActioningDialog
+from gui.Dialogs.ProxpoolsActionDialog import ProxpoolsActionDialog
+from gui.Dialogs.ProxpoolsActioningDialog import ProxpoolsActioningDialog
 from gui.Dialogs.GUIFunctionExecutingDialog import GUIFunctionExecutingDialog
 from PyQt5 import QtCore, QtGui, QtWidgets
 import logging
 from gui.Dialogs.ExperimentActionDialog import ExperimentActionDialog
-from gui.Widgets.ConnectionWidgets.ConnectionStatusWidget import ConnectionStatusWidget
+from gui.Widgets.ConnectionWidgets.ProxpoolsStatusWidget import ProxpoolsStatusWidget
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from engine.Configuration.UserPool import UserPool
 from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, QDateTimeEdit,
@@ -12,19 +12,19 @@ from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, 
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QMessageBox, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar)
-from gui.Helpers.ConnectionActions import ConnectionActions
+from gui.Helpers.ProxpoolsActions import ConnectionActions
 import os
 
-class ConnectionWidget(QtWidgets.QWidget):
+class ProxpoolsWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, statusBar=None):
-        logging.debug("ConnectionWidget instantiated")
+        logging.debug("ProxpoolsWidget instantiated")
         QtWidgets.QWidget.__init__(self, parent=None)
         self.statusBar = statusBar
         self.experimentItemNames = {}
         self.connectionBaseWidgets = {}
         self.eco = ExperimentConfigIO.getInstance()
 
-        self.setObjectName("ConnectionWidget")
+        self.setObjectName("ProxpoolsWidget")
 
         self.windowWidget = QtWidgets.QWidget()
         self.windowWidget.setObjectName("windowWidget")
@@ -65,21 +65,19 @@ class ConnectionWidget(QtWidgets.QWidget):
         
         # Context menu
         self.connsContextMenu = QtWidgets.QMenu()
-        self.createGuac = self.connsContextMenu.addAction("Create Users")
-        self.createGuac.triggered.connect(self.menuItemSelected)
-        self.removeGuac = self.connsContextMenu.addAction("Remove Users")
-        self.removeGuac.triggered.connect(self.menuItemSelected)
-        self.clearGuac = self.connsContextMenu.addAction("Clear All Users on Server")
-        self.clearGuac.triggered.connect(self.menuItemSelected)
-        self.openGuac = self.connsContextMenu.addAction("Open Connections")
-        self.openGuac.triggered.connect(self.menuItemSelected)
+        self.createProx = self.connsContextMenu.addAction("Create Users+Pools")
+        self.createProx.triggered.connect(self.menuItemSelected)
+        self.removeProx = self.connsContextMenu.addAction("Remove Users+Pools")
+        self.removeProx.triggered.connect(self.menuItemSelected)
+        self.clearProx = self.connsContextMenu.addAction("Clear All Users+Pools on Server")
+        self.clearProx.triggered.connect(self.menuItemSelected)
 
         self.setLayout(self.windowBoxHLayout)
         self.retranslateUi()
 
     def retranslateUi(self):
-        logging.debug("ConnectionWidget: retranslateUi(): instantiated")
-        self.setWindowTitle("ConnectionWidget")
+        logging.debug("ProxpoolsWidget: retranslateUi(): instantiated")
+        self.setWindowTitle("ProxpoolsWidget")
         self.experimentTree.headerItem().setText(0, "Experiments")
         self.experimentTree.setSortingEnabled(False)
     
@@ -125,7 +123,7 @@ class ConnectionWidget(QtWidgets.QWidget):
 
 
     def getExperimentVMRolledOut(self, configname, config_json):
-        logging.debug("ConnectionWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
+        logging.debug("ProxpoolsWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
         self.rolledoutjson = self.eco.getExperimentVMRolledOut(configname, config_json)
 
     def addExperimentItem(self, configname, config_jsondata=None):
@@ -164,10 +162,10 @@ class ConnectionWidget(QtWidgets.QWidget):
 
         if rolledoutjson != None:
             #first check if ther'es an RDP Broker IP, if not, disable the tree and add a description to configname
-            if "rdp-broker-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
-                config_jsondata["xml"]["testbed-setup"]["network-config"]["rdp-broker-ip"] == None or \
-                    config_jsondata["xml"]["testbed-setup"]["network-config"]["rdp-broker-ip"].strip() == "":
-                experimentTreeWidgetItem.setText(0,configname+" (RDP Broker Address required)")
+            if "vm-server-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
+                config_jsondata["xml"]["testbed-setup"]["network-config"]["vm-server-ip"] == None or \
+                    config_jsondata["xml"]["testbed-setup"]["network-config"]["vm-server-ip"].strip() == "":
+                experimentTreeWidgetItem.setText(0,configname+" (VM Server Address required)")
                 experimentTreeWidgetItem.setDisabled(True)
             #get the usersConn associations first:
             # if file was specified, but it doesn't exist, prepend usernames
@@ -188,7 +186,7 @@ class ConnectionWidget(QtWidgets.QWidget):
                         vmuser_mapping[cloneVMName] = "userfile_not_found"
                     
             #create the status widgets (tables)
-            self.experimentActionsBaseWidget = ConnectionStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+            self.experimentActionsBaseWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
             self.connectionBaseWidgets[configname] = {"ExperimentActionsBaseWidget": {}, "ExperimentActionsSetWidgets": {}, "ExperimentActionsTemplateWidgets": {}, "ExperimentActionsVMWidgets": {}, "ExperimentActionsUserWidgets": {} }
             self.connectionBaseWidgets[configname]["ExperimentActionsBaseWidget"] = self.experimentActionsBaseWidget
             self.basedataStackedWidget.addWidget(self.experimentActionsBaseWidget)
@@ -201,7 +199,7 @@ class ConnectionWidget(QtWidgets.QWidget):
                 setlabel = "S: Set " + set
                 set_item.setText(0,setlabel)
                 # Set Widget
-                experimentActionsSetStatusWidget = ConnectionStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsSetStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"][setlabel] = experimentActionsSetStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsSetStatusWidget)
 
@@ -211,7 +209,7 @@ class ConnectionWidget(QtWidgets.QWidget):
                 templatelabel = "T: " + templatename
                 template_item.setText(0,templatelabel)
                 # Set Widget
-                experimentActionsTemplateStatusWidget = ConnectionStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsTemplateStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"][templatelabel] = experimentActionsTemplateStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsTemplateStatusWidget)
 
@@ -223,7 +221,7 @@ class ConnectionWidget(QtWidgets.QWidget):
                 vmlabel = "V: " + vmname
                 vm_item.setText(0,vmlabel)
                 # VM Config Widget
-                connectionStatusWidget = ConnectionStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                connectionStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"][vmlabel] = connectionStatusWidget
                 self.basedataStackedWidget.addWidget(connectionStatusWidget)
 
@@ -236,7 +234,7 @@ class ConnectionWidget(QtWidgets.QWidget):
                 num+=1
                 user_item.setText(0,user_label)
                 # VM Config Widget
-                experimentActionsUserStatusWidget = ConnectionStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                experimentActionsUserStatusWidget = ProxpoolsStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
                 self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"][user_label] = experimentActionsUserStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsUserStatusWidget)
         else:
@@ -264,7 +262,7 @@ class ConnectionWidget(QtWidgets.QWidget):
         logging.debug("removeExperimentItem(): Completed")
 
     def showContextMenu(self, position):
-        logging.debug("ConnectionWidget(): showContextMenu(): instantiated")
+        logging.debug("ProxpoolsWidget(): showContextMenu(): instantiated")
         self.connsContextMenu.popup(self.experimentTree.mapToGlobal(position))
 
     def getTypeNameFromSelection(self):
@@ -309,12 +307,12 @@ class ConnectionWidget(QtWidgets.QWidget):
         configname, itype, name = self.getTypeNameFromSelection()
         
         ##get server info
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
-        if vmHostname != None and rdpBrokerHostname != None:
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
+        if vmHostname != None:
             if users_file == None:
-                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype=itype, name=name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, users_file="", itype=itype, name=name)
             else:
-                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file, itype, name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, users_file, itype, name)
 
     def refreshConnsStatus(self):
         logging.debug("refreshVMStatus(): instantiated")
@@ -331,8 +329,8 @@ class ConnectionWidget(QtWidgets.QWidget):
             selectedItem = selectedItem.parent()
         configname = selectedItem.text(0)
 
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
-        s = ConnectionActionDialog(self, configname, "Refresh", vmHostname, rdpBrokerHostname).exec_()
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
+        s = ProxpoolsActionDialog(self, configname, "Refresh", vmHostname).exec_()
         #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:
             logging.debug("Cancel pressed")
@@ -349,7 +347,7 @@ class ConnectionWidget(QtWidgets.QWidget):
             logging.error("Could not retrieve conns status: " + str(s))
             QMessageBox.warning(self,
                         "No Results",
-                        "No connections found. If you think this is an error, check your credentials and connectivity",
+                        "No Pools found. If you think this is an error, check your credentials and connectivity",
                         QMessageBox.Ok)
             return None
 
@@ -359,21 +357,21 @@ class ConnectionWidget(QtWidgets.QWidget):
         #Update all vm status in the subtrees
         #First the "all" view
         for widget in self.connectionBaseWidgets[configname].values():
-            if isinstance(widget, ConnectionStatusWidget):
+            if isinstance(widget, ProxpoolsStatusWidget):
                 widget.updateConnStatus(self.usersConnsStatus)
         #The Sets:
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"].values():
-            if isinstance(widget, ConnectionStatusWidget):
+            if isinstance(widget, ProxpoolsStatusWidget):
                 widget.updateConnStatus(self.usersConnsStatus)
         #The Templates:
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"].values():
-            if isinstance(widget, ConnectionStatusWidget):
+            if isinstance(widget, ProxpoolsStatusWidget):
                 widget.updateConnStatus(self.usersConnsStatus)
         #The VMs
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"].values():
-            if isinstance(widget, ConnectionStatusWidget):
+            if isinstance(widget, ProxpoolsStatusWidget):
                 widget.updateConnStatus(self.usersConnsStatus)
         #The Users
         for widget in self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"].values():
-            if isinstance(widget, ConnectionStatusWidget):
+            if isinstance(widget, ProxpoolsStatusWidget):
                 widget.updateConnStatus(self.usersConnsStatus)

@@ -1,10 +1,10 @@
-from gui.Dialogs.ChallengesActionDialog import ChallengesActionDialog
-from gui.Dialogs.ChallengesActioningDialog import ChallengesActioningDialog
+from gui.Dialogs.GuacActionDialog import GuacActionDialog
+from gui.Dialogs.GuacActionDialog import GuacActioningDialog
 from gui.Dialogs.GUIFunctionExecutingDialog import GUIFunctionExecutingDialog
 from PyQt5 import QtCore, QtGui, QtWidgets
 import logging
 from gui.Dialogs.ExperimentActionDialog import ExperimentActionDialog
-from gui.Widgets.ChallengesWidgets.ChallengesStatusWidget import ChallengesStatusWidget
+from gui.Widgets.ConnectionWidgets.GuacStatusWidget import GuacStatusWidget
 from engine.Configuration.ExperimentConfigIO import ExperimentConfigIO
 from engine.Configuration.UserPool import UserPool
 from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, QDateTimeEdit,
@@ -12,19 +12,19 @@ from PyQt5.QtWidgets import (QApplication, qApp, QAction, QCheckBox, QComboBox, 
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QMessageBox, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QStackedWidget, QStatusBar, QMenuBar)
-from gui.Helpers.ChallengesActions import ChallengesActions
+from gui.Helpers.GuacActions import ConnectionActions
 import os
 
-class ChallengesWidget(QtWidgets.QWidget):
+class GuacWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, statusBar=None):
-        logging.debug("ChallengesWidget instantiated")
+        logging.debug("GuacWidget instantiated")
         QtWidgets.QWidget.__init__(self, parent=None)
         self.statusBar = statusBar
         self.experimentItemNames = {}
-        self.challengesBaseWidgets = {}
+        self.connectionBaseWidgets = {}
         self.eco = ExperimentConfigIO.getInstance()
 
-        self.setObjectName("ChallengesWidget")
+        self.setObjectName("GuacWidget")
 
         self.windowWidget = QtWidgets.QWidget()
         self.windowWidget.setObjectName("windowWidget")
@@ -56,37 +56,37 @@ class ChallengesWidget(QtWidgets.QWidget):
         self.basedataStackedWidget.setEnabled(False)
         self.windowBoxVLayout.addWidget(self.basedataStackedWidget)
 
-        self.refreshChallengesButton = QtWidgets.QPushButton("Refresh Status")
-        self.refreshChallengesButton.clicked.connect(self.refreshChallengesStatus)
-        self.refreshChallengesButton.setEnabled(False)
-        self.windowBoxVLayout.addWidget(self.refreshChallengesButton)
-
+        self.refreshConnsButton = QtWidgets.QPushButton("Refresh Status")
+        self.refreshConnsButton.clicked.connect(self.refreshConnsStatus)
+        self.refreshConnsButton.setEnabled(False)
+        self.windowBoxVLayout.addWidget(self.refreshConnsButton)
+    
         self.windowBoxHLayout.addLayout(self.windowBoxVLayout)
         
         # Context menu
         self.connsContextMenu = QtWidgets.QMenu()
-        self.createChallenges = self.connsContextMenu.addAction("Create Users")
-        self.createChallenges.triggered.connect(self.menuItemSelected)
-        self.removeChallenges = self.connsContextMenu.addAction("Remove Users")
-        self.removeChallenges.triggered.connect(self.menuItemSelected)
-        self.clearChallenges = self.connsContextMenu.addAction("Clear All Users on Server")
-        self.clearChallenges.triggered.connect(self.menuItemSelected)
-        self.viewStatsChallenges = self.connsContextMenu.addAction("View All Challenge Stats")
-        self.viewStatsChallenges.triggered.connect(self.menuItemSelected)
+        self.createGuac = self.connsContextMenu.addAction("Create Users")
+        self.createGuac.triggered.connect(self.menuItemSelected)
+        self.removeGuac = self.connsContextMenu.addAction("Remove Users")
+        self.removeGuac.triggered.connect(self.menuItemSelected)
+        self.clearGuac = self.connsContextMenu.addAction("Clear All Users on Server")
+        self.clearGuac.triggered.connect(self.menuItemSelected)
+        self.openGuac = self.connsContextMenu.addAction("Open Connections")
+        self.openGuac.triggered.connect(self.menuItemSelected)
 
         self.setLayout(self.windowBoxHLayout)
         self.retranslateUi()
 
     def retranslateUi(self):
-        logging.debug("ChallengesWidget: retranslateUi(): instantiated")
-        self.setWindowTitle("ChallengesWidget")
+        logging.debug("GuacWidget: retranslateUi(): instantiated")
+        self.setWindowTitle("GuacWidget")
         self.experimentTree.headerItem().setText(0, "Experiments")
         self.experimentTree.setSortingEnabled(False)
     
     def onItemSelected(self):
         logging.debug("MainApp:onItemSelected instantiated")
         self.basedataStackedWidget.setEnabled(True)
-        self.refreshChallengesButton.setEnabled(True)
+        self.refreshConnsButton.setEnabled(True)
     	# Get the selected item
         selectedItem = self.experimentTree.currentItem()
         if selectedItem == None:
@@ -102,30 +102,30 @@ class ChallengesWidget(QtWidgets.QWidget):
             
         if parentSelectedItem == None:
             #A base widget was selected
-            self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[selectedItem.text(0)]["ExperimentActionsBaseWidget"])
+            self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[selectedItem.text(0)]["ExperimentActionsBaseWidget"])
             self.experimentTree.resizeColumnToContents(0)
         elif parentparentSelectedItem == None:
             #A base widget was selected
-            self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[parentSelectedItem.text(0)]["ExperimentActionsBaseWidget"])
+            self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[parentSelectedItem.text(0)]["ExperimentActionsBaseWidget"])
             self.experimentTree.resizeColumnToContents(0)
         else:
             #Check if it's the case that a VM Name was selected
             if(selectedItem.text(0)[0] == "V"):
-                logging.debug("Setting right widget: " + str(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsVMWidgets"][selectedItem.text(0)]))
-                self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsVMWidgets"][selectedItem.text(0)])
+                logging.debug("Setting right widget: " + str(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsVMWidgets"][selectedItem.text(0)]))
+                self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsVMWidgets"][selectedItem.text(0)])
             if(selectedItem.text(0)[0] == "S"):
-                logging.debug("Setting right widget: " + str(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsSetWidgets"][selectedItem.text(0)]))
-                self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsSetWidgets"][selectedItem.text(0)])
+                logging.debug("Setting right widget: " + str(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsSetWidgets"][selectedItem.text(0)]))
+                self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsSetWidgets"][selectedItem.text(0)])
             if(selectedItem.text(0)[0] == "T"):
-                logging.debug("Setting right widget: " + str(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsTemplateWidgets"][selectedItem.text(0)]))
-                self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsTemplateWidgets"][selectedItem.text(0)])
+                logging.debug("Setting right widget: " + str(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsTemplateWidgets"][selectedItem.text(0)]))
+                self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsTemplateWidgets"][selectedItem.text(0)])
             if(selectedItem.text(0)[0] == "U"):
-                logging.debug("Setting right widget: " + str(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsUserWidgets"][selectedItem.text(0)]))
-                self.basedataStackedWidget.setCurrentWidget(self.challengesBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsUserWidgets"][selectedItem.text(0)])
+                logging.debug("Setting right widget: " + str(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsUserWidgets"][selectedItem.text(0)]))
+                self.basedataStackedWidget.setCurrentWidget(self.connectionBaseWidgets[parentparentSelectedItem.text(0)]["ExperimentActionsUserWidgets"][selectedItem.text(0)])
 
 
     def getExperimentVMRolledOut(self, configname, config_json):
-        logging.debug("ChallengesWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
+        logging.debug("GuacWidget(): getExperimentVMRolledOut(): retranslateUi(): instantiated")
         self.rolledoutjson = self.eco.getExperimentVMRolledOut(configname, config_json)
 
     def addExperimentItem(self, configname, config_jsondata=None):
@@ -163,11 +163,11 @@ class ChallengesWidget(QtWidgets.QWidget):
         rolledoutjson = self.rolledoutjson
 
         if rolledoutjson != None:
-            #first check if ther'es an Challenges Server IP, if not, disable the tree and add a description to configname
-            if "challenges-server-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
-                config_jsondata["xml"]["testbed-setup"]["network-config"]["challenges-server-ip"] == None or \
-                    config_jsondata["xml"]["testbed-setup"]["network-config"]["challenges-server-ip"].strip() == "":
-                experimentTreeWidgetItem.setText(0,configname+" (Challenge Server IP Address required)")
+            #first check if ther'es an RDP Broker IP, if not, disable the tree and add a description to configname
+            if "rdp-broker-ip" not in config_jsondata["xml"]["testbed-setup"]["network-config"] or \
+                config_jsondata["xml"]["testbed-setup"]["network-config"]["rdp-broker-ip"] == None or \
+                    config_jsondata["xml"]["testbed-setup"]["network-config"]["rdp-broker-ip"].strip() == "":
+                experimentTreeWidgetItem.setText(0,configname+" (RDP Broker Address required)")
                 experimentTreeWidgetItem.setDisabled(True)
             #get the usersConn associations first:
             # if file was specified, but it doesn't exist, prepend usernames
@@ -177,10 +177,10 @@ class ChallengesWidget(QtWidgets.QWidget):
                 if os.path.exists(users_filename) == False:
                     invalid_userfile = True
             
-            usersChallenges = userpool.generateUsersConns(configname, creds_file=users_filename, rolledout_json=rolledoutjson)
+            usersConns = userpool.generateUsersConns(configname, creds_file=users_filename, rolledout_json=rolledoutjson)
             vmuser_mapping = {}
-            for (username, password) in usersChallenges:
-                for conn in usersChallenges[(username, password)]:
+            for (username, password) in usersConns:
+                for conn in usersConns[(username, password)]:
                     cloneVMName = conn[0]
                     if invalid_userfile == False:
                         vmuser_mapping[cloneVMName] = (username, password)
@@ -188,9 +188,9 @@ class ChallengesWidget(QtWidgets.QWidget):
                         vmuser_mapping[cloneVMName] = "userfile_not_found"
                     
             #create the status widgets (tables)
-            self.experimentActionsBaseWidget = ChallengesStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
-            self.challengesBaseWidgets[configname] = {"ExperimentActionsBaseWidget": {}, "ExperimentActionsSetWidgets": {}, "ExperimentActionsTemplateWidgets": {}, "ExperimentActionsVMWidgets": {}, "ExperimentActionsUserWidgets": {} }
-            self.challengesBaseWidgets[configname]["ExperimentActionsBaseWidget"] = self.experimentActionsBaseWidget
+            self.experimentActionsBaseWidget = GuacStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+            self.connectionBaseWidgets[configname] = {"ExperimentActionsBaseWidget": {}, "ExperimentActionsSetWidgets": {}, "ExperimentActionsTemplateWidgets": {}, "ExperimentActionsVMWidgets": {}, "ExperimentActionsUserWidgets": {} }
+            self.connectionBaseWidgets[configname]["ExperimentActionsBaseWidget"] = self.experimentActionsBaseWidget
             self.basedataStackedWidget.addWidget(self.experimentActionsBaseWidget)
             #Set-based view
             (template_vms, num_clones) = rolledoutjson
@@ -201,8 +201,8 @@ class ChallengesWidget(QtWidgets.QWidget):
                 setlabel = "S: Set " + set
                 set_item.setText(0,setlabel)
                 # Set Widget
-                experimentActionsSetStatusWidget = ChallengesStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
-                self.challengesBaseWidgets[configname]["ExperimentActionsSetWidgets"][setlabel] = experimentActionsSetStatusWidget
+                experimentActionsSetStatusWidget = GuacStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=sets[set], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"][setlabel] = experimentActionsSetStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsSetStatusWidget)
 
             templates = self.eco.getExperimentVMNamesFromTemplateFromRolledOut(configname, rolledoutjson)
@@ -211,8 +211,8 @@ class ChallengesWidget(QtWidgets.QWidget):
                 templatelabel = "T: " + templatename
                 template_item.setText(0,templatelabel)
                 # Set Widget
-                experimentActionsTemplateStatusWidget = ChallengesStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
-                self.challengesBaseWidgets[configname]["ExperimentActionsTemplateWidgets"][templatelabel] = experimentActionsTemplateStatusWidget
+                experimentActionsTemplateStatusWidget = GuacStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=templates[templatename], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"][templatelabel] = experimentActionsTemplateStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsTemplateStatusWidget)
 
             #Individual VM-based view
@@ -223,21 +223,21 @@ class ChallengesWidget(QtWidgets.QWidget):
                 vmlabel = "V: " + vmname
                 vm_item.setText(0,vmlabel)
                 # VM Config Widget
-                challengesStatusWidget = ChallengesStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
-                self.challengesBaseWidgets[configname]["ExperimentActionsVMWidgets"][vmlabel] = challengesStatusWidget
-                self.basedataStackedWidget.addWidget(challengesStatusWidget)
+                connectionStatusWidget = GuacStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=[vmname], vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"][vmlabel] = connectionStatusWidget
+                self.basedataStackedWidget.addWidget(connectionStatusWidget)
 
             #Individual Users-based view
             num = 1
-            for (username, password) in usersChallenges:
-                vmnames = [tuple[0] for tuple in usersChallenges[(username, password)] ]
+            for (username, password) in usersConns:
+                vmnames = [tuple[0] for tuple in usersConns[(username, password)] ]
                 user_item = QtWidgets.QTreeWidgetItem(experimentUserTreeItem)
                 user_label = "U: " + username + " (Set " + str(num) + ")"
                 num+=1
                 user_item.setText(0,user_label)
                 # VM Config Widget
-                experimentActionsUserStatusWidget = ChallengesStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
-                self.challengesBaseWidgets[configname]["ExperimentActionsUserWidgets"][user_label] = experimentActionsUserStatusWidget
+                experimentActionsUserStatusWidget = GuacStatusWidget(self, configname, rolledoutjson=rolledoutjson, interest_vmnames=vmnames, vmuser_mapping=vmuser_mapping, status_bar=self.statusBar)
+                self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"][user_label] = experimentActionsUserStatusWidget
                 self.basedataStackedWidget.addWidget(experimentActionsUserStatusWidget)
         else:
             experimentTreeWidgetItem.setDisabled(True)
@@ -264,7 +264,7 @@ class ChallengesWidget(QtWidgets.QWidget):
         logging.debug("removeExperimentItem(): Completed")
 
     def showContextMenu(self, position):
-        logging.debug("ChallengesWidget(): showContextMenu(): instantiated")
+        logging.debug("GuacWidget(): showContextMenu(): instantiated")
         self.connsContextMenu.popup(self.experimentTree.mapToGlobal(position))
 
     def getTypeNameFromSelection(self):
@@ -310,13 +310,13 @@ class ChallengesWidget(QtWidgets.QWidget):
         
         ##get server info
         vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
-        if challengesServerIP != None:
+        if vmHostname != None and rdpBrokerHostname != None:
             if users_file == None:
-                ChallengesActions().challengesActionEvent(self, configname, actionlabelname, challengesServerIP, users_file="", itype=itype, name=name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype=itype, name=name)
             else:
-                ChallengesActions().challengesActionEvent(self, configname, actionlabelname, challengesServerIP, users_file, itype, name)
+                ConnectionActions().connectionActionEvent(self, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file, itype, name)
 
-    def refreshChallengesStatus(self):
+    def refreshConnsStatus(self):
         logging.debug("refreshVMStatus(): instantiated")
 
         #Get the configname based on selected item:
@@ -332,47 +332,48 @@ class ChallengesWidget(QtWidgets.QWidget):
         configname = selectedItem.text(0)
 
         vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
-        s = ChallengesActionDialog(self, configname, "Refresh", challengesServerIP).exec_()
-        #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersChallengesStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
+        s = GuacActionDialog(self, configname, "Refresh", vmHostname, rdpBrokerHostname).exec_()
+        #format: {"readStatus" : self.readStatus, "writeStatus" : self.writeStatus, "usersConnsStatus" : [(username, connName): {"user_status": user_perm, "connStatus": active}] }
         if s == QMessageBox.Cancel:
             logging.debug("Cancel pressed")
             return
         if s == None or s == -1:
-            logging.error("Could not retrieve challenges status: " + str(s))
+            logging.error("Could not retrieve connection status: " + str(s))
             QMessageBox.warning(self,
                         "No Results",
                         "Incorrect credentials or no connectivity",
                         QMessageBox.Ok)
             return
 
-        if s == None or s["usersChallengesStatus"] == {} or s["usersChallengesStatus"] == None:
-            logging.error("Could not retrieve challenges status: " + str(s))
+        if s == None or s["usersConnsStatus"] == {} or s["usersConnsStatus"] == None:
+            logging.error("Could not retrieve conns status: " + str(s))
             QMessageBox.warning(self,
                         "No Results",
-                        "No users found. If you think this is an error, check your credentials and connectivity",
+                        "No connections found. If you think this is an error, check your credentials and connectivity",
                         QMessageBox.Ok)
             return None
+
+        self.usersConnsStatus = s["usersConnsStatus"]
        
-        self.usersChallengesStatus = s["usersChallengesStatus"]
         
         #Update all vm status in the subtrees
         #First the "all" view
-        for widget in self.challengesBaseWidgets[configname].values():
-            if isinstance(widget, ChallengesStatusWidget):
-                widget.updateUserStatus(self.usersChallengesStatus)
+        for widget in self.connectionBaseWidgets[configname].values():
+            if isinstance(widget, GuacStatusWidget):
+                widget.updateConnStatus(self.usersConnsStatus)
         #The Sets:
-        for widget in self.challengesBaseWidgets[configname]["ExperimentActionsSetWidgets"].values():
-            if isinstance(widget, ChallengesStatusWidget):
-                widget.updateUserStatus(self.usersChallengesStatus)
+        for widget in self.connectionBaseWidgets[configname]["ExperimentActionsSetWidgets"].values():
+            if isinstance(widget, GuacStatusWidget):
+                widget.updateConnStatus(self.usersConnsStatus)
         #The Templates:
-        for widget in self.challengesBaseWidgets[configname]["ExperimentActionsTemplateWidgets"].values():
-            if isinstance(widget, ChallengesStatusWidget):
-                widget.updateUserStatus(self.usersChallengesStatus)
+        for widget in self.connectionBaseWidgets[configname]["ExperimentActionsTemplateWidgets"].values():
+            if isinstance(widget, GuacStatusWidget):
+                widget.updateConnStatus(self.usersConnsStatus)
         #The VMs
-        for widget in self.challengesBaseWidgets[configname]["ExperimentActionsVMWidgets"].values():
-            if isinstance(widget, ChallengesStatusWidget):
-                widget.updateUserStatus(self.usersChallengesStatus)
+        for widget in self.connectionBaseWidgets[configname]["ExperimentActionsVMWidgets"].values():
+            if isinstance(widget, GuacStatusWidget):
+                widget.updateConnStatus(self.usersConnsStatus)
         #The Users
-        for widget in self.challengesBaseWidgets[configname]["ExperimentActionsUserWidgets"].values():
-            if isinstance(widget, ChallengesStatusWidget):
-                widget.updateUserStatus(self.usersChallengesStatus)
+        for widget in self.connectionBaseWidgets[configname]["ExperimentActionsUserWidgets"].values():
+            if isinstance(widget, GuacStatusWidget):
+                widget.updateConnStatus(self.usersConnsStatus)

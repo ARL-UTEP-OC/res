@@ -21,7 +21,9 @@ from gui.Widgets.BaseWidget import BaseWidget
 from gui.Widgets.VMWidget import VMWidget
 from gui.Widgets.MaterialWidget import MaterialWidget
 from gui.Widgets.ExperimentActionsWidgets.ExperimentActionsWidget import ExperimentActionsWidget
-from gui.Widgets.ConnectionWidgets.ConnectionWidget import ConnectionWidget
+from gui.Widgets.ConnectionWidgets.KeycloakWidget import KeycloakWidget
+from gui.Widgets.ConnectionWidgets.GuacWidget import GuacWidget
+from gui.Widgets.ConnectionWidgets.ProxpoolsWidget import ProxpoolsWidget
 from gui.Widgets.ChallengesWidgets.ChallengesWidget import ChallengesWidget
 
 from engine.Configuration.SystemConfigIO import SystemConfigIO
@@ -54,7 +56,21 @@ class MainApp(QWidget):
         self.cf = SystemConfigIO()
         self.ec = ExperimentConfigIO.getInstance()
         self.statusBar = QStatusBar()
-        
+        self.features = {}
+        #get enabled features
+        if self.cf.getConfig()['FEATURES']['VM'] == 'True':
+            self.features["Experiment Actions"] = None
+        if self.cf.getConfig()['FEATURES']['GUAC'] == 'True':
+            self.features["Guacamole Conns"] = None
+        if self.cf.getConfig()['FEATURES']['PROXMOX'] == 'True':
+            self.features["Proxmox Pools"] = None
+        if self.cf.getConfig()['FEATURES']['KEYCLOAK'] == 'True':
+            self.features["Keycloak"] = None            
+        # if self.cf.getConfig()['FEATURES']['ROCKETCHAT'] == 'True':
+        #     self.features["Challenges"] = None
+        if self.cf.getConfig()['FEATURES']['CTFD'] == 'True':
+            self.features["Challenges System"] = None
+
         self.setMinimumSize(930,565)
         quit = QAction("Quit", self)
         quit.triggered.connect(self.closeEvent)
@@ -70,13 +86,9 @@ class MainApp(QWidget):
         self.tabWidget.setObjectName("tabWidget")
 
         # Configuration Window (windowBox) contains:
-        ## windowBoxHLayout contains:
-        ###experimentTree (Left)
-        ###basedataStackedWidget (Right)
         self.windowWidget = QtWidgets.QWidget()
         self.windowWidget.setObjectName("windowWidget")
         self.windowBoxHLayout = QtWidgets.QHBoxLayout()
-        #self.windowBoxHLayout.setContentsMargins(0, 0, 0, 0)
         self.windowBoxHLayout.setObjectName("windowBoxHLayout")
         self.windowWidget.setLayout(self.windowBoxHLayout)
 
@@ -101,17 +113,37 @@ class MainApp(QWidget):
         # VBox Actions Tab
         self.experimentActionsWidget = ExperimentActionsWidget(statusBar=self.statusBar)
         self.experimentActionsWidget.setObjectName("experimentActionsWidget")
-        self.tabWidget.addTab(self.experimentActionsWidget, "Experiment Actions")      
+        if "Experiment Actions" in self.features:
+            self.features["Experiment Actions"] = self.experimentActionsWidget
+            self.tabWidget.addTab(self.experimentActionsWidget, "Experiment Actions")      
 
-        # Remote Display Tab
-        self.connectionWidget = ConnectionWidget(statusBar=self.statusBar)
-        self.connectionWidget.setObjectName("connectionsWidget")
-        self.tabWidget.addTab(self.connectionWidget, "Remote Display")
-        
+        # Guacamole Connections Tab
+        self.guacWidget = GuacWidget(statusBar=self.statusBar)
+        self.guacWidget.setObjectName("guacWidget")
+        if "Guacamole Conns" in self.features:
+            self.features["Guacamole Conns"] = self.guacWidget
+            self.tabWidget.addTab(self.guacWidget, "Guacamole Conns")
+
+        # Proxmox Users/Pools Tab
+        self.proxpoolsWidget = ProxpoolsWidget(statusBar=self.statusBar)
+        self.proxpoolsWidget.setObjectName("proxpoolsWidget")
+        if "Proxmox Pools" in self.features:
+            self.features["Proxmox Pools"] = self.proxpoolsWidget
+            self.tabWidget.addTab(self.proxpoolsWidget, "Proxmox Pools")
+
+        # Keycloak Users/Pools Tab
+        self.keycloakWidget = KeycloakWidget(statusBar=self.statusBar)
+        self.keycloakWidget.setObjectName("keycloakWidget")
+        if "Keycloak" in self.features:
+            self.features["Keycloak"] = self.keycloakWidget
+            self.tabWidget.addTab(self.keycloakWidget, "Keycloak")
+
         # Challenges Tab
         self.challengesWidget = ChallengesWidget(statusBar=self.statusBar)
         self.challengesWidget.setObjectName("challengesWidget")
-        self.tabWidget.addTab(self.challengesWidget, "Challenges System")
+        if "Challenges System" in self.features:
+            self.features["Challenges System"] = self.challengesWidget
+            self.tabWidget.addTab(self.challengesWidget, "Challenges System")
 
         #Create the bottom layout so that we can access the status bar
         self.bottomLayout = QHBoxLayout()
@@ -228,6 +260,8 @@ class MainApp(QWidget):
             jsondata["xml"]["testbed-setup"]["vm-set"]["users-filename"] = ""
         if "rdp-broker-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
             jsondata["xml"]["testbed-setup"]["vm-set"]["rdp-broker-ip"] = ""
+        if "keycloak-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
+            jsondata["xml"]["testbed-setup"]["vm-set"]["keycloak-server-ip"] = ""
         if "chat-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
             jsondata["xml"]["testbed-setup"]["vm-set"]["chat-server-ip"] = ""
         if "challenges-server-ip" not in jsondata["xml"]["testbed-setup"]["vm-set"]:
@@ -235,9 +269,9 @@ class MainApp(QWidget):
 
         configTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.experimentTree)
         configTreeWidgetItem.setText(0,configname)
-        self.experimentActionsWidget.addExperimentItem(configname, config_jsondata=jsondata)
-        self.connectionWidget.addExperimentItem(configname, config_jsondata=jsondata)
-        self.challengesWidget.addExperimentItem(configname, config_jsondata=jsondata)
+        for featureWidget in list(self.features.values()):
+            featureWidget.addExperimentItem(configname, config_jsondata=jsondata)
+            
         basejsondata = jsondata["xml"]
         # Base Config Widget 
         self.baseWidget = BaseWidget(self, configname, configname, basejsondata)
@@ -337,9 +371,8 @@ class MainApp(QWidget):
         ##Now add the item to the tree widget and create the baseWidget
         configTreeWidgetItem = QtWidgets.QTreeWidgetItem(self.experimentTree)
         configTreeWidgetItem.setText(0,configname)
-        self.experimentActionsWidget.addExperimentItem(configname)
-        self.connectionWidget.addExperimentItem(configname)
-        self.challengesWidget.addExperimentItem(configname)
+        for featureWidget in list(self.features.values()):
+            featureWidget.addExperimentItem(configname)
         # Base Config Widget 
         self.baseWidget = BaseWidget(self, configname, configname)
         self.baseWidgets[configname] = {"BaseWidget": {}, "VMWidgets": {}, "MaterialWidgets": {} }
@@ -401,9 +434,8 @@ class MainApp(QWidget):
             selectedItem = parentSelectedItem
         configname = selectedItem.text(0)
         config_jsondata = self.getWritableData(configname)
-        self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        for featureWidget in list(self.features.values()):
+            featureWidget.addExperimentItem(configname, config_jsondata=config_jsondata)
         self.statusBar.showMessage("Added " + str(len(vmsChosen)) + " VM files to experiment: " + str(selectedItemName))
 
     def addVMActionEvent(self):
@@ -439,9 +471,8 @@ class MainApp(QWidget):
             selectedItem = parentSelectedItem
         configname = selectedItem.text(0)
         config_jsondata = self.getWritableData(configname)
-        self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-        self.challengesWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+        for featureWidget in list(self.features.values()):
+            featureWidget.resetExperiment(configname, config_jsondata=config_jsondata)
         self.statusBar.showMessage("Added VM to experiment: " + str(selectedItemName))
 
     def startHypervisorActionEvent(self):
@@ -499,6 +530,7 @@ class MainApp(QWidget):
         #Check if it's the case that an experiment name was selected
         parentSelectedItem = selectedItem.parent()
         if(parentSelectedItem == None):
+            configname = selectedItem.text(0)
             #A base widget was selected
             successfilenames = ExperimentRemoveFileDialog().experimentRemoveFileDialog(selectedItemName)
             if successfilenames == [] or successfilenames == "":
@@ -508,9 +540,8 @@ class MainApp(QWidget):
             self.experimentTree.invisibleRootItem().removeChild(selectedItem)
             self.basedataStackedWidget.removeWidget(self.baseWidgets[selectedItemName]["BaseWidget"])
             del self.baseWidgets[selectedItemName]
-            self.experimentActionsWidget.removeExperimentItem(selectedItemName)
-            self.connectionWidget.removeExperimentItem(selectedItemName)
-            self.challengesWidget.removeExperimentItem(selectedItemName)
+            for featureWidget in list(self.features.values()):
+                featureWidget.removeExperimentItem(configname)
             self.statusBar.showMessage("Removed experiment: " + str(selectedItemName))
         else:
             #Check if it's the case that a VM Name was selected
@@ -522,8 +553,8 @@ class MainApp(QWidget):
                 self.statusBar.showMessage("Removed VM: " + str(selectedItemName) + " from experiment: " + str(parentSelectedItem.text(0)))
                 #Also remove from the experiment action widget:
                 config_jsondata = self.getWritableData(configname)
-                self.experimentActionsWidget.resetExperiment(configname, config_jsondata=config_jsondata)
-                self.connectionWidget.resetExperiment(configname, config_jsondata=config_jsondata)
+                for featureWidget in list(self.features.values()):
+                    featureWidget.resetExperiment(configname, config_jsondata=config_jsondata)
 
             #Check if it's the case that a Material Name was selected
             elif(selectedItem.text(0)[0] == "M"):
@@ -588,7 +619,6 @@ class MainApp(QWidget):
         logging.debug("MainApp:editPathActionEvent() instantiated")
         result = ConfigurationDialog(self).exec_()
         
-
     def closeEvent(self, event):
         logging.debug("MainApp:closeEvent(): instantiated")
         logging.debug("closeEvent(): returning accept")
@@ -687,9 +717,8 @@ class MainApp(QWidget):
         self.ec.writeExperimentJSONFileData(jsondata, configname)
         
         #Now reset the experimentActions view
-        self.experimentActionsWidget.resetExperiment(configname, jsondata)
-        self.connectionWidget.resetExperiment(configname, jsondata)
-        self.challengesWidget.resetExperiment(configname, jsondata)
+        for featureWidget in list(self.features.values()):
+            featureWidget.resetExperiment(configname, config_jsondata=jsondata)
         self.statusBar.showMessage("Succesfully saved experiment file for " + str(configname), 2000)
 
 if __name__ == '__main__':

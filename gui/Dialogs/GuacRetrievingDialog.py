@@ -24,21 +24,21 @@ class WatchRetrieveThread(QThread):
         self.watchsignal.emit("Querying Broker Service...", None, None)
         try:
             e = Engine.getInstance()
-            logging.debug("watchRetrieveStatus(): running: conns refresh")
-            #e.execute("conns refresh")
+            logging.debug("watchRetrieveStatus(): running: guac refresh")
+            #e.execute("guac refresh")
             if len(self.args) != 3:
                 logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
                 self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                 self.status = -1
                 return None
-            #format: "conns refresh <ip> <user> <pass> <path>"
-            cmd = "conns " + " refresh " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+            #format: "guac refresh <ip> <user> <pass> <path>"
+            cmd = "guac " + " refresh --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
             e.execute(cmd)
             #will check status every 0.5 second and will either display stopped or ongoing or connected
             dots = 1
             while(True):
-                logging.debug("watchRetrieveStatus(): running: conns refresh")
-                self.status = e.execute("conns status")
+                logging.debug("watchRetrieveStatus(): running: guac refresh")
+                self.status = e.execute("guac status")
                 logging.debug("watchRetrieveStatus(): result: " + str(self.status))
                 if self.status["writeStatus"] != ConnectionManage.CONNECTION_MANAGE_IDLE:
                     dotstring = ""
@@ -63,10 +63,10 @@ class WatchRetrieveThread(QThread):
             self.status = -1
             return None
 
-class ConnectionRetrievingDialog(QDialog):
+class GuacRetrievingDialog(QDialog):
     def __init__(self, parent, configname, args):
-        logging.debug("ConnectionRetrievingDialog(): instantiated")
-        super(ConnectionRetrievingDialog, self).__init__(parent)     
+        logging.debug("GuacRetrievingDialog(): instantiated")
+        super(GuacRetrievingDialog, self).__init__(parent)     
         self.configname = configname
         self.args = args
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
@@ -96,7 +96,7 @@ class ConnectionRetrievingDialog(QDialog):
         t = WatchRetrieveThread(self.configname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ConnectionRetrievingDialog, self).exec_()
+        result = super(GuacRetrievingDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status

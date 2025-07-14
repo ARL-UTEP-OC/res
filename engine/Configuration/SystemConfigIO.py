@@ -94,10 +94,6 @@ class SystemConfigIO():
         self.config['PROXMOX']['VMANAGE_PVESH_PATH'] = "pvesh"
         self.config['PROXMOX']['VMANAGE_QMRESTORE_PATH'] = "qmrestore"
         self.config['PROXMOX']['VMANAGE_STORAGE_VOL'] = "local-lvm"
-        self.config['PROXMOX']['VMANAGE_NODE_NAME'] = "acostave"
-        self.config['PROXMOX']['VMANAGE_SERVER'] = "acostanet.ddns.net"
-        self.config['PROXMOX']['VMANAGE_APIPORT'] = "64646"
-        self.config['PROXMOX']['VMANAGE_CMDPORT'] = "5734"
         self.config['PROXMOX']['VMANAGE_MAXCREATEJOBS'] = "20"
         self.config['PROXMOX']['VMANAGE_SNAPWAITTIME'] = "2.0"
         #Other platform agnostic settings
@@ -106,6 +102,15 @@ class SystemConfigIO():
         self.config['EXPERIMENTS'] = {}
         self.config['EXPERIMENTS']['EXPERIMENTS_PATH'] = "ExperimentData"
         self.config['EXPERIMENTS']['TEMP_DATA_PATH'] = "tmp"
+
+        self.config['FEATURES'] = {}
+        self.config['FEATURES']['VM'] = "True"
+        self.config['FEATURES']['GUAC'] = "True"
+        self.config['FEATURES']['PROXMOX'] = "True"
+        self.config['FEATURES']['KEYCLOAK'] = "True"
+        self.config['FEATURES']['ROCKETCHAT'] = "False"
+        self.config['FEATURES']['CTFD'] = "True"
+
         self.config['CONNECTIONS'] = {}
         self.config['CONNECTIONS']['HANDLER'] = "PROXMOX"
 

@@ -1,4 +1,4 @@
-from gui.Helpers.ConnectionActions import ConnectionActions
+from gui.Helpers.KeycloakActions import ConnectionActions
 from engine.Configuration.UserPool import UserPool
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QThread, pyqtSignal, QObject
@@ -11,9 +11,9 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
 
 import logging
 
-class ConnectionStatusWidget(QtWidgets.QWidget):
+class KeycloakStatusWidget(QtWidgets.QWidget):
     def __init__(self, parent=None, configname=None, widgetname="", rolledoutjson=None, interest_vmnames = [], vmuser_mapping={}, status_bar=None):
-        logging.debug("ConnectionStatusWidget instantiated")
+        logging.debug("KeycloakStatusWidget instantiated")
         if configname == None:
             logging.error("configname cannot be empty")
             return None
@@ -25,8 +25,8 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
         self.rolledoutjson = rolledoutjson
         self.eco = ExperimentConfigIO.getInstance()
 
-        self.setWindowTitle("ConnectionStatusWidget")
-        self.setObjectName("ConnectionStatusWidget")
+        self.setWindowTitle("KeycloakStatusWidget")
+        self.setObjectName("KeycloakStatusWidget")
         self.layoutWidget = QtWidgets.QWidget()
         self.layoutWidget.setObjectName("layoutWidget")
         self.outerVertBox = QtWidgets.QVBoxLayout()
@@ -53,14 +53,14 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
         self.connStatusTable.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.connStatusTable.customContextMenuRequested.connect(self.showContextMenu)
         self.connsContextMenu = QtWidgets.QMenu()
-        self.createGuac = self.connsContextMenu.addAction("Create Users")
-        self.createGuac.triggered.connect(self.menuItemSelected)
-        self.removeGuac = self.connsContextMenu.addAction("Remove Users")
-        self.removeGuac.triggered.connect(self.menuItemSelected)
-        self.clearGuac = self.connsContextMenu.addAction("Clear All Users on Server")
-        self.clearGuac.triggered.connect(self.menuItemSelected)
-        self.openGuac = self.connsContextMenu.addAction("Open Connections")
-        self.openGuac.triggered.connect(self.menuItemSelected)
+        self.createKeycloak = self.connsContextMenu.addAction("Create Users")
+        self.createKeycloak.triggered.connect(self.menuItemSelected)
+        self.removeKeycloak = self.connsContextMenu.addAction("Remove Users")
+        self.removeKeycloak.triggered.connect(self.menuItemSelected)
+        self.clearKeycloak = self.connsContextMenu.addAction("Clear All Users on Server")
+        self.clearKeycloak.triggered.connect(self.menuItemSelected)
+        # self.openKeycloak = self.connsContextMenu.addAction("Open Connections")
+        # self.openKeycloak.triggered.connect(self.menuItemSelected)
 
         self.connStatusTable.setSortingEnabled(True)
         self.outerVertBox.addWidget(self.connStatusTable)
@@ -69,7 +69,7 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
         self.retranslateUi(rolledoutjson, interest_vmnames, vmuser_mapping)
 
     def retranslateUi(self, rolledoutjson, interest_vmnames, vmuser_mapping):
-        logging.debug("ConnectionStatusWidget: retranslateUi(): instantiated")
+        logging.debug("KeycloakStatusWidget: retranslateUi(): instantiated")
         user_num = 1
         if rolledoutjson == None:
             return
@@ -113,9 +113,8 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
             return
         connName = self.connStatusTable.item(connRow,0).text()
         actionlabelname = self.sender().text()
-        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, users_file = self.eco.getExperimentServerInfo(self.configname)
-        #parent, configname, actionlabelname, vmHostname, rdpBrokerHostname, users_file="", itype="", name=""
-        ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, vmserverip, rdpbroker, users_file, "vm", connName)
+        vmserverip, vmserversshport, rdpbroker, chatserver, challengesserver, keycloakserver, users_file = self.eco.getExperimentServerInfo(self.configname)
+        ConnectionActions().connectionActionEvent(self.parent, self.configname, actionlabelname, keycloakserver, users_file, "vm", connName)
         self.statusBar.showMessage("Executed " + str(actionlabelname) + " on " + self.configname)
 
     def updateConnStatus(self, usersConnsStatus):
@@ -140,6 +139,6 @@ class ConnectionStatusWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    ui = ConnectionStatusWidget()
+    ui = KeycloakStatusWidget()
     ui.show()
     sys.exit(app.exec_())

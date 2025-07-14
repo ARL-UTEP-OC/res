@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
 import sys, traceback
 from engine.Engine import Engine
 import time
-from engine.Manager.ChallengesManage.ChallengesManage import ChallengesManage
+from engine.Manager.ConnectionManage.ConnectionManage import ConnectionManage
 import logging
 
 class WatchActioningThread(QThread):
@@ -23,74 +23,76 @@ class WatchActioningThread(QThread):
     # run method gets called when we start the thread
     def run(self):
         logging.debug("WatchActioningThread(): instantiated")
-        self.watchsignal.emit("Processing Challenges " + str(self.actionname) + "...", None, None)
-        cmd = ""
+        self.watchsignal.emit("Processing Connection " + str(self.actionname) + "...", None, None)
         try:
             e = Engine.getInstance()
             creds_file = " None "
             if self.actionname == "Add":
                 if len(self.args) != 6:
-                    logging.error("WatchActioningThread(): invalid number of args for create challenges: " + str(len(self.args)) + ". Skipping...")
-                    self.watchsignal.emit("Invalid number of args for create challenges. Skipping...", self.status, True)
+                    logging.error("WatchActioningThread(): invalid number of args for create connections. Skipping...")
+                    self.watchsignal.emit("Invalid number of args for create connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                # 0 - hostname, 1 - username, 2 - password, 3 - usersfile, 4 - type, 5 - name
-                cmd = "challenges " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + str(self.args[3]) + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
+                #10 is the users_file 
+                if str(self.args[3]).strip() != "":
+                    creds_file = str(self.args[3])
+                    if " " in creds_file:
+                        creds_file = "\""+creds_file+"\""
+                cmd = "keycloak " + " create " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + creds_file + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
             if self.actionname == "Remove":
                 if len(self.args) != 6:
-                    logging.error("WatchActioningThread(): invalid number of args for remove challenges. Skipping...")
-                    self.watchsignal.emit("Invalid number of args for remove challenges. Skipping...", self.status, True)
+                    logging.error("WatchActioningThread(): invalid number of args for remove connections. Skipping...")
+                    self.watchsignal.emit("Invalid number of args for remove connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                # 0 - hostname, 1 - username, 2 - password, 3 - usersfile, 4 - type, 5 - name
-                cmd = "challenges " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + str(self.args[3]) + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
+                if str(self.args[3]).strip() != "":
+                    creds_file = str(self.args[3])
+                    if " " in creds_file:
+                        creds_file = "\""+creds_file+"\""
+                cmd = "keycloak " + " remove " + self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2]) + " --creds_file " + creds_file + " --itype " + str(self.args[4]) + " --name " + str(self.args[5])
             if self.actionname == "Clear":
-                # 0 - hostname, 1 - username, 2 - password
                 if len(self.args) != 3:
-                    logging.error("WatchActioningThread(): invalid number of args for clear challenges. Skipping...")
-                    self.watchsignal.emit("Invalid number of args for clear challenges. Skipping...", self.status, True)
+                    logging.error("WatchActioningThread(): invalid number of args for clear connections. Skipping...")
+                    self.watchsignal.emit("Invalid number of args for clear connections. Skipping...", self.status, True)
                     self.status = -1
                     return None
-                cmd = "challenges " + " clear --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
-            if cmd != "":
+                cmd = "keycloak " + " clearall "+ self.configname + " --hostname " + str(self.args[0]) + " --username " + str(self.args[1]) + " --password " + str(self.args[2])
+            logging.debug("WatchActioningThread(): running: " + cmd)
+            e.execute(cmd)
+            #will check status every 0.5 second and will either display stopped or ongoing or connected
+            dots = 1
+            while(True):
                 logging.debug("WatchActioningThread(): running: " + cmd)
-                e.execute(cmd)
-                #will check status every 0.5 second and will either display stopped or ongoing or connected
-                dots = 1
-                while(True):
-                    logging.debug("WatchActioningThread(): running: " + cmd)
-                    self.status = e.execute("challenges status")
-                    logging.debug("WatchActioningThread(): result: " + str(self.status))
-                    if self.status["writeStatus"] != ChallengesManage.CHALLENGES_MANAGE_COMPLETE:
-                        dotstring = ""
-                        for i in range(1,dots):
-                            dotstring = dotstring + "."
-                        self.watchsignal.emit( "Processing " + str(self.actionname) + dotstring, self.status, None)
-                        dots = dots+1
-                        if dots > 4:
-                            dots = 1
-                    else:
-                        break
-                    time.sleep(0.5)
-                logging.debug("WatchActioningThread(): thread ending")
-                self.watchsignal.emit(str(self.actionname) + " Complete", self.status, True)
-            else:
-                logging.warning("WatchActioningThread(): unrecognized command.")
-            return        
+                self.status = e.execute("keycloak status")
+                logging.debug("WatchActioningThread(): result: " + str(self.status))
+                if self.status["writeStatus"] != ConnectionManage.CONNECTION_MANAGE_COMPLETE:
+                    dotstring = ""
+                    for i in range(1,dots):
+                        dotstring = dotstring + "."
+                    self.watchsignal.emit( "Processing " + str(self.actionname) + dotstring, self.status, None)
+                    dots = dots+1
+                    if dots > 4:
+                        dots = 1
+                else:
+                    break
+                time.sleep(0.5)
+            logging.debug("WatchActioningThread(): thread ending")
+            self.watchsignal.emit(str(self.actionname) + " Complete", self.status, True)
+            return
         except:
             logging.error("Error in WatchActioningThread(): An error occured ")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            self.watchsignal.emit("Error while completing challenges action.", None, True)
+            self.watchsignal.emit("Error while completing connection action.", None, True)
             self.status = -1
             return None
         finally:
             return None
 
-class ChallengesActioningDialog(QDialog):
+class KeycloakActioningDialog(QDialog):
     def __init__(self, parent, configname, actionname, args):
-        logging.debug("ChallengesActioningDialog(): instantiated")
-        super(ChallengesActioningDialog, self).__init__(parent)     
+        logging.debug("KeycloakActioningDialog(): instantiated")
+        super(KeycloakActioningDialog, self).__init__(parent)     
         
         self.configname = configname
         self.actionname = actionname
@@ -123,7 +125,7 @@ class ChallengesActioningDialog(QDialog):
         t = WatchActioningThread(self.configname, self.actionname, self.args)
         t.watchsignal.connect(self.setStatus)
         t.start()
-        result = super(ChallengesActioningDialog, self).exec_()
+        result = super(KeycloakActioningDialog, self).exec_()
         logging.debug("exec_(): initiated")
         logging.debug("exec_: self.status: " + str(self.status))
         return self.status

@@ -27,7 +27,7 @@ class ExperimentActionDialog(QDialog):
         super(ExperimentActionDialog, self).__init__(parent)
         self.parent = parent
         self.eco = ExperimentConfigIO.getInstance()
-        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, users_file = self.eco.getExperimentServerInfo(configname)
+        vmHostname, vmserversshport, rdpBrokerHostname, chatServerIP, challengesServerIP, keycloakserver, users_file = self.eco.getExperimentServerInfo(configname)
         self.s = SystemConfigIO()
         self.configname = configname
         self.actionname = actionname
@@ -62,7 +62,7 @@ class ExperimentActionDialog(QDialog):
         self.experimentHostnameLineEdit = QLineEdit(self.experimentHostname)
         self.experimentHostnameLineEdit.setEnabled(False)
         if self.s.getConfig()["HYPERVISOR"]["ACTIVE"] == "PROXMOX":
-            self.layout.addRow(QLabel("PROXMOX Server URL:"), self.experimentHostnameLineEdit)
+            self.layout.addRow(QLabel("Proxmox Server URL:"), self.experimentHostnameLineEdit)
         else:
             self.layout.addRow(QLabel("VM Server URL:"), self.experimentHostnameLineEdit)
         mgmusername = ""
