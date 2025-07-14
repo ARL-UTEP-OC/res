@@ -64,7 +64,7 @@ class ProxmoxManage(VMManage):
         logging.debug("ProxmoxManage: basic_blocking_task_status(): instantiated by " + str(caller))
         Tasks.blocking_status(proxmox_api, task_id)
 
-    def configureVMNet(self, vmName, netNum, netName, proxapi, nodename):
+    def configureVMNet(self, vmName, netNum, netName, proxssh, proxapi, nodename):
         logging.debug("ProxmoxManage: configureVMNet(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         if self.checkVMExistsRetry(vmName, "configureVMNet") == -1:
@@ -72,11 +72,11 @@ class ProxmoxManage(VMManage):
 
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
-        t = threading.Thread(target=self.runConfigureVMNet, args=(vmName, netNum, netName, proxapi, nodename))
+        t = threading.Thread(target=self.runConfigureVMNet, args=(vmName, netNum, netName, proxssh, proxapi, nodename))
         t.start()
         return 0
 
-    def configureVMNets(self, vmName, internalNets, proxapi, nodename):
+    def configureVMNets(self, vmName, internalNets, proxssh, proxapi, nodename):
         logging.debug("ProxmoxManage: configureVMNets(): instantiated")
         #check to make sure the vm is known, if not should refresh or check name:
         if self.checkVMExistsRetry(vmName, "configureVMNets") == -1:
@@ -84,11 +84,11 @@ class ProxmoxManage(VMManage):
 
         self.readStatus = VMManage.MANAGER_READING
         self.writeStatus += 1
-        t = threading.Thread(target=self.runConfigureVMNets, args=(vmName, internalNets, proxapi, nodename))
+        t = threading.Thread(target=self.runConfigureVMNets, args=(vmName, internalNets, proxssh, proxapi, nodename))
         t.start()
         return 0
 
-    def runConfigureVMNets(self, vmName, internalNets, proxapi, nodename, refreshNetwork=False):
+    def runConfigureVMNets(self, vmName, internalNets, proxssh, proxapi, nodename, refreshNetwork=False):
         try:
             logging.debug("runConfigureVMNets(): instantiated")
             self.readStatus = VMManage.MANAGER_READING
@@ -116,6 +116,11 @@ class ProxmoxManage(VMManage):
                         res = proxapi.nodes(nodename)('network').post(iface=str(internalnet),node=nodename,type='bridge',autostart=1)
                         if res == None:
                             createdNets.append(internalnet)
+                            logging.debug("runConfigureVMNet(): setting new ifx to 'hub' mode:"  + str(internalnet))
+                            cmd = "sed -i '/^iface "+ internalnet + " inet manual/a\    bridge-ageing 0' /etc/network/interfaces.new"
+                            res = proxssh.ssh_client.exec_command(cmd)
+                            logging.debug("result: " + str(res))
+                    
                     # self.basic_blocking_task_status(proxapi, res, 'bridge-create')
                 except ResourceException:
                     logging.warning("runConfigureVMNets(): interface may already exist: " + str(internalnet))
@@ -133,9 +138,10 @@ class ProxmoxManage(VMManage):
                     logging.error("Error in runConfigureVMNets(): An error occured when trying to configure vm network device")
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_exception(exc_type, exc_value, exc_traceback)
-                cloneNetNum += 1        
-            if refreshNetwork:    
-                self.refreshNetwork()
+                cloneNetNum += 1
+            if refreshNetwork:
+                self.refreshNetwork(proxapi, nodename)
+                
             logging.debug("runConfigureVMNets(): Thread completed")
         except Exception:
             logging.error("runConfigureVMNets() Error")
@@ -370,7 +376,7 @@ class ProxmoxManage(VMManage):
             self.writeStatus -= 1
             logging.debug("runVMSInfo(): sub 1 "+ str(self.writeStatus))
 
-    def runConfigureVMNet(self, vmName, netNum, netName, proxapi, nodename, refreshNetwork=False):
+    def runConfigureVMNet(self, vmName, netNum, netName, proxssh, proxapi, nodename, refreshNetwork=False):
         try:
             logging.debug("runConfigureVMNet(): instantiated")
             self.readStatus = VMManage.MANAGER_READING
@@ -393,9 +399,14 @@ class ProxmoxManage(VMManage):
             try:
                 #create bridge if it doesn't exist
                 if netName not in ifaces and netName not in createdNets:
-                    res = proxapi.nodes(nodename)('network').post(iface=str(netName),node=nodename,type='bridge',autostart=1)
+                    res = proxapi.nodes(nodename)('network').post(iface=str(netName),node=nodename,type='bridge',autostart=1)                   
                     if res == None:
                         createdNets.append(netName)
+                        logging.debug("runConfigureVMNet(): setting new ifx to 'hub' mode:"  + netName)
+                        cmd = "sed -i '/^iface "+ netName + " inet manual/a\    bridge-ageing 0' /etc/network/interfaces.new"
+                        res = proxssh.ssh_client.exec_command(cmd)
+                        logging.debug("result: " + str(res))
+
             except ResourceException:
                 logging.warning("In runConfigureVMNet(): Interface may already exist: " + str(netName))
                 # exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -414,7 +425,7 @@ class ProxmoxManage(VMManage):
             logging.info("Command Output: "+ str(res))
             cloneNetNum += 1
             if refreshNetwork:
-                self.refreshNetwork()
+                self.refreshNetwork(proxapi, nodename)   
             logging.debug("runConfigureVMNet(): Thread completed")
         except Exception:
             logging.error("runConfigureVMNet() Error")
@@ -498,7 +509,7 @@ class ProxmoxManage(VMManage):
                 if proxssh == None:
                     return None
             except Exception:
-                logging.error("Error in runConfigureVMNet(): An error occured when trying to connect to proxmox")
+                logging.error("Error in runImportVM(): An error occured when trying to connect to proxmox")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return None
@@ -508,7 +519,7 @@ class ProxmoxManage(VMManage):
                 cmd = pveshpath + " get /cluster/nextid -vmid " + proposedid
                 logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
                 # res = proxssh._exec(shlex.split(cmd))
-                res = self.proxssh.ssh_client.exec_command(cmd)
+                res = proxssh.ssh_client.exec_command(cmd)
                 
                 newid = res.strip()
                 logging.info("runRemoteCmds(): Next available id: " + str(newid))
@@ -522,7 +533,7 @@ class ProxmoxManage(VMManage):
                 cmd = qmrestore + " " + filepath + "  " + str(newid) + " --storage " + storagepath
                 logging.info("runRemoteCmds(): Running cmd: " + str(cmd))
                 # res = proxssh._exec(shlex.split(cmd))
-                res = self.proxssh.ssh_client.exec_command(cmd)
+                res = proxssh.ssh_client.exec_command(cmd)
             except Exception:
                 logging.error("Error in runRemoteCmds(): An error occured when trying to get next available id")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -810,7 +821,7 @@ class ProxmoxManage(VMManage):
                 return -1
 
             self.writeStatus += 1
-            self.runConfigureVMNets(cloneName, internalNets, proxapi, nodename)
+            self.runConfigureVMNets(cloneName, internalNets, proxssh, proxapi, nodename)
 
             #vrdp setup (if applicable)
             if vrdpPort != None:
@@ -959,8 +970,8 @@ class ProxmoxManage(VMManage):
             vncport = int(vrdpPort) - 5900
             cmds = []
             #need to figure out a way to make sure ports are reused...
-            cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
-            cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            #cmds.append('sed -i "/vnc/d" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
+            #cmds.append('sed -i "1 a args: -vnc 0.0.0.0:'+str(vncport)+'" /etc/pve/qemu-server/' + str(vmUUID) + '.conf')
             self.readStatus = VMManage.MANAGER_READING
             self.writeStatus += 1
             self.runRemoteCmds(cmds, proxssh, username, password)

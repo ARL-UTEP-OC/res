@@ -56,11 +56,11 @@ class ChallengesStatsRetrieveDialog(QDialog):
             self.challenges = s["challengesStats"]
         else:
             logging.warning("ChallengesStatsRetrieveDialog(): No Challenges were retrieved")
-            noChallengesDialog = QMessageBox.critical(self, "Challenges Error", "No Challenges were found. The system may not have challenges or your credentials may be incorrect.", QMessageBox.Ok)
+            noChallengesDialog = QMessageBox.critical(self, "Challenges Error", "No Users were found. The system may not have challenges or your credentials may be incorrect.", QMessageBox.Ok)
             return
         if len(self.challenges) == 0:
             logging.warning("ChallengesStatsRetrieveDialog(): No Challenges were retrieved")
-            noChallengesDialog = QMessageBox.critical(self, "Challenges Error", "No Challenges were found. The system may not have challenges or your credentials may be incorrect.", QMessageBox.Ok)
+            noChallengesDialog = QMessageBox.critical(self, "Challenges Error", "No Users were found. The system may not have challenges or your credentials may be incorrect.", QMessageBox.Ok)
             return
 
         #self.treeWidget.setSelectionMode(ChallengesTreeWidget.MultiSelection)

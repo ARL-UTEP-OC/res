@@ -93,6 +93,7 @@ class ChallengesManageCTFd(ChallengesManage):
     #abstractmethod
     def createChallengesUsers(self, configname, ctfdHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("createChallengesUsers(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runCreateChallengesUsers, args=(configname, ctfdHostname, username, password, creds_file, itype, name))
         t.start()
         t.join()
@@ -200,6 +201,7 @@ class ChallengesManageCTFd(ChallengesManage):
     #abstractmethod
     def removeChallengesUsers(self, configname, ctfdHostname, username, password, creds_file="", itype="", name=""):
         logging.debug("removeChallengesUsers(): instantiated")
+        self.writeStatus+=1
         t = threading.Thread(target=self.runRemoveChallengesUsers, args=(configname,ctfdHostname, username, password, creds_file, itype, name))
         t.start()
         t.join()

@@ -102,6 +102,13 @@ class SystemConfigIO():
         self.config['EXPERIMENTS'] = {}
         self.config['EXPERIMENTS']['EXPERIMENTS_PATH'] = "ExperimentData"
         self.config['EXPERIMENTS']['TEMP_DATA_PATH'] = "tmp"
+        self.config['FEATURES'] = {}
+        self.config['FEATURES']['VM'] = "True"
+        self.config['FEATURES']['GUAC'] = "True"
+        self.config['FEATURES']['PROXMOX'] = "True"
+        self.config['FEATURES']['KEYCLOAK'] = "True"
+        self.config['FEATURES']['ROCKETCHAT'] = "False"
+        self.config['FEATURES']['CTFD'] = "True"
 
     def getConfig(self):
         return self.config
